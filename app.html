@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SHIPYARD — Платформа</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚓</text></svg>">
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body class="app-body">
+
+<button class="mobile-nav-toggle" id="navToggle" aria-label="Меню">☰</button>
+
+<div class="app-shell">
+
+  <!-- ===== SIDEBAR ===== -->
+  <aside class="sidebar" id="sidebar">
+    <a class="brand" href="index.html"><span>⚓</span>SHIPYARD</a>
+
+    <div class="side-group">
+      <div class="side-label">Мой путь</div>
+      <button class="side-link" data-view="dashboard"><span class="em">🏠</span>Обзор</button>
+      <button class="side-link" data-view="track"><span class="em">🗺️</span>Трек проекта<span class="pill" id="pillTrack"></span></button>
+      <button class="side-link" data-view="security"><span class="em">🛡️</span>Безопасность<span class="pill" id="pillSec"></span></button>
+      <button class="side-link" data-view="legal"><span class="em">⚖️</span>Юридический трек</button>
+    </div>
+
+    <div class="side-group">
+      <div class="side-label">Поток</div>
+      <button class="side-link" data-view="demos"><span class="em">📣</span>Стена демо</button>
+      <button class="side-link" data-view="league"><span class="em">🏆</span>Лига</button>
+      <button class="side-link" data-view="demoday"><span class="em">🎤</span>Demo Day</button>
+    </div>
+
+    <div class="side-group">
+      <div class="side-label">Ресурсы</div>
+      <button class="side-link" data-view="kb"><span class="em">📚</span>База знаний</button>
+      <button class="side-link" data-view="experts"><span class="em">🧑‍🏫</span>Эксперты</button>
+      <button class="side-link" data-view="profile"><span class="em">👤</span>Профиль</button>
+    </div>
+
+    <div class="side-user">
+      <div class="avatar" id="userAvatar">А</div>
+      <div>
+        <b id="userName">Участник</b>
+        <small id="userTariff">Тариф Pro · Поток №1</small>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ===== MAIN ===== -->
+  <main class="main">
+    <div class="main-inner" id="view"><!-- rendered by app.js --></div>
+  </main>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0071e3"/>
+      <stop offset="100%" stop-color="#30b0c7"/>
+    </linearGradient>
+  </defs>
+</svg>
+
+<script src="assets/app.js"></script>
+</body>
+</html>
