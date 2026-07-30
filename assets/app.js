@@ -1,6 +1,8 @@
 /* ============================================================
    SHIPYARD Platform — SPA
-   Состояние в localStorage, без сервера (пилотный контур).
+   Два режима:
+   · API-режим — аккаунты и прогресс на бэкенде (server/server.js)
+   · локальный — localStorage, если бэкенд недоступен (GitHub Pages)
    ============================================================ */
 
 (() => {
@@ -241,6 +243,7 @@ const EXPERTS = [
   { icon: "💼", dir: "Инвестиционный трек", what: "Питч, оценка, структура сделки", format: "Подготовка к Demo Day", weeks: "8", indiv: true },
 ];
 
+/* локальный режим: сиды для стены и лиги (без бэкенда) */
 const PEERS = [
   { name: "Айгерим С.", project: "MedQueue — запись в частные клиники", pts: 720, lvl: 4 },
   { name: "Данияр Т.",  project: "CargoLink — биржа попутных грузов",   pts: 660, lvl: 4 },
@@ -260,20 +263,62 @@ const PEER_DEMOS = [
   { author: "Тимур А.",   project: "FitDesk", week: 3, text: "Каркас на заготовке авторизации программы. Первый спринт закрыт за 4 вечера.", votes: 2 },
 ];
 
+/* ---------------- API-слой ---------------- */
+
+let API = null;          // "" = same-origin, "https://…" = удалённый, null = локальный режим
+let TOKEN = localStorage.getItem("shipyard_token") || null;
+const CACHE = { demos: null, league: null };
+
+function candidateApi() {
+  const o = localStorage.getItem("shipyard_api");
+  if (o) return o.replace(/\/$/, "");
+  if (window.SHIPYARD_REMOTE_API) return String(window.SHIPYARD_REMOTE_API).replace(/\/$/, "");
+  if (location.protocol === "file:" || location.hostname.endsWith("github.io")) return null;
+  return "";
+}
+
+async function apiCall(path, method = "GET", body) {
+  const headers = { "Content-Type": "application/json" };
+  if (TOKEN) headers.Authorization = "Bearer " + TOKEN;
+  const r = await fetch(API + "/api" + path, {
+    method, headers, body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  const data = await r.json().catch(() => ({}));
+  if (r.status === 401) { logout(false); throw new Error(data.error || "Нужен вход"); }
+  if (!r.ok) throw new Error(data.error || "Ошибка сервера");
+  return data;
+}
+
+function applyMe(d) {
+  S.name = d.user.name;
+  S.project = d.user.project;
+  S.tariff = d.user.tariff;
+  S.email = d.user.email;
+  S.done = d.done || {};
+  S.sec = d.sec || {};
+  S.legal = d.legal || {};
+  S.demos = d.demos || [];
+}
+
+function logout(rerender = true) {
+  TOKEN = null;
+  localStorage.removeItem("shipyard_token");
+  CACHE.demos = CACHE.league = null;
+  if (rerender) go("dashboard");
+}
+
 /* ---------------- состояние ---------------- */
 
 const KEY = "shipyard_state_v1";
 
 const defaultState = () => ({
-  name: "Адилет",
+  name: "Гость",
   project: "Мой продукт",
   tariff: "Pro",
+  email: "",
   startDate: Date.now(),
-  done: {},   // taskId -> true
-  sec: {},    // securityItemId -> true
-  legal: {},  // legalId -> true
-  demos: [],  // {week, text, link, ts}
-  votes: {},  // demoIdx -> true
+  done: {}, sec: {}, legal: {},
+  demos: [], votes: {},
   kbTab: "materials",
 });
 
@@ -281,7 +326,7 @@ let S;
 try { S = Object.assign(defaultState(), JSON.parse(localStorage.getItem(KEY) || "{}")); }
 catch { S = defaultState(); }
 
-const save = () => localStorage.setItem(KEY, JSON.stringify(S));
+const save = () => { if (API === null) localStorage.setItem(KEY, JSON.stringify(S)); };
 
 /* ---------------- вычисления ---------------- */
 
@@ -308,7 +353,7 @@ function points() {
   for (const g of SECURITY) for (const i of g.items) if (S.sec[i.id]) pts += 10;
   for (const id in S.legal) if (S.legal[id]) pts += 15;
   pts += S.demos.length * 50;
-  if (S.demos.length >= 3) pts = Math.round(pts * 1.1); // множитель за серию демо
+  if (S.demos.length >= 3) pts = Math.round(pts * 1.1);
   return pts;
 }
 
@@ -343,7 +388,8 @@ function toast(msg) {
 
 function refreshChrome() {
   document.getElementById("userName").textContent = S.name;
-  document.getElementById("userTariff").textContent = `Тариф ${S.tariff} · Поток №1`;
+  document.getElementById("userTariff").textContent =
+    API !== null && !TOKEN ? "Не в системе" : `Тариф ${S.tariff} · Поток №1`;
   document.getElementById("userAvatar").textContent = (S.name[0] || "A").toUpperCase();
   document.getElementById("pillTrack").textContent = `нед. ${currentPhaseIdx()}`;
   const secAll = SECURITY.flatMap(g => g.items);
@@ -353,10 +399,17 @@ function refreshChrome() {
 
 let activeView = "dashboard";
 
-function go(name) {
+async function go(name) {
+  if (API !== null && !TOKEN) name = "auth";
   activeView = name;
   document.querySelectorAll(".side-link").forEach(b =>
     b.classList.toggle("active", b.dataset.view === name));
+  try {
+    if (API !== null && TOKEN) {
+      if (name === "demos" && !CACHE.demos) CACHE.demos = (await apiCall("/demos")).demos;
+      if (name === "league") CACHE.league = (await apiCall("/league")).rows;
+    }
+  } catch (e) { toast(e.message); }
   render();
   document.getElementById("sidebar").classList.remove("open");
   window.scrollTo({ top: 0 });
@@ -371,6 +424,37 @@ document.getElementById("navToggle").addEventListener("click", () =>
 /* ---------------- views ---------------- */
 
 const VIEWS = {
+
+  /* ---- вход / регистрация ---- */
+  auth() {
+    return `
+      <div style="max-width:440px;margin:8vh auto 0">
+        <div style="text-align:center;margin-bottom:26px">
+          <div style="font-size:44px">⚓</div>
+          <h1 style="font-size:28px;font-weight:700;letter-spacing:-.02em;margin-top:8px">SHIPYARD</h1>
+          <p class="muted" style="margin-top:6px">Войдите, чтобы прогресс, демо и лига жили на сервере</p>
+        </div>
+        <div class="panel">
+          <div class="kb-tabs" style="margin-bottom:18px">
+            <button class="kb-tab ${!S._reg ? "active" : ""}" data-authtab="login">Вход</button>
+            <button class="kb-tab ${S._reg ? "active" : ""}" data-authtab="reg">Регистрация</button>
+          </div>
+          <form id="authForm">
+            ${S._reg ? `
+              <div class="field"><label>Имя</label><input id="aName" required placeholder="Как к вам обращаться"></div>
+              <div class="field"><label>Проект</label><input id="aProject" placeholder="Название вашего продукта"></div>
+              <div class="field"><label>Тариф</label>
+                <select id="aTariff"><option>Solo</option><option selected>Pro</option><option>Venture</option></select>
+              </div>` : ""}
+            <div class="field"><label>E-mail</label><input id="aEmail" type="email" required placeholder="you@example.com"></div>
+            <div class="field"><label>Пароль</label><input id="aPass" type="password" required minlength="6" placeholder="Минимум 6 символов"></div>
+            <div id="authErr" style="color:var(--red);font-size:14px;margin-bottom:12px;display:none"></div>
+            <button class="btn btn-primary" type="submit" style="width:100%">${S._reg ? "Создать аккаунт" : "Войти"}</button>
+          </form>
+        </div>
+        <p class="muted" style="text-align:center;font-size:13px">Пилотный поток №1 · права на ваш продукт всегда остаются у вас</p>
+      </div>`;
+  },
 
   /* ---- обзор ---- */
   dashboard() {
@@ -475,34 +559,55 @@ const VIEWS = {
 
   /* ---- стена демо ---- */
   demos() {
-    const myDemos = S.demos.map((d, i) => `
-      <div class="demo-card">
-        <div class="d-head">
-          <div class="avatar">${esc((S.name[0] || "A").toUpperCase())}</div>
-          <div><b>${esc(S.name)} — ${esc(S.project)}</b><small>моё демо</small></div>
-          <span class="d-week">нед. ${d.week}</span>
-        </div>
-        <p>${esc(d.text)}</p>
-        ${d.link ? `<a href="${esc(d.link)}" target="_blank" rel="noopener" class="link-arrow" style="font-size:14px">Открыть</a>` : ""}
-      </div>`).join("");
-
-    const peers = PEER_DEMOS.map((d, i) => {
-      const voted = !!S.votes[i];
-      return `
-      <div class="demo-card">
-        <div class="d-head">
-          <div class="avatar" style="background:linear-gradient(135deg,#af52de,#ff2d55)">${esc(d.author[0])}</div>
-          <div><b>${esc(d.author)} — ${esc(d.project)}</b><small>участник потока</small></div>
-          <span class="d-week">нед. ${d.week}</span>
-        </div>
-        <p>${esc(d.text)}</p>
-        <div class="d-actions">
-          <button class="vote-btn ${voted ? "voted" : ""}" data-vote="${i}">
-            ${voted ? "✓ Ваш голос" : "▲ Лучшее демо"} · ${d.votes + (voted ? 1 : 0)}
-          </button>
-        </div>
-      </div>`;
-    }).join("");
+    let cards = "";
+    if (API !== null) {
+      const list = CACHE.demos || [];
+      cards = list.map(d => `
+        <div class="demo-card">
+          <div class="d-head">
+            <div class="avatar" style="${d.mine ? "" : "background:linear-gradient(135deg,#af52de,#ff2d55)"}">${esc(d.name[0] || "?")}</div>
+            <div><b>${esc(d.name)} — ${esc(d.project)}</b><small>${d.mine ? "моё демо" : "участник потока"}</small></div>
+            <span class="d-week">нед. ${d.week}</span>
+          </div>
+          <p>${esc(d.text)}</p>
+          <div class="d-actions">
+            ${d.mine
+              ? (d.link ? `<a href="${esc(d.link)}" target="_blank" rel="noopener" class="link-arrow" style="font-size:14px">Открыть</a>` : "")
+              : `<button class="vote-btn ${d.my ? "voted" : ""}" data-voteid="${d.id}">${d.my ? "✓ Ваш голос" : "▲ Лучшее демо"} · ${d.votes}</button>
+                 ${d.link ? `<a href="${esc(d.link)}" target="_blank" rel="noopener" class="link-arrow" style="font-size:14px">Открыть</a>` : ""}`}
+          </div>
+        </div>`).join("");
+      if (!list.length) cards = `<div class="empty">Пока тихо. Будьте первым, кто сдаст демо этой недели.</div>`;
+    } else {
+      const myDemos = S.demos.map(d => `
+        <div class="demo-card">
+          <div class="d-head">
+            <div class="avatar">${esc((S.name[0] || "A").toUpperCase())}</div>
+            <div><b>${esc(S.name)} — ${esc(S.project)}</b><small>моё демо</small></div>
+            <span class="d-week">нед. ${d.week}</span>
+          </div>
+          <p>${esc(d.text)}</p>
+          ${d.link ? `<a href="${esc(d.link)}" target="_blank" rel="noopener" class="link-arrow" style="font-size:14px">Открыть</a>` : ""}
+        </div>`).join("");
+      const peers = PEER_DEMOS.map((d, i) => {
+        const voted = !!S.votes[i];
+        return `
+        <div class="demo-card">
+          <div class="d-head">
+            <div class="avatar" style="background:linear-gradient(135deg,#af52de,#ff2d55)">${esc(d.author[0])}</div>
+            <div><b>${esc(d.author)} — ${esc(d.project)}</b><small>участник потока</small></div>
+            <span class="d-week">нед. ${d.week}</span>
+          </div>
+          <p>${esc(d.text)}</p>
+          <div class="d-actions">
+            <button class="vote-btn ${voted ? "voted" : ""}" data-vote="${i}">
+              ${voted ? "✓ Ваш голос" : "▲ Лучшее демо"} · ${d.votes + (voted ? 1 : 0)}
+            </button>
+          </div>
+        </div>`;
+      }).join("");
+      cards = myDemos + peers;
+    }
 
     return `
       <div class="page-head">
@@ -524,25 +629,30 @@ const VIEWS = {
           <button class="btn btn-primary" type="submit">Опубликовать демо · +50 очков</button>
         </form>
       </div>
-      <div class="demo-grid">${myDemos}${peers}</div>`;
+      <div class="demo-grid">${cards}</div>`;
   },
 
   /* ---- лига ---- */
   league() {
-    const me = { name: S.name + " (вы)", project: S.project, pts: points(), lvl: level().n, me: true };
-    const rows = [...PEERS, me].sort((a, b) => b.pts - a.pts);
+    let rows;
+    if (API !== null) {
+      rows = (CACHE.league || []).map(r => ({ ...r, name: r.me ? r.name + " (вы)" : r.name }));
+    } else {
+      const me = { name: S.name + " (вы)", project: S.project, pts: points(), lvl: level().n, me: true };
+      rows = [...PEERS, me].sort((a, b) => b.pts - a.pts);
+    }
     const medals = ["🥇", "🥈", "🥉"];
     return `
       <div class="page-head">
         <h1>Лига «Док А»</h1>
-        <p>Мини-группа из 8 участников схожей стадии. Лиги вместо общего рейтинга: отстающие не демотивированы разрывом с лидерами.</p>
+        <p>Мини-группа участников схожей стадии. Лиги вместо общего рейтинга: отстающие не демотивированы разрывом с лидерами.</p>
       </div>
       <div class="panel">
         <table class="table">
           <thead><tr><th style="width:56px">Место</th><th>Участник</th><th>Проект</th><th>Уровень</th><th style="text-align:right">Очки</th></tr></thead>
           <tbody>
             ${rows.map((r, i) => {
-              const lv = LEVELS[r.lvl - 1];
+              const lv = LEVELS[Math.max(0, Math.min(7, r.lvl - 1))];
               return `<tr class="${r.me ? "me" : ""}">
                 <td><span class="rank-medal">${medals[i] || (i + 1)}</span></td>
                 <td><b>${esc(r.name)}</b></td>
@@ -778,6 +888,7 @@ const VIEWS = {
       <div class="panel-row cols-2">
         <div class="panel">
           <h2>Данные</h2>
+          ${S.email ? `<p class="muted" style="margin-top:4px">${esc(S.email)}</p>` : ""}
           <form id="profileForm" style="margin-top:12px">
             <div class="field"><label>Имя</label><input id="pfName" value="${esc(S.name)}"></div>
             <div class="field"><label>Проект</label><input id="pfProject" value="${esc(S.project)}"></div>
@@ -787,6 +898,7 @@ const VIEWS = {
               </select>
             </div>
             <button class="btn btn-primary btn-sm" type="submit">Сохранить</button>
+            ${API !== null ? `<button class="btn btn-ghost btn-sm" type="button" id="logoutBtn" style="margin-left:10px">Выйти</button>` : ""}
           </form>
         </div>
         <div class="panel">
@@ -801,8 +913,7 @@ const VIEWS = {
           <div class="bar"><i style="width:${lvl.n / 8 * 100}%"></i></div>
           <div class="divider"></div>
           <p class="muted"><b style="color:var(--ink)">${fmt(points())}</b> очков · уровень отражает стадию продукта, а не время в программе.</p>
-          <div class="divider"></div>
-          <button class="btn btn-ghost btn-sm" id="resetState">Сбросить прогресс (демо)</button>
+          ${API === null ? `<div class="divider"></div><button class="btn btn-ghost btn-sm" id="resetState">Сбросить прогресс (демо)</button>` : ""}
         </div>
       </div>
       <div class="panel">
@@ -861,72 +972,137 @@ function render() {
   bind();
 }
 
+async function syncToggle(kind, id, done) {
+  if (API === null) return;
+  await apiCall("/toggle", "POST", { kind, id, done });
+}
+
 function bind() {
-  // навигационные ссылки внутри контента
   view.querySelectorAll("[data-go]").forEach(el =>
     el.addEventListener("click", e => { e.preventDefault(); go(el.dataset.go); }));
 
-  // задачи трека
+  /* вход / регистрация */
+  view.querySelectorAll("[data-authtab]").forEach(b =>
+    b.addEventListener("click", () => { S._reg = b.dataset.authtab === "reg"; render(); }));
+
+  const authForm = view.querySelector("#authForm");
+  if (authForm) authForm.addEventListener("submit", async e => {
+    e.preventDefault();
+    const errEl = view.querySelector("#authErr");
+    errEl.style.display = "none";
+    try {
+      const body = {
+        email: view.querySelector("#aEmail").value,
+        password: view.querySelector("#aPass").value,
+      };
+      let data;
+      if (S._reg) {
+        body.name = view.querySelector("#aName").value;
+        body.project = view.querySelector("#aProject").value;
+        body.tariff = view.querySelector("#aTariff").value;
+        data = await apiCall("/register", "POST", body);
+      } else {
+        data = await apiCall("/login", "POST", body);
+      }
+      TOKEN = data.token;
+      localStorage.setItem("shipyard_token", TOKEN);
+      applyMe(data);
+      S._reg = false;
+      toast(`Добро пожаловать на верфь, ${S.name}!`);
+      go("dashboard");
+    } catch (err2) {
+      errEl.textContent = err2.message;
+      errEl.style.display = "block";
+    }
+  });
+
+  /* задачи трека */
   view.querySelectorAll("[data-task]").forEach(cb =>
-    cb.addEventListener("change", () => {
+    cb.addEventListener("change", async () => {
       const id = cb.dataset.task;
       const wasLvl = level().n;
-      S.done[id] = cb.checked;
-      if (!cb.checked) delete S.done[id];
-      save();
-      const nowLvl = level().n;
-      if (cb.checked) {
-        const t = PHASES.flatMap(p => p.tasks).find(x => x.id === id);
-        if (nowLvl > wasLvl) toast(`${LEVELS[nowLvl - 1].emoji} Новый уровень: ${LEVELS[nowLvl - 1].name}!`);
-        else toast(`+${t.pts} очков`);
-      }
-      render();
+      const checked = cb.checked;
+      try {
+        await syncToggle("task", id, checked);
+        S.done[id] = checked;
+        if (!checked) delete S.done[id];
+        save();
+        const nowLvl = level().n;
+        if (checked) {
+          const t = PHASES.flatMap(p => p.tasks).find(x => x.id === id);
+          if (nowLvl > wasLvl) toast(`${LEVELS[nowLvl - 1].emoji} Новый уровень: ${LEVELS[nowLvl - 1].name}!`);
+          else toast(`+${t.pts} очков`);
+        }
+        CACHE.league = null;
+        render();
+      } catch (err2) { toast(err2.message); cb.checked = !checked; }
     }));
 
-  // раскрытие фаз
   view.querySelectorAll("[data-toggle]").forEach(h =>
     h.addEventListener("click", () =>
       h.closest(".phase-card").classList.toggle("open")));
 
-  // безопасность
+  /* безопасность */
   view.querySelectorAll("[data-sec]").forEach(cb =>
-    cb.addEventListener("change", () => {
-      S.sec[cb.dataset.sec] = cb.checked;
-      if (!cb.checked) delete S.sec[cb.dataset.sec];
-      save();
-      if (cb.checked) toast("+10 очков · пункт ИБ закрыт");
-      render();
+    cb.addEventListener("change", async () => {
+      const checked = cb.checked;
+      try {
+        await syncToggle("sec", cb.dataset.sec, checked);
+        S.sec[cb.dataset.sec] = checked;
+        if (!checked) delete S.sec[cb.dataset.sec];
+        save();
+        if (checked) toast("+10 очков · пункт ИБ закрыт");
+        render();
+      } catch (err2) { toast(err2.message); cb.checked = !checked; }
     }));
 
-  // юридический трек
+  /* юридический трек */
   view.querySelectorAll("[data-legal]").forEach(b =>
-    b.addEventListener("click", () => {
+    b.addEventListener("click", async () => {
       const id = b.dataset.legal;
-      S.legal[id] = !S.legal[id];
-      if (!S.legal[id]) delete S.legal[id];
-      save();
-      if (S.legal[id]) toast("+15 очков · документ готов");
-      render();
+      const val = !S.legal[id];
+      try {
+        await syncToggle("legal", id, val);
+        S.legal[id] = val;
+        if (!val) delete S.legal[id];
+        save();
+        if (val) toast("+15 очков · документ готов");
+        render();
+      } catch (err2) { toast(err2.message); }
     }));
 
-  // демо
+  /* демо */
   const demoForm = view.querySelector("#demoForm");
-  if (demoForm) demoForm.addEventListener("submit", e => {
+  if (demoForm) demoForm.addEventListener("submit", async e => {
     e.preventDefault();
     const text = view.querySelector("#demoText").value.trim();
     if (!text) return;
-    S.demos.unshift({
-      week: currentPhaseIdx(),
-      text,
-      link: view.querySelector("#demoLink").value.trim(),
-      ts: Date.now(),
-    });
-    save();
-    toast(S.demos.length >= 3 ? "🔥 Серия из 3 демо — множитель ×1.1!" : "+50 очков · демо на стене");
-    render();
+    const link = view.querySelector("#demoLink").value.trim();
+    const week = currentPhaseIdx();
+    try {
+      if (API !== null) {
+        await apiCall("/demos", "POST", { week, text, link });
+        CACHE.demos = (await apiCall("/demos")).demos;
+      }
+      S.demos.unshift({ week, text, link, ts: Date.now() });
+      save();
+      toast(S.demos.length >= 3 ? "🔥 Серия из 3 демо — множитель ×1.1!" : "+50 очков · демо на стене");
+      render();
+    } catch (err2) { toast(err2.message); }
   });
 
-  // голоса
+  /* голоса — API-режим */
+  view.querySelectorAll("[data-voteid]").forEach(b =>
+    b.addEventListener("click", async () => {
+      try {
+        const r = await apiCall("/vote", "POST", { demoId: Number(b.dataset.voteid) });
+        const d = (CACHE.demos || []).find(x => x.id === Number(b.dataset.voteid));
+        if (d) { d.votes = r.votes; d.my = r.my; }
+        render();
+      } catch (err2) { toast(err2.message); }
+    }));
+
+  /* голоса — локальный режим */
   view.querySelectorAll("[data-vote]").forEach(b =>
     b.addEventListener("click", () => {
       const i = b.dataset.vote;
@@ -936,7 +1112,7 @@ function bind() {
       render();
     }));
 
-  // база знаний
+  /* база знаний */
   view.querySelectorAll("[data-tab]").forEach(b =>
     b.addEventListener("click", () => { S.kbTab = b.dataset.tab; save(); render(); }));
 
@@ -949,22 +1125,36 @@ function bind() {
     b.addEventListener("click", () =>
       navigator.clipboard?.writeText(b.dataset.copy).then(() => toast("Промпт скопирован"))));
 
-  // эксперты
+  /* эксперты */
   view.querySelectorAll("[data-book]").forEach(b =>
     b.addEventListener("click", () => {
       toast(`Слот у направления «${EXPERTS[b.dataset.book].dir}» запрошен — ментор подтвердит в Telegram`);
     }));
 
-  // профиль
+  /* профиль */
   const pf = view.querySelector("#profileForm");
-  if (pf) pf.addEventListener("submit", e => {
+  if (pf) pf.addEventListener("submit", async e => {
     e.preventDefault();
-    S.name = view.querySelector("#pfName").value.trim() || S.name;
-    S.project = view.querySelector("#pfProject").value.trim() || S.project;
-    S.tariff = view.querySelector("#pfTariff").value;
-    save();
-    toast("Профиль сохранён");
-    render();
+    const name = view.querySelector("#pfName").value.trim() || S.name;
+    const project = view.querySelector("#pfProject").value.trim() || S.project;
+    const tariff = view.querySelector("#pfTariff").value;
+    try {
+      if (API !== null) {
+        const data = await apiCall("/me", "PUT", { name, project, tariff });
+        applyMe(data);
+      } else {
+        S.name = name; S.project = project; S.tariff = tariff;
+      }
+      save();
+      toast("Профиль сохранён");
+      render();
+    } catch (err2) { toast(err2.message); }
+  });
+
+  const logoutBtn = view.querySelector("#logoutBtn");
+  if (logoutBtn) logoutBtn.addEventListener("click", () => {
+    logout();
+    toast("Вы вышли из системы");
   });
 
   const reset = view.querySelector("#resetState");
@@ -979,7 +1169,20 @@ function bind() {
 
 /* ---------------- старт ---------------- */
 
-save();
-go("dashboard");
+(async () => {
+  const cand = candidateApi();
+  if (cand !== null) {
+    try {
+      const r = await fetch(cand + "/api/health", { signal: AbortSignal.timeout(4000) });
+      if (r.ok) API = cand;
+    } catch { API = null; }
+  }
+  if (API !== null && TOKEN) {
+    try { applyMe(await apiCall("/me")); }
+    catch { /* токен истёк — увидим экран входа */ }
+  }
+  if (API === null) save();
+  go("dashboard");
+})();
 
 })();
