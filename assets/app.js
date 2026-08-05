@@ -8,15 +8,20 @@
 (() => {
 "use strict";
 
-/* ---------------- данные программы ---------------- */
+const GAME = window.SHIPYARD_GAME;
 
-const PHASES = [
+/* ---------------- станции пути ----------------
+   Девять станций пайплайна: миссия, задачи, артефакт недели и инструмент,
+   который участник забирает с собой дальше. */
+
+const STATIONS = [
   {
-    id: "w0", week: 0, phase: "Onboarding", title: "Диагностика и окружение",
-    desc: "До старта: идея проверена, окружение готово, документы подписаны.",
+    id: "w0", week: 0, phase: "Старт", title: "Диагностика и окружение",
+    tool: "wrench", toolName: "Ключ мастера",
+    desc: "До старта: идея проверена, окружение готово, договор подписан.",
+    story: "Первая остановка — база у подножия. Здесь мы честно смотрим на идею: кому больно, кто заплатит, что вообще собираем. Дальше настраиваем рабочее место — Claude Code, репозиторий, доступы — и разбираемся, как ставить агенту задачи так, чтобы он не уводил проект в сторону. Отсюда вы уходите с ключом мастера: рабочим окружением, в котором можно строить.",
     tasks: [
       { id: "w0_idea",   label: "Пройти диагностику идеи и получить заключение", pts: 30 },
-      { id: "w0_ip",     label: "Пройти скрининг IP-конфликта с работодателем", pts: 20 },
       { id: "w0_docs",   label: "Подписать договор с программой (права на продукт — у вас)", pts: 20 },
       { id: "w0_cc",     label: "Установить Claude Code и настроить рабочее окружение", pts: 30 },
       { id: "w0_vibe",   label: "Изучить базовые принципы вайб-кодинга: контекст и планирование", pts: 20 },
@@ -25,8 +30,10 @@ const PHASES = [
     artifact: "Заключение по идее · рабочее окружение · доступ к потоку",
   },
   {
-    id: "w1", week: 1, phase: "Requirements", title: "Сбор требований",
+    id: "w1", week: 1, phase: "Требования", title: "Разговор с рынком",
+    tool: "mic", toolName: "Микрофон",
     desc: "Выйти к рынку до того, как написана первая строка кода.",
+    story: "Подъём начинается с людей, а не с кода. Пять–семь разговоров с теми, кто живёт с вашей болью: как решают сейчас, сколько это стоит, что бесит. По итогам вы формулируете сегмент, боль и ценностное предложение одним предложением, которое понятно постороннему. Инструмент станции — микрофон: навык вытаскивать правду из клиента.",
     tasks: [
       { id: "w1_i1", label: "Интервью с клиентом №1 (по шаблону сценария)", pts: 30, interview: true },
       { id: "w1_i2", label: "Интервью с клиентом №2", pts: 30, interview: true },
@@ -37,11 +44,13 @@ const PHASES = [
       { id: "w1_vp",   label: "Сформулировать ценностное предложение", pts: 40 },
     ],
     artifact: "Профиль клиента · карта боли · ценностное предложение",
-    gate: { id: "G1", cond: "Проведено 5–7 интервью, боль подтверждена минимум половиной респондентов" },
+    cp: { id: "КТ-1", cond: "Проведено 5–7 интервью, боль подтверждена минимум половиной респондентов" },
   },
   {
-    id: "w2", week: 2, phase: "Design", title: "Проектирование",
-    desc: "Урезать до минимума. Перевести архитектуру на язык Claude Code.",
+    id: "w2", week: 2, phase: "Проектирование", title: "Чертёж продукта",
+    tool: "blueprint", toolName: "Чертёж",
+    desc: "Урезать до минимума и перевести архитектуру на язык Claude Code.",
+    story: "Самая недооценённая станция. Здесь вы режете задуманное до одного сценария, который можно собрать за четыре недели, выбираете стек и переносите архитектуру в CLAUDE.md — файл, по которому агент работает все следующие недели. Плохой чертёж стоит трёх недель переделок, поэтому контрольная точка тут жёсткая.",
     tasks: [
       { id: "w2_scope", label: "Урезать объём MVP до одного ключевого сценария", pts: 50 },
       { id: "w2_arch",  label: "Составить техническую карту и выбрать стек", pts: 40 },
@@ -50,21 +59,25 @@ const PHASES = [
       { id: "w2_plan",  label: "Декомпозировать сборку на задачи и спринты", pts: 30 },
     ],
     artifact: "Техкарта · CLAUDE.md · прототип интерфейса · план спринтов",
-    gate: { id: "G2", cond: "Объём MVP умещается в 4 недели сборки. Не умещается — режем ещё" },
+    cp: { id: "КТ-2", cond: "Объём MVP умещается в 4 недели сборки. Не умещается — режем ещё" },
   },
   {
-    id: "w3", week: 3, phase: "Implementation I", title: "Реализация: ядро",
+    id: "w3", week: 3, phase: "Сборка", title: "Ядро продукта",
+    tool: "hammer", toolName: "Молоток",
     desc: "Сборка ключевого сценария — самостоятельно, через Claude Code, по спринтам.",
+    story: "Стройка. Вы сами ведёте сборку через Claude Code по спринтам: каркас и модель данных, затем ключевой сценарий от входа пользователя до полезного результата. Эксперт разбирает с вами сложные участки и делает ревью сгенерированного кода — чтобы скорость не превратилась в технический долг.",
     tasks: [
       { id: "w3_s1",  label: "Спринт 1: каркас проекта и модель данных через Claude Code", pts: 50 },
       { id: "w3_s2",  label: "Спринт 2: ключевой сценарий от входа до результата", pts: 60 },
-      { id: "w3_rev", label: "Ревью сгенерированного кода вместе с ментором", pts: 30 },
+      { id: "w3_rev", label: "Ревью сгенерированного кода вместе с экспертом", pts: 30 },
     ],
     artifact: "Работающий ключевой сценарий",
   },
   {
-    id: "w4", week: 4, phase: "Implementation II", title: "Реализация: обвязка",
-    desc: "Авторизация, база, интеграции — из готовых заготовок программы. С нуля не пишется.",
+    id: "w4", week: 4, phase: "Сборка", title: "Обвязка",
+    tool: "gear", toolName: "Шестерёнка",
+    desc: "Авторизация, база, интеграции — из готовых заготовок программы.",
+    story: "То, что обычно съедает месяц, здесь подключается из готовых заготовок: авторизация, база с миграциями, почта, файлы, внешние API. С нуля это не пишется — время экономится для вашего ключевого сценария. К концу станции MVP функционально полный, и его уже можно показывать живому пользователю.",
     tasks: [
       { id: "w4_auth", label: "Подключить авторизацию из шаблонной заготовки", pts: 40 },
       { id: "w4_db",   label: "Подключить базу данных и миграции из заготовки", pts: 40 },
@@ -72,11 +85,13 @@ const PHASES = [
       { id: "w4_mid",  label: "Пройти промежуточный смотр MVP", pts: 40 },
     ],
     artifact: "Функционально полный MVP",
-    gate: { id: "G3", cond: "Ключевой сценарий работает от начала до конца на реальных данных" },
+    cp: { id: "КТ-3", cond: "Ключевой сценарий работает от начала до конца на реальных данных" },
   },
   {
-    id: "w5", week: 5, phase: "Testing & Security", title: "Тестирование и безопасность",
+    id: "w5", week: 5, phase: "Проверка", title: "Тестирование и защита",
+    tool: "shield", toolName: "Щит",
     desc: "Найти и починить типовые ошибки вайб-кодинга. Закрыть чек-лист OWASP.",
+    story: "Станция, из-за которой продукт можно показать клиенту, а не только другу. Прогон всех сценариев на реальных данных, ревью на типовые ошибки вайб-кодинга — захардкоженные секреты, дырявые доступы, молчаливые ошибки, — сканирование зависимостей и чек-лист OWASP. Щит остаётся с продуктом навсегда.",
     tasks: [
       { id: "w5_test", label: "Прогнать тестирование всех сценариев на реальных данных", pts: 40 },
       { id: "w5_rev",  label: "Ревью сгенерированного кода: типовые ошибки вайб-кодинга", pts: 40 },
@@ -86,8 +101,10 @@ const PHASES = [
     artifact: "Закрытый чек-лист OWASP · отчёт сканирования",
   },
   {
-    id: "w6", week: 6, phase: "Deployment", title: "Развёртывание",
-    desc: "Продукт выходит в интернет: хостинг, домен, автодеплой, мониторинг.",
+    id: "w6", week: 6, phase: "Запуск", title: "Продукт в интернете",
+    tool: "rocket", toolName: "Ракета",
+    desc: "Хостинг, домен, автодеплой, мониторинг и юридический пакет.",
+    story: "Продукт выходит наружу: хостинг, домен, сертификаты, автоматический деплой, мониторинг и резервные копии. Параллельно закрывается юридический пакет — оферта и политика данных, без которых нельзя принимать деньги. С этой станции у вас есть публичная ссылка, которую не стыдно отправить клиенту.",
     tasks: [
       { id: "w6_host", label: "Настроить хостинг, домен и сертификаты", pts: 40 },
       { id: "w6_cicd", label: "Настроить автоматический деплой (CI/CD)", pts: 40 },
@@ -96,42 +113,82 @@ const PHASES = [
       { id: "w6_live", label: "Опубликовать продукт по публичной ссылке", pts: 60 },
     ],
     artifact: "Продукт в проде · юридический пакет",
-    gate: { id: "G4", cond: "Чек-лист безопасности закрыт, продукт доступен по публичной ссылке" },
+    cp: { id: "КТ-4", cond: "Чек-лист безопасности закрыт, продукт доступен по публичной ссылке" },
   },
   {
-    id: "w7", week: 7, phase: "Go-to-market", title: "Вывод на рынок",
-    desc: "Предзаказы и LOI. Приём денег — только после закрытия юридического пакета.",
+    id: "w7", week: 7, phase: "Рабочая среда", title: "Вывод в рабочую среду",
+    tool: "megaphone", toolName: "Рупор",
+    desc: "Продукт попадает в руки первых пользователей и получает первые деньги.",
+    story: "Продукт переезжает из демо в реальную работу: лендинг, цена, первые каналы, аналитика. Цель станции — не «трафик», а первые люди, которые пользуются продуктом в своей работе, и первое подтверждение деньгами: предоплата, пилотное соглашение или подписанное письмо о намерении.",
     tasks: [
       { id: "w7_land",  label: "Собрать лендинг продукта и определить цену", pts: 40 },
       { id: "w7_chan",  label: "Запустить первые каналы и подключить аналитику", pts: 40 },
-      { id: "w7_loi",   label: "Подписать LOI или пилотное соглашение", pts: 200 },
+      { id: "w7_loi",   label: "Подписать пилотное соглашение или письмо о намерении", pts: 200 },
       { id: "w7_pay",   label: "Первый платящий клиент (после юридического пакета)", pts: 200 },
     ],
-    artifact: "Предзаказы · LOI · пилотные соглашения",
-    gate: { id: "G5", cond: "Есть предзаказ, подписанное LOI или пилотное соглашение" },
+    artifact: "Первые пользователи · пилотные соглашения",
+    cp: { id: "КТ-5", cond: "Продукт используется вне вашей команды: есть пилот, предоплата или подписанное письмо" },
   },
   {
-    id: "w8", week: 8, phase: "Demo Day", title: "Защита",
-    desc: "Питч перед инвесторами и жюри. Выбор дальнейшего трека.",
+    id: "w8", week: 8, phase: "Защита", title: "Защита проекта",
+    tool: "trophy", toolName: "Кубок",
+    desc: "Разбор результата перед отраслевыми экспертами.",
+    story: "Финальная станция перед дверью. Вы собираете разбор проекта: проблема, решение, что подтвердилось, что нет, метрики и план развития. Прогон с ментором, затем защита перед отраслевыми экспертами и письменная обратная связь каждому. За дверью — сертификат и выбор, как жить дальше.",
     tasks: [
-      { id: "w8_deck",  label: "Собрать питч-дек: проблема, решение, трекшн, команда", pts: 60 },
-      { id: "w8_dry",   label: "Пройти прогон питча с ментором", pts: 40 },
-      { id: "w8_pitch", label: "Выступить на Demo Day", pts: 100 },
-      { id: "w8_track", label: "Выбрать трек: самостоятельный / сопровождение / venture", pts: 30 },
+      { id: "w8_deck",  label: "Собрать разбор проекта: проблема, решение, результат, план", pts: 60 },
+      { id: "w8_dry",   label: "Пройти прогон защиты с ментором", pts: 40 },
+      { id: "w8_pitch", label: "Выступить на Demo Day перед экспертами", pts: 100 },
+      { id: "w8_track", label: "Выбрать трек после программы", pts: 30 },
     ],
-    artifact: "Питч-дек · оценка жюри · решение по треку",
+    artifact: "Разбор проекта · оценка экспертов · решение по треку",
   },
 ];
 
 const LEVELS = [
-  { n: 1, name: "Sketch",       emoji: "✏️", cond: "Идея описана, диагностика пройдена", phase: 0 },
-  { n: 2, name: "Blueprint",    emoji: "📐", cond: "Требования собраны, ЦП сформулировано", phase: 1 },
-  { n: 3, name: "Keel",         emoji: "🔩", cond: "Архитектура и объём MVP утверждены", phase: 2 },
-  { n: 4, name: "Builder",      emoji: "🏗️", cond: "Ключевой сценарий работает", phase: 4 },
-  { n: 5, name: "Sea Trials",   emoji: "🌊", cond: "Тестирование и безопасность закрыты", phase: 5 },
-  { n: 6, name: "Launched",     emoji: "🚢", cond: "Продукт в проде, юрпакет собран", phase: 6 },
-  { n: 7, name: "First Voyage", emoji: "🧭", cond: "Первые пользователи или клиенты", phase: 7 },
-  { n: 8, name: "Captain",      emoji: "⚓️", cond: "Demo Day пройден", phase: 8 },
+  { n: 1, name: "Sketch",       emoji: "✏️", cond: "Идея описана, диагностика пройдена", station: 0 },
+  { n: 2, name: "Blueprint",    emoji: "📐", cond: "Требования собраны, ЦП сформулировано", station: 1 },
+  { n: 3, name: "Keel",         emoji: "🔩", cond: "Архитектура и объём MVP утверждены", station: 2 },
+  { n: 4, name: "Builder",      emoji: "🏗️", cond: "Ключевой сценарий работает", station: 4 },
+  { n: 5, name: "Sea Trials",   emoji: "🌊", cond: "Тестирование и безопасность закрыты", station: 5 },
+  { n: 6, name: "Launched",     emoji: "🚢", cond: "Продукт в проде, юрпакет собран", station: 6 },
+  { n: 7, name: "First Voyage", emoji: "🧭", cond: "Продукт в рабочей среде у первых клиентов", station: 7 },
+  { n: 8, name: "Captain",      emoji: "⚓️", cond: "Защита пройдена", station: 8 },
+];
+
+/* ---------------- скрининг сложности ----------------
+   Определяет док (лигу). Сравниваем проекты схожей сложности,
+   иначе гонка выигрывается выбором простой темы. */
+
+const SCREENING = [
+  { id: "q_int", q: "Сколько внешних систем нужно подключить в MVP?",
+    opts: [["Ни одной", 0], ["Одну–две", 2], ["Три и больше", 4]] },
+  { id: "q_reg", q: "Отрасль регулируемая (медицина, финансы, госсектор)?",
+    opts: [["Нет", 0], ["Частично", 2], ["Да", 3]] },
+  { id: "q_pdn", q: "Продукт работает с персональными или чувствительными данными?",
+    opts: [["Нет", 0], ["Да", 2]] },
+  { id: "q_pay", q: "Приём платежей входит в MVP?",
+    opts: [["Нет", 0], ["Да", 2]] },
+  { id: "q_mob", q: "Нужен ли мобильный клиент, а не только веб?",
+    opts: [["Только веб", 0], ["Адаптив", 1], ["Отдельное приложение", 3]] },
+  { id: "q_ml", q: "Есть ли внутри продукта модели или обработка данных как функция?",
+    opts: [["Нет", 0], ["Готовые API", 1], ["Своя модель или обучение", 3]] },
+  { id: "q_roles", q: "Сколько типов пользователей с разными правами?",
+    opts: [["Один", 0], ["Два", 1], ["Три и больше", 2]] },
+];
+
+const DOCKS = {
+  A: { name: "Док A", note: "Лёгкий контур: один сценарий, без интеграций и регуляторики" },
+  B: { name: "Док B", note: "Средний контур: интеграции, роли, персональные данные" },
+  C: { name: "Док C", note: "Тяжёлый контур: регуляторика, платежи, мобильный клиент или модели" },
+};
+
+const dockFor = score => (score <= 5 ? "A" : score <= 11 ? "B" : "C");
+
+const PRIZES = [
+  { place: "1 место в доке", emoji: "🥇", prize: "Год подписки Claude Max и слот сопровождения на месяц" },
+  { place: "2 место", emoji: "🥈", prize: "Полгода подписки Claude Pro и разбор продукта с экспертом" },
+  { place: "3 место", emoji: "🥉", prize: "Подписка Claude Pro на три месяца" },
+  { place: "Все, кто дошёл до двери", emoji: "🎫", prize: "Сертификат, витрина проекта и вход в сообщество выпускников" },
 ];
 
 const SECURITY = [
@@ -150,7 +207,7 @@ const SECURITY = [
     { id: "s_conf",  label: "Конфигурации проверены: нет открытых портов, дефолтных паролей, публичных бакетов" },
     { id: "s_rep",   label: "Отчёт сканирования сохранён, исправления по приоритетам выполнены" },
   ]},
-  { level: 3, title: "Ручной аудит", tag: "Pro / Venture", items: [
+  { level: 3, title: "Ручной аудит", tag: "Pro / Partner", items: [
     { id: "s_man1",  label: "Аудит логики доступа специалистом пройден" },
     { id: "s_man2",  label: "Аудит бизнес-логики: сценарии злоупотребления разобраны" },
     { id: "s_man3",  label: "Повторная проверка после исправлений пройдена" },
@@ -159,7 +216,6 @@ const SECURITY = [
 
 const LEGAL = [
   { id: "l0a", week: "0",   title: "Договор с программой",              why: "Фиксирует: права на продукт остаются у участника" },
-  { id: "l0b", week: "0",   title: "Скрининг IP-конфликта с работодателем", why: "Служебные произведения и конфликт интересов — до старта" },
   { id: "l1",  week: "1",   title: "Соглашение о конфиденциальности",   why: "Защита при разговорах с клиентами и партнёрами" },
   { id: "l2",  week: "2–3", title: "Регистрация компании",              why: "Основание для счетов и договоров" },
   { id: "l3",  week: "3",   title: "Соглашение между сооснователями",   why: "Критично, если участник не один" },
@@ -169,11 +225,11 @@ const LEGAL = [
 ];
 
 const BADGES = [
-  { id: "b_interview", emoji: "🎙️", name: "Interview Master",  desc: "5+ интервью с клиентами",            test: s => PHASES[1].tasks.filter(t => t.interview && s.done[t.id]).length >= 5 },
+  { id: "b_interview", emoji: "🎙️", name: "Interview Master",  desc: "5+ интервью с клиентами",            test: s => STATIONS[1].tasks.filter(t => t.interview && s.done[t.id]).length >= 5 },
   { id: "b_security",  emoji: "🛡️", name: "Security Cleared",  desc: "Чек-лист OWASP и сканирование закрыты", test: s => SECURITY.slice(0, 2).every(g => g.items.every(i => s.sec[i.id])) },
-  { id: "b_legal",     emoji: "⚖️", name: "Legal Ready",       desc: "Юридический пакет собран",           test: s => ["l0a","l0b","l1","l5","l6"].every(id => s.legal[id]) },
+  { id: "b_legal",     emoji: "⚖️", name: "Legal Ready",       desc: "Юридический пакет собран",           test: s => ["l0a","l1","l5","l6"].every(id => s.legal[id]) },
   { id: "b_ship",      emoji: "🚢", name: "Zero Downtime",     desc: "Продукт в проде с мониторингом",     test: s => ["w6_host","w6_cicd","w6_mon","w6_live"].every(id => s.done[id]) },
-  { id: "b_revenue",   emoji: "💸", name: "First Revenue",     desc: "Первый платящий клиент или LOI",     test: s => s.done["w7_loi"] || s.done["w7_pay"] },
+  { id: "b_revenue",   emoji: "💸", name: "First Revenue",     desc: "Первый платящий клиент или пилот",   test: s => s.done["w7_loi"] || s.done["w7_pay"] },
   { id: "b_streak",    emoji: "🔥", name: "Демо-серия",        desc: "3 пятничных демо подряд",            test: s => s.demos.length >= 3 },
 ];
 
@@ -192,8 +248,8 @@ const KB = {
     { icon: "🛡️", week: 5, title: "Чек-лист OWASP программы",                      note: "Интерактивная версия — в разделе «Безопасность»", type: "чек-лист" },
     { icon: "🚀", week: 6, title: "Шаблон инфраструктуры и автодеплой",            note: "Хостинг, домен, CI/CD, мониторинг, резервные копии — по шагам", type: "заготовка" },
     { icon: "📜", week: 6, title: "Пакет юридических шаблонов",                    note: "Оферта, политика данных, пользовательское соглашение", type: "шаблон" },
-    { icon: "📈", week: 7, title: "Лендинг, цена, каналы",                         note: "Как собрать предзаказы и LOI до приёма денег", type: "гайд" },
-    { icon: "🎤", week: 8, title: "Структура питча для Demo Day",                  note: "Проблема, решение, трекшн, команда — 5 минут, 10 слайдов", type: "шаблон" },
+    { icon: "📈", week: 7, title: "Лендинг, цена, каналы",                         note: "Как довести продукт до первых рабочих пользователей", type: "гайд" },
+    { icon: "🎤", week: 8, title: "Структура разбора проекта",                     note: "Проблема, решение, что подтвердилось, метрики — 5 минут", type: "шаблон" },
   ],
   prompts: [
     { icon: "🧱", title: "Промпт: план перед кодом", body: "Изучи CLAUDE.md и требования ниже. Прежде чем писать код, предложи план реализации из 3–5 шагов и задай уточняющие вопросы, если требования неполные. Код пиши только после моего подтверждения плана." },
@@ -232,33 +288,33 @@ const CLAUDE_MD = `# CLAUDE.md — <название продукта>
 Сценарий проходит на реальных данных; пункт чек-листа OWASP
 по затронутой области закрыт; изменение показано на пятничном демо.`;
 
-const EXPERTS = [
+/* сервисный пул — шесть направлений плюс ментор */
+const SERVICE = [
   { icon: "🧑‍✈️", dir: "Ментор потока",     what: "Вопросы, блокеры, навигация, темп", format: "Telegram, SLA 4 раб. часа", weeks: "0–8, постоянно", indiv: false },
   { icon: "💻", dir: "Разработка",          what: "Архитектура, код-ревью, сложные участки", format: "Групповой созвон ВТ", weeks: "2–6", indiv: true },
   { icon: "⚙️", dir: "DevOps",              what: "Инфраструктура, деплой, мониторинг", format: "Групповой созвон + шаблон", weeks: "5–6", indiv: true },
   { icon: "🛡️", dir: "Кибербезопасность",   what: "Уязвимости, защита данных, доступы", format: "Чек-лист + сканирование", weeks: "5", indiv: true },
   { icon: "⚖️", dir: "Право",               what: "Компания, оферта, перс. данные, знак", format: "Групповые сессии + шаблоны", weeks: "1–7", indiv: true },
-  { icon: "📦", dir: "Продукт",             what: "Объём MVP, метрики, приоритизация", format: "Групповые созвоны", weeks: "1–4", indiv: true },
-  { icon: "📣", dir: "Маркетинг и продажи", what: "Позиционирование, цена, каналы, сделки", format: "Групповые сессии + питчи", weeks: "7–8", indiv: true },
-  { icon: "💼", dir: "Инвестиционный трек", what: "Питч, оценка, структура сделки", format: "Подготовка к Demo Day", weeks: "8", indiv: true },
+  { icon: "📊", dir: "Бизнес-аналитика",    what: "Метрики, юнит-экономика, приоритизация объёма", format: "Групповые созвоны + разбор", weeks: "1–7", indiv: true },
+  { icon: "📣", dir: "Маркетинг и продажи", what: "Позиционирование, цена, каналы, сделки", format: "Групповые сессии + разборы", weeks: "7–8", indiv: true },
 ];
 
-/* локальный режим: сиды для стены и лиги (без бэкенда) */
+/* локальный режим: сиды потока (без бэкенда) */
 const PEERS = [
-  { name: "Айгерим С.", project: "MedQueue — запись в частные клиники", pts: 720, lvl: 4 },
-  { name: "Данияр Т.",  project: "CargoLink — биржа попутных грузов",   pts: 660, lvl: 4 },
-  { name: "Мария К.",   project: "LexDraft — генератор договоров",      pts: 605, lvl: 3 },
-  { name: "Ерлан Ж.",   project: "AgroScan — учёт полей для фермеров",  pts: 540, lvl: 3 },
-  { name: "Салтанат Б.",project: "EduPay — оплата кружков для школ",    pts: 470, lvl: 3 },
-  { name: "Тимур А.",   project: "FitDesk — абонементы для студий",     pts: 390, lvl: 2 },
-  { name: "Жанна О.",   project: "TenderEye — мониторинг закупок",      pts: 310, lvl: 2 },
+  { name: "Айгерим С.", project: "MedQueue — запись в частные клиники", about: "Запись к врачу без звонков: пациент выбирает слот, клиника видит очередь.", pts: 720, lvl: 4, dock: "C", station: 4, open: true },
+  { name: "Данияр Т.",  project: "CargoLink — биржа попутных грузов",   about: "Перевозчик находит обратную загрузку вместо холостого пробега.", pts: 660, lvl: 4, dock: "B", station: 4, open: true },
+  { name: "Мария К.",   project: "LexDraft — генератор договоров",      about: "Типовой договор из анкеты: 12 полей на входе, документ на выходе.", pts: 605, lvl: 3, dock: "B", station: 3, open: true },
+  { name: "Ерлан Ж.",   project: "AgroScan — учёт полей для фермеров",  about: "Карта полей и заметки агронома.", pts: 540, lvl: 3, dock: "A", station: 3, open: true },
+  { name: "Салтанат Б.",project: "EduPay — оплата кружков для школ",    about: "Оплата школьных кружков в одном окне.", pts: 470, lvl: 3, dock: "B", station: 2, open: true },
+  { name: "Тимур А.",   project: "FitDesk — абонементы для студий",     about: "Учёт абонементов для небольших студий.", pts: 390, lvl: 2, dock: "A", station: 2, open: true },
+  { name: "Жанна О.",   project: "",                                    about: "", pts: 310, lvl: 2, dock: "C", station: 1, open: false },
 ];
 
 const PEER_DEMOS = [
   { author: "Айгерим С.", project: "MedQueue", week: 3, text: "Ключевой сценарий записи работает: пациент выбирает врача, слот бронируется, клиника видит запись в панели.", votes: 5 },
   { author: "Данияр Т.",  project: "CargoLink", week: 3, text: "Собрал матчинг груза и машины через Claude Code. Показал на реальных заявках двух перевозчиков.", votes: 4 },
   { author: "Мария К.",   project: "LexDraft", week: 3, text: "Генерация договора аренды из анкеты: 12 полей → готовый документ. Юрист потока проверил формулировки.", votes: 6 },
-  { author: "Ерлан Ж.",   project: "AgroScan", week: 2, text: "Урезал MVP с 9 функций до одной: карта поля + заметки агронома. CLAUDE.md утверждён на G2.", votes: 3 },
+  { author: "Ерлан Ж.",   project: "AgroScan", week: 2, text: "Урезал MVP с 9 функций до одной: карта поля + заметки агронома. CLAUDE.md утверждён на КТ-2.", votes: 3 },
   { author: "Салтанат Б.",project: "EduPay", week: 2, text: "7 интервью с директорами кружков: боль подтвердили 6 из 7. Ценностное предложение переписала трижды.", votes: 4 },
   { author: "Тимур А.",   project: "FitDesk", week: 3, text: "Каркас на заготовке авторизации программы. Первый спринт закрыт за 4 вечера.", votes: 2 },
 ];
@@ -267,7 +323,7 @@ const PEER_DEMOS = [
 
 let API = null;          // "" = same-origin, "https://…" = удалённый, null = локальный режим
 let TOKEN = localStorage.getItem("shipyard_token") || null;
-const CACHE = { demos: null, league: null };
+const CACHE = { demos: null, league: null, flow: null };
 
 function candidateApi() {
   const o = localStorage.getItem("shipyard_api");
@@ -290,36 +346,54 @@ async function apiCall(path, method = "GET", body) {
 }
 
 function applyMe(d) {
-  S.name = d.user.name;
-  S.project = d.user.project;
-  S.tariff = d.user.tariff;
-  S.email = d.user.email;
+  const u = d.user || {};
+  S.name = u.name;
+  S.project = u.project;
+  S.tariff = u.tariff;
+  S.email = u.email;
+  S.avatar = u.avatar || "";
+  S.about = u.about || "";
+  S.link = u.link || "";
+  S.repo = u.repo || "";
+  S.isPublic = u.isPublic !== false;
+  S.dock = u.dock || "";
+  S.complexity = u.complexity || 0;
   S.done = d.done || {};
   S.sec = d.sec || {};
   S.legal = d.legal || {};
   S.demos = d.demos || [];
+  S.github = d.github || null;
 }
 
 function logout(rerender = true) {
   TOKEN = null;
   localStorage.removeItem("shipyard_token");
-  CACHE.demos = CACHE.league = null;
-  if (rerender) go("dashboard");
+  CACHE.demos = CACHE.league = CACHE.flow = null;
+  if (rerender) go("map");
 }
 
 /* ---------------- состояние ---------------- */
 
-const KEY = "shipyard_state_v1";
+const KEY = "shipyard_state_v2";
 
 const defaultState = () => ({
   name: "Гость",
   project: "Мой продукт",
   tariff: "Pro",
   email: "",
+  avatar: "",
+  about: "",
+  link: "",
+  repo: "",
+  isPublic: true,
+  dock: "",
+  complexity: 0,
+  github: null,
   startDate: Date.now(),
   done: {}, sec: {}, legal: {},
   demos: [], votes: {},
   kbTab: "materials",
+  selStation: null,
 });
 
 let S;
@@ -330,26 +404,26 @@ const save = () => { if (API === null) localStorage.setItem(KEY, JSON.stringify(
 
 /* ---------------- вычисления ---------------- */
 
-const phaseDone = p => p.tasks.every(t => S.done[t.id]);
-const phaseProgress = p => p.tasks.filter(t => S.done[t.id]).length / p.tasks.length;
+const stationDone = p => p.tasks.every(t => S.done[t.id]);
+const stationProgress = p => p.tasks.filter(t => S.done[t.id]).length / p.tasks.length;
 
-function currentPhaseIdx() {
-  const i = PHASES.findIndex(p => !phaseDone(p));
-  return i === -1 ? PHASES.length - 1 : i;
+function currentStationIdx() {
+  const i = STATIONS.findIndex(p => !stationDone(p));
+  return i === -1 ? STATIONS.length - 1 : i;
 }
 
-function gatePassed(p) { return p.gate ? phaseDone(p) : false; }
+function cpPassed(p) { return p.cp ? stationDone(p) : false; }
 
 function level() {
   let lvl = LEVELS[0];
-  for (const l of LEVELS) if (phaseDone(PHASES[l.phase])) lvl = l; else break;
+  for (const l of LEVELS) if (stationDone(STATIONS[l.station])) lvl = l; else break;
   return lvl;
 }
 
 function points() {
   let pts = 0;
-  for (const p of PHASES) for (const t of p.tasks) if (S.done[t.id]) pts += t.pts;
-  for (const p of PHASES) if (p.gate && gatePassed(p)) pts += 100;
+  for (const p of STATIONS) for (const t of p.tasks) if (S.done[t.id]) pts += t.pts;
+  for (const p of STATIONS) if (p.cp && cpPassed(p)) pts += 100;
   for (const g of SECURITY) for (const i of g.items) if (S.sec[i.id]) pts += 10;
   for (const id in S.legal) if (S.legal[id]) pts += 15;
   pts += S.demos.length * 50;
@@ -358,9 +432,22 @@ function points() {
 }
 
 function totalProgress() {
-  const all = PHASES.flatMap(p => p.tasks);
+  const all = STATIONS.flatMap(p => p.tasks);
   return all.filter(t => S.done[t.id]).length / all.length;
 }
+
+/* Позиция персонажа: станция плюс доля закрытых задач внутри неё.
+   По доле всех задач считать нельзя — с закрытыми поздними станциями
+   персонаж уходил бы вперёд своих флагов. */
+function walkPos() {
+  const cur = currentStationIdx();
+  const p = STATIONS[cur];
+  const frac = p.tasks.filter(t => S.done[t.id]).length / p.tasks.length;
+  return Math.max(0, Math.min(1, (cur + frac) / STATIONS.length));
+}
+
+const tools = () => STATIONS.filter(stationDone);
+const doorOpen = () => STATIONS.every(stationDone);
 
 function earnedBadges() { return BADGES.filter(b => b.test(S)); }
 
@@ -370,8 +457,15 @@ function demoDayDate() {
   return d;
 }
 
-const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
 const fmt = n => n.toLocaleString("ru-RU");
+
+/* аватар: фото участника либо сгенерированный спрайт по имени */
+function myAvatar() {
+  if (S.avatar) return S.avatar;
+  return GAME.PixelAvatar.generated(S.name || "?");
+}
+const peerAvatar = p => p.avatar || GAME.PixelAvatar.generated(p.name || "?");
 
 /* ---------------- каркас ---------------- */
 
@@ -383,31 +477,37 @@ function toast(msg) {
   toastEl.textContent = msg;
   toastEl.classList.add("show");
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => toastEl.classList.remove("show"), 2600);
+  toastTimer = setTimeout(() => toastEl.classList.remove("show"), 2800);
 }
 
 function refreshChrome() {
   document.getElementById("userName").textContent = S.name;
   document.getElementById("userTariff").textContent =
-    API !== null && !TOKEN ? "Не в системе" : `Тариф ${S.tariff} · Поток №1`;
-  document.getElementById("userAvatar").textContent = (S.name[0] || "A").toUpperCase();
-  document.getElementById("pillTrack").textContent = `нед. ${currentPhaseIdx()}`;
+    API !== null && !TOKEN ? "Не в системе"
+      : `Тариф ${S.tariff}${S.dock ? " · " + DOCKS[S.dock].name : ""}`;
+  const av = document.getElementById("userAvatar");
+  av.innerHTML = `<img src="${myAvatar()}" alt="">`;
+  document.getElementById("pillTrack").textContent = `ст. ${currentStationIdx()}`;
   const secAll = SECURITY.flatMap(g => g.items);
-  const secDone = secAll.filter(i => S.sec[i.id]).length;
-  document.getElementById("pillSec").textContent = `${secDone}/${secAll.length}`;
+  document.getElementById("pillSec").textContent =
+    `${secAll.filter(i => S.sec[i.id]).length}/${secAll.length}`;
+  const pt = document.getElementById("pillTools");
+  if (pt) pt.textContent = `${tools().length}/9`;
 }
 
-let activeView = "dashboard";
+let activeView = "map";
 
 async function go(name) {
   if (API !== null && !TOKEN) name = "auth";
   activeView = name;
+  if (name !== "auth") history.replaceState(null, "", "#" + name);
   document.querySelectorAll(".side-link").forEach(b =>
     b.classList.toggle("active", b.dataset.view === name));
   try {
     if (API !== null && TOKEN) {
       if (name === "demos" && !CACHE.demos) CACHE.demos = (await apiCall("/demos")).demos;
       if (name === "league") CACHE.league = (await apiCall("/league")).rows;
+      if (name === "flow" || name === "map") CACHE.flow = (await apiCall("/flow")).rows;
     }
   } catch (e) { toast(e.message); }
   render();
@@ -421,6 +521,22 @@ document.querySelectorAll(".side-link").forEach(b =>
 document.getElementById("navToggle").addEventListener("click", () =>
   document.getElementById("sidebar").classList.toggle("open"));
 
+/* участники потока для карты и дашборда */
+function flowRows() {
+  if (API !== null) return CACHE.flow || [];
+  const me = {
+    name: S.name, project: S.project, about: S.about, avatar: S.avatar, open: S.isPublic,
+    dock: S.dock, points: points(), level: level().n, station: currentStationIdx(),
+    walk: walkPos(), demos: S.demos.length, link: S.link, me: true,
+  };
+  const peers = PEERS.map(p => ({
+    name: p.name, project: p.open ? p.project : "", about: p.open ? p.about : "",
+    avatar: "", open: p.open, dock: p.dock, points: p.pts, level: p.lvl,
+    station: p.station, walk: p.station / 8, demos: p.lvl, link: "", me: false,
+  }));
+  return [me, ...peers].sort((a, b) => b.walk - a.walk || b.points - a.points);
+}
+
 /* ---------------- views ---------------- */
 
 const VIEWS = {
@@ -432,7 +548,7 @@ const VIEWS = {
         <div style="text-align:center;margin-bottom:26px">
           <div style="font-size:44px">⚓</div>
           <h1 style="font-size:28px;font-weight:700;letter-spacing:-.02em;margin-top:8px">SHIPYARD</h1>
-          <p class="muted" style="margin-top:6px">Войдите, чтобы прогресс, демо и лига жили на сервере</p>
+          <p class="muted" style="margin-top:6px">Войдите, чтобы путь, демо и лига жили на сервере</p>
         </div>
         <div class="panel">
           <div class="kb-tabs" style="margin-bottom:18px">
@@ -444,7 +560,7 @@ const VIEWS = {
               <div class="field"><label>Имя</label><input id="aName" required placeholder="Как к вам обращаться"></div>
               <div class="field"><label>Проект</label><input id="aProject" placeholder="Название вашего продукта"></div>
               <div class="field"><label>Тариф</label>
-                <select id="aTariff"><option>Solo</option><option selected>Pro</option><option>Venture</option></select>
+                <select id="aTariff"><option>Solo</option><option selected>Pro</option><option>Partner</option></select>
               </div>` : ""}
             <div class="field"><label>E-mail</label><input id="aEmail" type="email" required placeholder="you@example.com"></div>
             <div class="field"><label>Пароль</label><input id="aPass" type="password" required minlength="6" placeholder="Минимум 6 символов"></div>
@@ -456,105 +572,145 @@ const VIEWS = {
       </div>`;
   },
 
-  /* ---- обзор ---- */
-  dashboard() {
+  /* ---- карта пути: главный экран ---- */
+  map() {
+    const cur = currentStationIdx();
+    const sel = S.selStation === null ? cur : Math.max(0, Math.min(8, S.selStation));
+    const st = STATIONS[sel];
     const lvl = level();
-    const cur = currentPhaseIdx();
-    const p = PHASES[cur];
-    const prog = Math.round(totalProgress() * 100);
-    const badges = earnedBadges();
+    const prog = Math.round(walkPos() * 100);
     const dd = demoDayDate();
     const daysLeft = Math.max(0, Math.ceil((dd - Date.now()) / 86400000));
+    const done = stationDone(st);
+    const locked = sel > cur;
+    const got = tools();
 
     return `
-      <div class="hero-card">
-        <div class="hc-label">Неделя ${p.week} · ${esc(p.phase)}</div>
-        <h1>${esc(S.project)}</h1>
-        <p>${esc(p.desc)}</p>
-        <div class="hc-stats">
+      ${API === null ? `
+        <div class="notice">
+          <b>Демо-режим.</b> Бэкенд не подключён: прогресс хранится в этом браузере, аккаунтов и общего
+          потока нет, участники рядом — из демонстрационного набора. Всё остальное работает по-настоящему:
+          карта, миссии, инструменты, персонаж из вашего фото.
+        </div>` : ""}
+      ${!S.dock ? `
+        <div class="notice">
+          <b>Пройдите скрининг сложности проекта.</b> Он определяет ваш док — группу проектов схожей
+          сложности. Сравнивать сложный проект с простым по скорости нечестно, поэтому лига считается внутри дока.
+          <button class="btn btn-primary btn-sm" data-go="screening" style="margin-left:auto">Пройти за 2 минуты</button>
+        </div>` : ""}
+
+      <div class="map-head">
+        <div>
+          <div class="mh-label">Станция ${st.week} из 8 · ${esc(STATIONS[cur].phase)}</div>
+          <h1>${esc(S.project)}</h1>
+        </div>
+        <div class="mh-stats">
           <div><b>${lvl.emoji} ${lvl.name}</b><span>уровень ${lvl.n} из 8</span></div>
           <div><b>${fmt(points())}</b><span>очков</span></div>
-          <div><b>${S.demos.length}</b><span>демо сдано</span></div>
-          <div><b>${daysLeft} дн.</b><span>до Demo Day</span></div>
-        </div>
-        <div class="bar"><i style="width:${prog}%"></i></div>
-      </div>
-
-      <div class="panel-row cols-3">
-        <div class="panel tile">
-          <div class="t-icon">🗺️</div>
-          <div class="t-num">${prog}%</div>
-          <div class="t-cap">трека пройдено · <a href="#" data-go="track">к треку</a></div>
-        </div>
-        <div class="panel tile">
-          <div class="t-icon">🛡️</div>
-          <div class="t-num">${SECURITY.flatMap(g=>g.items).filter(i=>S.sec[i.id]).length}/${SECURITY.flatMap(g=>g.items).length}</div>
-          <div class="t-cap">пунктов безопасности · <a href="#" data-go="security">к чек-листу</a></div>
-        </div>
-        <div class="panel tile">
-          <div class="t-icon">🏅</div>
-          <div class="t-num">${badges.length}/${BADGES.length}</div>
-          <div class="t-cap">бейджей получено · <a href="#" data-go="profile">в профиль</a></div>
+          <div><b>${got.length}/9</b><span>инструментов</span></div>
+          <div><b>${daysLeft} дн.</b><span>до защиты</span></div>
         </div>
       </div>
 
-      <div class="panel-row cols-2">
-        <div class="panel">
-          <h2>Эта неделя: ${esc(p.title)}</h2>
-          <p class="muted" style="margin-bottom:14px">Фаза ${esc(p.phase)} · артефакт: ${esc(p.artifact)}</p>
-          ${p.tasks.map(t => taskRow(t)).join("")}
-          ${p.gate ? gateBanner(p) : ""}
+      <div class="map-stage">
+        <canvas id="mapCanvas"></canvas>
+        <div class="map-hint">Нажмите на станцию, чтобы раскрыть миссию · вы прошли ${prog}% пути</div>
+      </div>
+
+      <div class="tool-shelf">
+        ${STATIONS.map((p, i) => {
+          const has = stationDone(p);
+          return `<div class="tool-slot ${has ? "has" : ""}" title="${esc(p.toolName)} — станция ${i}">
+            <canvas class="tool-ic" data-tool="${esc(p.tool)}" width="32" height="32"></canvas>
+            <small>${esc(has ? p.toolName : "—")}</small>
+          </div>`;
+        }).join("")}
+        <div class="tool-slot door ${doorOpen() ? "has" : ""}" title="Дверь MVP">
+          <div class="door-ic">🚪</div>
+          <small>${doorOpen() ? "Открыта" : "Дверь MVP"}</small>
         </div>
-        <div class="panel">
-          <h2>Ритм недели</h2>
-          <p class="muted" style="margin-bottom:8px">Структура — на платформе, скорость — в Telegram.</p>
-          ${[
-            ["ПН", "Материалы фазы", "асинхронно, база знаний"],
-            ["ВТ", "Групповой созвон с экспертом", "разбор фазы SDLC · 60–90 мин"],
-            ["ЧТ", "Профильный созвон", "направление недели · 60–90 мин"],
-            ["ПТ", "Демо — обязательное", "5 минут, публично, очки"],
-            ["·", "Ментор в Telegram", "SLA — 4 рабочих часа, будни 10:00–19:00"],
-          ].map(([d, t, n]) => `
-            <div class="kb-item">
-              <div class="k-icon" style="font-size:13px;font-weight:700;color:var(--accent)">${d}</div>
-              <div><b>${t}</b><small>${n}</small></div>
-            </div>`).join("")}
-          <div class="divider"></div>
-          <button class="btn btn-primary btn-sm" data-go="demos">Сдать пятничное демо</button>
+      </div>
+
+      <div class="panel station-panel ${done ? "is-done" : locked ? "is-locked" : "is-current"}">
+        <div class="sp-head">
+          <div class="sp-num">${done ? "✓" : st.week}</div>
+          <div>
+            <b>${esc(st.title)}</b>
+            <small>${esc(st.phase)} · награда: ${esc(st.toolName)}${locked ? " · станция впереди" : ""}</small>
+          </div>
+          <div class="sp-nav">
+            <button class="btn btn-ghost btn-sm" data-station="${Math.max(0, sel - 1)}" ${sel === 0 ? "disabled" : ""}>←</button>
+            <button class="btn btn-ghost btn-sm" data-station="${Math.min(8, sel + 1)}" ${sel === 8 ? "disabled" : ""}>→</button>
+          </div>
         </div>
+        <p class="sp-story">${esc(st.story)}</p>
+        <div class="sp-tasks">
+          ${st.tasks.map(t => taskRow(t)).join("")}
+        </div>
+        <div class="artifact-box">📦 <b>Артефакт недели:</b>&nbsp;${esc(st.artifact)}</div>
+        ${st.cp ? cpBanner(st) : ""}
+        ${done ? `<div class="reward-box">
+            <canvas class="tool-ic big" data-tool="${esc(st.tool)}" width="48" height="48"></canvas>
+            <div><b>Инструмент получен: ${esc(st.toolName)}</b>
+            <small>Станция закрыта — персонаж поднялся выше по карте.</small></div>
+          </div>` : ""}
+      </div>
+
+      <div class="panel">
+        <h2>Кто ещё идёт рядом</h2>
+        <p class="muted" style="margin-bottom:14px">Позиции участников потока на этой же карте. Подробности — в разделе «Кто где идёт».</p>
+        ${flowRows().slice(0, 5).map(r => flowRow(r)).join("")}
+        <button class="btn btn-ghost btn-sm" data-go="flow" style="margin-top:12px">Весь поток</button>
       </div>`;
   },
 
-  /* ---- трек ---- */
-  track() {
-    const cur = currentPhaseIdx();
+  /* ---- скрининг сложности ---- */
+  screening() {
     return `
       <div class="page-head">
-        <h1>Трек проекта · SDLC</h1>
-        <p>Девять фаз, пять gates. Переход между фазами не автоматический: gate закрывается только проверяемым артефактом.</p>
+        <h1>Скрининг сложности</h1>
+        <p>Семь вопросов о продукте, а не о вас. По ним проект попадает в док — группу схожих по сложности проектов. Лига и призы считаются внутри дока: медицинский сервис с интеграциями не соревнуется с записной книжкой.</p>
       </div>
-      ${PHASES.map((p, i) => {
-        const done = phaseDone(p);
-        const cls = done ? "done" : i === cur ? "current open" : i > cur ? "locked" : "";
-        const prog = Math.round(phaseProgress(p) * 100);
-        return `
-        <div class="phase-card ${cls}" data-phase="${i}">
-          <div class="phase-head" data-toggle="${i}">
-            <div class="phase-num">${done ? "✓" : p.week}</div>
-            <div class="phase-title">
-              <b>${esc(p.title)}</b>
-              <small>Неделя ${p.week} · ${esc(p.phase)} · ${esc(p.artifact)}</small>
+      <form id="screenForm">
+        ${SCREENING.map((qq, i) => `
+          <div class="panel screen-q">
+            <b>${i + 1}. ${esc(qq.q)}</b>
+            <div class="screen-opts">
+              ${qq.opts.map(([label, val], j) => `
+                <label class="screen-opt">
+                  <input type="radio" name="${qq.id}" value="${val}" ${j === 0 ? "checked" : ""}>
+                  <span>${esc(label)}</span>
+                </label>`).join("")}
             </div>
-            <div class="phase-state">${done ? "Завершено" : i === cur ? "Текущая фаза" : prog > 0 ? prog + "%" : "Впереди"}</div>
-          </div>
-          <div class="phase-body">
-            <p class="muted" style="margin-bottom:10px">${esc(p.desc)}</p>
-            ${p.tasks.map(t => taskRow(t)).join("")}
-            <div class="artifact-box">📦 <b>Артефакт недели:</b>&nbsp;${esc(p.artifact)}</div>
-          </div>
+          </div>`).join("")}
+        <div class="panel">
+          <button class="btn btn-primary" type="submit">Определить док</button>
+          <p class="muted" style="margin-top:12px">Скрининг можно пройти заново, если объём проекта изменился — док пересчитается.</p>
         </div>
-        ${p.gate ? gateBanner(p) : ""}`;
-      }).join("")}`;
+      </form>
+      <div class="panel">
+        <h2>Как читаются доки</h2>
+        ${Object.entries(DOCKS).map(([id, d]) => `
+          <div class="req ok"><div class="r-ic">${id}</div><div><b>${esc(d.name)}</b> — ${esc(d.note)}</div></div>`).join("")}
+      </div>`;
+  },
+
+  /* ---- дашборд потока ---- */
+  flow() {
+    const rows = flowRows();
+    return `
+      <div class="page-head">
+        <h1>Кто где идёт</h1>
+        <p>Общая карта потока: позиция каждого участника, док и последние результаты. Видно, кто вырвался вперёд и у кого стоит спросить, как он прошёл станцию.</p>
+      </div>
+      <div class="notice">
+        <b>Что видят другие.</b> Ваше имя, аватар, станция и очки видны всем участникам потока всегда.
+        Название и описание проекта — только если вы включили публичный профиль. Выключить можно в профиле в любой момент.
+        <button class="btn btn-ghost btn-sm" data-go="profile" style="margin-left:auto">Настроить</button>
+      </div>
+      <div class="panel">
+        ${rows.map(r => flowRow(r, true)).join("")}
+      </div>`;
   },
 
   /* ---- стена демо ---- */
@@ -565,9 +721,9 @@ const VIEWS = {
       cards = list.map(d => `
         <div class="demo-card">
           <div class="d-head">
-            <div class="avatar" style="${d.mine ? "" : "background:linear-gradient(135deg,#af52de,#ff2d55)"}">${esc(d.name[0] || "?")}</div>
+            <div class="avatar"><img src="${esc(d.avatar || GAME.PixelAvatar.generated(d.name))}" alt=""></div>
             <div><b>${esc(d.name)} — ${esc(d.project)}</b><small>${d.mine ? "моё демо" : "участник потока"}</small></div>
-            <span class="d-week">нед. ${d.week}</span>
+            <span class="d-week">ст. ${d.week}</span>
           </div>
           <p>${esc(d.text)}</p>
           <div class="d-actions">
@@ -582,9 +738,9 @@ const VIEWS = {
       const myDemos = S.demos.map(d => `
         <div class="demo-card">
           <div class="d-head">
-            <div class="avatar">${esc((S.name[0] || "A").toUpperCase())}</div>
+            <div class="avatar"><img src="${myAvatar()}" alt=""></div>
             <div><b>${esc(S.name)} — ${esc(S.project)}</b><small>моё демо</small></div>
-            <span class="d-week">нед. ${d.week}</span>
+            <span class="d-week">ст. ${d.week}</span>
           </div>
           <p>${esc(d.text)}</p>
           ${d.link ? `<a href="${esc(d.link)}" target="_blank" rel="noopener" class="link-arrow" style="font-size:14px">Открыть</a>` : ""}
@@ -594,9 +750,9 @@ const VIEWS = {
         return `
         <div class="demo-card">
           <div class="d-head">
-            <div class="avatar" style="background:linear-gradient(135deg,#af52de,#ff2d55)">${esc(d.author[0])}</div>
+            <div class="avatar"><img src="${GAME.PixelAvatar.generated(d.author)}" alt=""></div>
             <div><b>${esc(d.author)} — ${esc(d.project)}</b><small>участник потока</small></div>
-            <span class="d-week">нед. ${d.week}</span>
+            <span class="d-week">ст. ${d.week}</span>
           </div>
           <p>${esc(d.text)}</p>
           <div class="d-actions">
@@ -623,8 +779,16 @@ const VIEWS = {
             <textarea id="demoText" placeholder="Например: ключевой сценарий работает от входа до результата на реальных данных…" required></textarea>
           </div>
           <div class="field">
-            <label>Ссылка (прод, прототип или запись) — необязательно</label>
-            <input id="demoLink" type="url" placeholder="https://…">
+            <label>Ссылка: домен продукта, прототип или запись</label>
+            <input id="demoLink" type="url" placeholder="https://…" value="${esc(S.link)}">
+          </div>
+          <div class="field">
+            <label>Описание проекта для потока (видно, если профиль публичный)</label>
+            <textarea id="demoAbout" placeholder="Одно-два предложения: для кого продукт и что он решает">${esc(S.about)}</textarea>
+          </div>
+          <div class="disclaimer">
+            Сдавая демо, вы соглашаетесь: запись появляется на стене потока, а ваша позиция на карте
+            видна другим участникам. Название и описание проекта показываются, только если включён публичный профиль.
           </div>
           <button class="btn btn-primary" type="submit">Опубликовать демо · +50 очков</button>
         </form>
@@ -632,21 +796,26 @@ const VIEWS = {
       <div class="demo-grid">${cards}</div>`;
   },
 
-  /* ---- лига ---- */
+  /* ---- лига дока ---- */
   league() {
     let rows;
     if (API !== null) {
       rows = (CACHE.league || []).map(r => ({ ...r, name: r.me ? r.name + " (вы)" : r.name }));
     } else {
-      const me = { name: S.name + " (вы)", project: S.project, pts: points(), lvl: level().n, me: true };
-      rows = [...PEERS, me].sort((a, b) => b.pts - a.pts);
+      const me = { name: S.name + " (вы)", project: S.project, pts: points(), lvl: level().n, me: true, avatar: S.avatar };
+      rows = [...PEERS.filter(p => !S.dock || p.dock === S.dock)
+        .map(p => ({ name: p.name, project: p.open ? p.project : "проект скрыт", pts: p.pts, lvl: p.lvl, avatar: "" })), me]
+        .sort((a, b) => b.pts - a.pts);
     }
     const medals = ["🥇", "🥈", "🥉"];
+    const dock = S.dock ? DOCKS[S.dock] : null;
     return `
       <div class="page-head">
-        <h1>Лига «Док А»</h1>
-        <p>Мини-группа участников схожей стадии. Лиги вместо общего рейтинга: отстающие не демотивированы разрывом с лидерами.</p>
+        <h1>${dock ? esc(dock.name) : "Лига"}</h1>
+        <p>${dock ? esc(dock.note) + "." : "Док определяется скринингом сложности."} Соревнование идёт только внутри дока: проекты сравниваются с сопоставимыми по объёму работ, а не по удачно выбранной простой теме.</p>
       </div>
+      ${!S.dock ? `<div class="notice"><b>Док не определён.</b> Пройдите скрининг сложности — без него лига считается по общему потоку.
+        <button class="btn btn-primary btn-sm" data-go="screening" style="margin-left:auto">Пройти</button></div>` : ""}
       <div class="panel">
         <table class="table">
           <thead><tr><th style="width:56px">Место</th><th>Участник</th><th>Проект</th><th>Уровень</th><th style="text-align:right">Очки</th></tr></thead>
@@ -655,7 +824,7 @@ const VIEWS = {
               const lv = LEVELS[Math.max(0, Math.min(7, r.lvl - 1))];
               return `<tr class="${r.me ? "me" : ""}">
                 <td><span class="rank-medal">${medals[i] || (i + 1)}</span></td>
-                <td><b>${esc(r.name)}</b></td>
+                <td><div class="who"><span class="avatar sm"><img src="${esc(r.avatar || GAME.PixelAvatar.generated(r.name))}" alt=""></span><b>${esc(r.name)}</b></div></td>
                 <td style="color:var(--ink-2)">${esc(r.project)}</td>
                 <td><span class="lvl-chip">${lv.emoji} ${lv.name}</span></td>
                 <td style="text-align:right;font-weight:700">${fmt(r.pts)}</td>
@@ -666,17 +835,15 @@ const VIEWS = {
       </div>
       <div class="panel-row cols-2">
         <div class="panel">
-          <h2>Что даёт высокое место</h2>
-          ${["Приоритетный доступ к слотам экспертов на следующей неделе",
-             "Выступление на Demo Day перед инвесторами — для верхней части рейтинга",
-             "Скидка на трек сопровождения после программы",
-             "Приглашение в закрытый venture-трек"]
-            .map(t => `<div class="req ok"><div class="r-ic">✓</div>${t}</div>`).join("")}
+          <h2>Призы потока</h2>
+          <p class="muted" style="margin-bottom:12px">Разыгрываются внутри каждого дока по итогам восьми недель.</p>
+          ${PRIZES.map(p => `
+            <div class="kb-item"><div class="k-icon">${p.emoji}</div><div><b>${esc(p.place)}</b><small>${esc(p.prize)}</small></div></div>`).join("")}
         </div>
         <div class="panel">
           <h2>За что начисляются очки</h2>
           ${[["Пятничное демо", "+50"], ["Интервью с клиентом", "+30"], ["Пункт чек-листа ИБ", "+10"],
-             ["Пройденный gate", "+100"], ["LOI / первый платёж", "+200"], ["Серия из 3 демо", "×1.1"]]
+             ["Пройденная контрольная точка", "+100"], ["Пилот / первый платёж", "+200"], ["Серия из 3 демо", "×1.1"]]
             .map(([t, v]) => `<div class="req ok"><div class="r-ic" style="background:rgba(0,113,227,.1);color:var(--accent);font-size:11px">${v}</div>${t}</div>`).join("")}
           <p class="muted" style="margin-top:12px">Очки — только за проверяемые артефакты. За «время в системе» и строки кода очков нет.</p>
         </div>
@@ -705,8 +872,8 @@ const VIEWS = {
             <div class="ring-label"><b>${pct}%</b><small>закрыто</small></div>
           </div>
           <div>
-            <h2>Готовность к gate G4</h2>
-            <p class="muted" style="max-width:520px">Gate G4 (неделя 6) требует полностью закрытых уровней 1 и 2. Уровень 3 — ручной аудит специалистом — входит в тарифы Pro и Venture.</p>
+            <h2>Готовность к контрольной точке КТ-4</h2>
+            <p class="muted" style="max-width:520px">КТ-4 (станция 6) требует полностью закрытых уровней 1 и 2. Уровень 3 — ручной аудит специалистом — входит в тарифы Pro и Partner.</p>
           </div>
         </div>
       </div>
@@ -730,14 +897,14 @@ const VIEWS = {
     return `
       <div class="page-head">
         <h1>Юридический трек</h1>
-        <p>Идёт параллельно программе. Приём денег — только после публичной оферты на неделе 6. Регистрация компании и товарный знак могут продолжиться после программы — это фиксируется в договоре.</p>
+        <p>Идёт параллельно программе. Приём денег — только после публичной оферты на станции 6. Регистрация компании и товарный знак могут продолжиться после программы — это фиксируется в договоре.</p>
       </div>
       <div class="panel">
         ${LEGAL.map(l => {
           const done = !!S.legal[l.id];
           return `
           <div class="legal-step">
-            <div class="wk">нед. ${l.week}</div>
+            <div class="wk">ст. ${l.week}</div>
             <div><b>${esc(l.title)}</b><small>${esc(l.why)}</small></div>
             <button class="status-chip ${done ? "done" : "wait"}" data-legal="${l.id}" style="border:none;cursor:pointer">
               ${done ? "✓ Готово" : "Отметить"}
@@ -747,7 +914,7 @@ const VIEWS = {
       </div>
       <div class="panel">
         <h2>Права на продукт</h2>
-        <p class="muted">Договор с программой фиксирует с недели 0: полные права на код, дизайн и данные остаются у участника. Условия venture-сделки опубликованы до начала программы и одинаковы для всех; от сделки можно отказаться без потери прав.</p>
+        <p class="muted">Договор с программой фиксирует со станции 0: полные права на код, дизайн и данные остаются у участника. Условия партнёрского трека публикуются до начала программы и одинаковы для всех; от них можно отказаться без потери прав.</p>
       </div>`;
   },
 
@@ -755,24 +922,24 @@ const VIEWS = {
   kb() {
     const tab = S.kbTab;
     const tabs = [
-      ["materials", "Материалы недель"],
+      ["materials", "Материалы станций"],
       ["claudemd", "Шаблон CLAUDE.md"],
       ["prompts", "Библиотека промптов"],
     ];
     let body = "";
     if (tab === "materials") {
-      const cur = currentPhaseIdx();
+      const cur = currentStationIdx();
       body = `<div class="panel">${KB.materials.map(m => `
         <div class="kb-item" style="${m.week > cur ? "opacity:.45" : ""}">
           <div class="k-icon">${m.icon}</div>
-          <div><b>${esc(m.title)}</b><small>Неделя ${m.week} · ${esc(m.note)}${m.week > cur ? " · откроется по треку" : ""}</small></div>
+          <div><b>${esc(m.title)}</b><small>Станция ${m.week} · ${esc(m.note)}${m.week > cur ? " · откроется по пути" : ""}</small></div>
           <span class="k-type">${m.type}</span>
         </div>`).join("")}</div>`;
     } else if (tab === "claudemd") {
       body = `
         <div class="panel">
           <h2>Готовый шаблон CLAUDE.md</h2>
-          <p class="muted">Файл инструкций проекта: контекст, правила и архитектурные решения для агента. Заполняется на неделе 2 и живёт с проектом дальше.</p>
+          <p class="muted">Файл инструкций проекта: контекст, правила и архитектурные решения для агента. Заполняется на станции 2 и живёт с проектом дальше.</p>
           <pre class="code">${esc(CLAUDE_MD)}</pre>
           <button class="btn btn-dark btn-sm" id="copyMd" style="margin-top:14px">Скопировать шаблон</button>
         </div>`;
@@ -787,7 +954,7 @@ const VIEWS = {
     return `
       <div class="page-head">
         <h1>База знаний</h1>
-        <p>Материалы фаз, шаблоны, чек-листы, библиотека промптов и паттернов вайб-кодинга. Публикуются по понедельникам.</p>
+        <p>Материалы станций, шаблоны, чек-листы, библиотека промптов и паттернов вайб-кодинга. Публикуются по понедельникам.</p>
       </div>
       <div class="kb-tabs">
         ${tabs.map(([id, name]) => `<button class="kb-tab ${tab === id ? "active" : ""}" data-tab="${id}">${name}</button>`).join("")}
@@ -795,19 +962,19 @@ const VIEWS = {
       ${body}`;
   },
 
-  /* ---- эксперты ---- */
+  /* ---- сервисный пул ---- */
   experts() {
     const isPro = S.tariff !== "Solo";
     return `
       <div class="page-head">
-        <h1>Экспертный пул</h1>
-        <p>Групповой контур — всем: два созвона в неделю и ментор в Telegram. Индивидуальные слоты — дифференциатор тарифов Pro и Venture.</p>
+        <h1>Сервисный пул</h1>
+        <p>Групповой контур — всем: два созвона в неделю и ментор в Telegram. Индивидуальные слоты — дифференциатор тарифов Pro и Partner.</p>
       </div>
       <div class="panel">
         <table class="table">
-          <thead><tr><th></th><th>Направление</th><th>Что закрывает</th><th>Формат</th><th>Недели</th><th></th></tr></thead>
+          <thead><tr><th></th><th>Направление</th><th>Что закрывает</th><th>Формат</th><th>Станции</th><th></th></tr></thead>
           <tbody>
-            ${EXPERTS.map((e, i) => `
+            ${SERVICE.map((e, i) => `
               <tr>
                 <td style="font-size:20px">${e.icon}</td>
                 <td><b>${esc(e.dir)}</b></td>
@@ -817,7 +984,7 @@ const VIEWS = {
                 <td>${e.indiv
                   ? (isPro
                       ? `<button class="btn btn-ghost btn-sm" data-book="${i}">Слот</button>`
-                      : `<span class="status-chip wait">Pro / Venture</span>`)
+                      : `<span class="status-chip wait">Pro / Partner</span>`)
                   : `<span class="status-chip done">Всегда на связи</span>`}</td>
               </tr>`).join("")}
           </tbody>
@@ -835,21 +1002,20 @@ const VIEWS = {
     const diff = Math.max(0, dd - Date.now());
     const days = Math.floor(diff / 86400000);
     const hours = Math.floor((diff % 86400000) / 3600000);
-    const g5 = gatePassed(PHASES[7]);
     const reqs = [
-      { ok: gatePassed(PHASES[1]), label: "G1 — боль подтверждена интервью" },
-      { ok: gatePassed(PHASES[2]), label: "G2 — объём MVP утверждён" },
-      { ok: gatePassed(PHASES[4]), label: "G3 — ключевой сценарий на реальных данных" },
-      { ok: gatePassed(PHASES[6]), label: "G4 — безопасность закрыта, продукт в проде" },
-      { ok: g5, label: "G5 — предзаказ, LOI или пилотное соглашение" },
-      { ok: !!S.done["w8_deck"], label: "Питч-дек собран" },
-      { ok: !!S.done["w8_dry"], label: "Прогон питча с ментором пройден" },
+      { ok: cpPassed(STATIONS[1]), label: "КТ-1 — боль подтверждена интервью" },
+      { ok: cpPassed(STATIONS[2]), label: "КТ-2 — объём MVP утверждён" },
+      { ok: cpPassed(STATIONS[4]), label: "КТ-3 — ключевой сценарий на реальных данных" },
+      { ok: cpPassed(STATIONS[6]), label: "КТ-4 — безопасность закрыта, продукт в проде" },
+      { ok: cpPassed(STATIONS[7]), label: "КТ-5 — продукт в рабочей среде у первых клиентов" },
+      { ok: !!S.done["w8_deck"], label: "Разбор проекта собран" },
+      { ok: !!S.done["w8_dry"], label: "Прогон защиты с ментором пройден" },
     ];
     const okCount = reqs.filter(r => r.ok).length;
     return `
       <div class="page-head">
         <h1>Demo Day</h1>
-        <p>5 минут питча, 3 минуты вопросов. Жюри: инвесторы, отраслевые заказчики, технические эксперты и внешний член с правом вето. Оценка по осям: проблема, решение, трекшн, команда.</p>
+        <p>5 минут разбора, 3 минуты вопросов. В зале — отраслевые эксперты, практики и заказчики из вашей индустрии. Оценка по осям: проблема, решение, результат, план развития. Письменная обратная связь каждому.</p>
       </div>
       <div class="dd-count">
         <div class="dd-unit"><b>${days}</b><span>дней</span></div>
@@ -859,7 +1025,7 @@ const VIEWS = {
       <div class="panel-row cols-2">
         <div class="panel">
           <h2>Готовность к сцене · ${okCount}/${reqs.length}</h2>
-          <p class="muted" style="margin-bottom:10px">Выступают проекты, прошедшие gate G5. Остальные — зрители и участники нетворкинга.</p>
+          <p class="muted" style="margin-bottom:10px">Выступают проекты, прошедшие КТ-5. Остальные — зрители и участники разбора.</p>
           ${reqs.map(r => `<div class="req ${r.ok ? "ok" : "no"}"><div class="r-ic">${r.ok ? "✓" : "·"}</div>${esc(r.label)}</div>`).join("")}
         </div>
         <div class="panel">
@@ -867,12 +1033,48 @@ const VIEWS = {
           ${[
             ["🧗", "Самостоятельный трек", "Забираете всё и растёте сами. Продукт, код и права — ваши."],
             ["🤝", "Сопровождение", "Подписка на нашу команду по фиксированной прозрачной ставке."],
-            ["🚀", "Venture", "Мы забираем разработку целиком и входим в долю. Только по приглашению, условия опубликованы до старта."],
+            ["🚀", "Партнёрский трек", "Мы берём разработку на себя и входим в проект как партнёр. Только по приглашению, условия публикуются заранее."],
           ].map(([ic, t, n]) => `
             <div class="kb-item"><div class="k-icon">${ic}</div><div><b>${t}</b><small>${n}</small></div></div>`).join("")}
           <div class="divider"></div>
-          <p class="muted">Мы не обещаем инвестиции — мы обещаем доступ и подготовку: питч, подтверждённые метрики и людей, принимающих решения, в зале.</p>
+          <p class="muted">Мы обещаем доступ и подготовку: качественный разбор, подтверждённые метрики и практиков отрасли в зале.</p>
         </div>
+      </div>`;
+  },
+
+  /* ---- сертификат ---- */
+  certificate() {
+    const open = doorOpen();
+    const lvl = level();
+    const num = `SHP-1-${String(hashNum(S.email || S.name)).padStart(4, "0")}`;
+    return `
+      <div class="page-head">
+        <h1>Сертификат</h1>
+        <p>Выдаётся за пройденный путь: девять станций, пять контрольных точек, продукт в рабочей среде. Не за время в программе.</p>
+      </div>
+      <div class="cert ${open ? "open" : "locked"}">
+        <div class="cert-inner">
+          <div class="cert-top">⚓ SHIPYARD · Поток №1</div>
+          <div class="cert-name">${esc(S.name)}</div>
+          <div class="cert-sub">прошёл путь от идеи до продукта в рабочей среде</div>
+          <div class="cert-project">${esc(S.project)}</div>
+          <div class="cert-row">
+            <div><b>${S.dock ? esc(DOCKS[S.dock].name) : "—"}</b><span>док</span></div>
+            <div><b>${fmt(points())}</b><span>очков</span></div>
+            <div><b>${lvl.emoji} ${lvl.name}</b><span>уровень</span></div>
+            <div><b>${tools().length}/9</b><span>станций</span></div>
+          </div>
+          <div class="cert-num">№ ${num}</div>
+          ${open ? "" : `<div class="cert-lock">🔒 Откроется, когда все девять станций закрыты и дверь MVP открыта</div>`}
+        </div>
+      </div>
+      <div class="panel">
+        <h2>Что даёт сертификат</h2>
+        ${["Публичная витрина проекта в каталоге выпускников",
+           "Приоритет в отборе на партнёрский трек и сопровождение",
+           "Участие в розыгрыше призов дока по итогам потока",
+           "Вход в закрытое сообщество выпускников"]
+          .map(t => `<div class="req ok"><div class="r-ic">✓</div>${t}</div>`).join("")}
       </div>`;
   },
 
@@ -880,27 +1082,29 @@ const VIEWS = {
   profile() {
     const lvl = level();
     const badges = earnedBadges().map(b => b.id);
+    const gh = S.github;
     return `
       <div class="page-head">
         <h1>Профиль основателя</h1>
-        <p>Открытый профиль — основа нетворкинга: проект, стадия, стек, потребности. По нему вас находят соучастники и инвесторы.</p>
+        <p>Аватар, проект и настройки видимости. Аватар превращается в вашего персонажа на карте пути.</p>
       </div>
+
       <div class="panel-row cols-2">
         <div class="panel">
-          <h2>Данные</h2>
-          ${S.email ? `<p class="muted" style="margin-top:4px">${esc(S.email)}</p>` : ""}
-          <form id="profileForm" style="margin-top:12px">
-            <div class="field"><label>Имя</label><input id="pfName" value="${esc(S.name)}"></div>
-            <div class="field"><label>Проект</label><input id="pfProject" value="${esc(S.project)}"></div>
-            <div class="field"><label>Тариф</label>
-              <select id="pfTariff">
-                ${["Solo", "Pro", "Venture"].map(t => `<option ${S.tariff === t ? "selected" : ""}>${t}</option>`).join("")}
-              </select>
+          <h2>Персонаж</h2>
+          <p class="muted" style="margin-bottom:14px">Загрузите фото — платформа снимет с него цвета (причёска, кожа, костюм, галстук) и соберёт пиксельного персонажа. Само фото никуда не отправляется: обработка идёт в браузере, на сервер уходит только спрайт 16×16.</p>
+          <div class="avatar-editor">
+            <div class="avatar-preview"><img id="avPreview" src="${myAvatar()}" alt=""></div>
+            <div class="avatar-actions">
+              <label class="btn btn-primary btn-sm">
+                Загрузить фото<input type="file" id="avFile" accept="image/*" hidden>
+              </label>
+              <button class="btn btn-ghost btn-sm" id="avGen">Собрать без фото</button>
+              ${S.avatar ? `<button class="btn btn-ghost btn-sm" id="avClear">Убрать</button>` : ""}
             </div>
-            <button class="btn btn-primary btn-sm" type="submit">Сохранить</button>
-            ${API !== null ? `<button class="btn btn-ghost btn-sm" type="button" id="logoutBtn" style="margin-left:10px">Выйти</button>` : ""}
-          </form>
+          </div>
         </div>
+
         <div class="panel">
           <h2>Стадия</h2>
           <div style="display:flex;align-items:center;gap:16px;margin:16px 0">
@@ -912,10 +1116,65 @@ const VIEWS = {
           </div>
           <div class="bar"><i style="width:${lvl.n / 8 * 100}%"></i></div>
           <div class="divider"></div>
-          <p class="muted"><b style="color:var(--ink)">${fmt(points())}</b> очков · уровень отражает стадию продукта, а не время в программе.</p>
+          <p class="muted"><b style="color:var(--ink)">${fmt(points())}</b> очков · ${S.dock ? esc(DOCKS[S.dock].name) + " · сложность " + S.complexity : "док не определён"}
+            · <a href="#" data-go="screening">${S.dock ? "пересчитать" : "пройти скрининг"}</a></p>
           ${API === null ? `<div class="divider"></div><button class="btn btn-ghost btn-sm" id="resetState">Сбросить прогресс (демо)</button>` : ""}
         </div>
       </div>
+
+      <div class="panel">
+        <h2>Проект</h2>
+        ${S.email ? `<p class="muted" style="margin-top:4px">${esc(S.email)}</p>` : ""}
+        <form id="profileForm" style="margin-top:12px">
+          <div class="panel-row cols-2" style="margin-bottom:0">
+            <div>
+              <div class="field"><label>Имя</label><input id="pfName" value="${esc(S.name)}"></div>
+              <div class="field"><label>Название проекта</label><input id="pfProject" value="${esc(S.project)}"></div>
+              <div class="field"><label>Тариф</label>
+                <select id="pfTariff">
+                  ${["Solo", "Pro", "Partner"].map(t => `<option ${S.tariff === t ? "selected" : ""}>${t}</option>`).join("")}
+                </select>
+              </div>
+            </div>
+            <div>
+              <div class="field"><label>Описание для потока</label>
+                <textarea id="pfAbout" placeholder="Для кого продукт и какую боль закрывает">${esc(S.about)}</textarea>
+              </div>
+              <div class="field"><label>Домен или публичная ссылка</label>
+                <input id="pfLink" type="url" placeholder="https://…" value="${esc(S.link)}">
+              </div>
+              <div class="field"><label>Репозиторий GitHub (публичный)</label>
+                <input id="pfRepo" placeholder="owner/name" value="${esc(S.repo)}">
+              </div>
+            </div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="pfPublic" ${S.isPublic ? "checked" : ""}>
+            <span>Показывать название и описание проекта другим участникам потока</span>
+          </label>
+          <p class="muted" style="margin:8px 0 14px;font-size:13px">
+            Имя, аватар, станция и очки видны всегда — на этом держится общая карта потока.
+            При выключенном переключателе вместо проекта участники видят «проект скрыт».
+          </p>
+          <button class="btn btn-primary btn-sm" type="submit">Сохранить</button>
+          ${API !== null ? `<button class="btn btn-ghost btn-sm" type="button" id="logoutBtn" style="margin-left:10px">Выйти</button>` : ""}
+        </form>
+      </div>
+
+      <div class="panel">
+        <h2>Синхронизация с GitHub</h2>
+        <p class="muted" style="margin-bottom:14px">Платформа читает публичный репозиторий и показывает реальную активность сборки: коммиты за неделю и последнее изменение. Токены и приватные репозитории не запрашиваются.</p>
+        ${gh ? `
+          <div class="gh-box">
+            <div class="gh-stat"><b>${gh.weekCommits}</b><span>коммитов за 7 дней</span></div>
+            <div class="gh-stat"><b>${esc(gh.language || "—")}</b><span>основной язык</span></div>
+            <div class="gh-stat"><b>${gh.lastAt ? new Date(gh.lastAt).toLocaleDateString("ru-RU") : "—"}</b><span>последний коммит</span></div>
+            <div class="gh-last">${esc(gh.lastMessage || "нет коммитов за неделю")}</div>
+            <a class="link-arrow" href="${esc(gh.url || "#")}" target="_blank" rel="noopener" style="font-size:14px">${esc(gh.repo)}</a>
+          </div>` : `<div class="empty" style="margin-bottom:14px">Синхронизация ещё не запускалась.</div>`}
+        <button class="btn btn-dark btn-sm" id="ghSync">Синхронизировать</button>
+      </div>
+
       <div class="panel">
         <h2>Бейджи</h2>
         <p class="muted" style="margin-bottom:16px">Признание за качество, а не только за скорость.</p>
@@ -927,16 +1186,6 @@ const VIEWS = {
               <small>${esc(b.desc)}</small>
             </div>`).join("")}
         </div>
-      </div>
-      <div class="panel">
-        <h2>Что вы уносите в любом случае</h2>
-        ${["Работающий продукт и полные права на код, дизайн и данные",
-           "Навык вайб-кодинга через Claude Code внутри полного цикла SDLC",
-           "Зарегистрированную компанию и комплект юридических документов",
-           "Закрытый чек-лист безопасности и инфраструктуру с автодеплоем",
-           "Проверенную — или честно опровергнутую — бизнес-гипотезу",
-           "Сеть контактов: поток, менторы, эксперты, инвесторы Demo Day"]
-          .map(t => `<div class="req ok"><div class="r-ic">✓</div>${t}</div>`).join("")}
       </div>`;
   },
 };
@@ -953,22 +1202,121 @@ function taskRow(t) {
     </div>`;
 }
 
-function gateBanner(p) {
-  const passed = gatePassed(p);
+function cpBanner(p) {
+  const passed = cpPassed(p);
   return `
     <div class="gate-banner ${passed ? "passed" : ""}">
-      <span class="g-badge">${p.gate.id}</span>
+      <span class="g-badge">${p.cp.id}</span>
       <div>${passed
-        ? `<b>Gate пройден · +100 очков.</b> ${esc(p.gate.cond)}`
-        : `<b>Условие gate:</b> ${esc(p.gate.cond)}`}</div>
+        ? `<b>Контрольная точка пройдена · +100 очков.</b> ${esc(p.cp.cond)}`
+        : `<b>Условие контрольной точки:</b> ${esc(p.cp.cond)}`}</div>
     </div>`;
+}
+
+function flowRow(r, full = false) {
+  const pct = Math.round((r.walk || 0) * 100);
+  const proj = r.open
+    ? (r.project || "—")
+    : r.me ? (r.project || "—") + " · скрыт от потока" : "проект скрыт";
+  return `
+    <div class="flow-row ${r.me ? "me" : ""}">
+      <span class="avatar sm"><img src="${esc(peerAvatar(r))}" alt=""></span>
+      <div class="fr-main">
+        <b>${esc(r.name)}${r.me ? " (вы)" : ""}</b>
+        <small>${esc(proj)}${full && r.open && r.about ? " · " + esc(r.about) : ""}</small>
+        <div class="fr-track">
+          <i style="width:${pct}%"></i>
+          <span class="fr-dot" style="left:${pct}%"></span>
+        </div>
+      </div>
+      <div class="fr-meta">
+        <span class="dock-chip d${esc(r.dock || "x")}">${r.dock ? esc(DOCKS[r.dock].name) : "без дока"}</span>
+        <small>станция ${r.station} · ${fmt(r.points || 0)} очк.</small>
+        ${full && r.open && r.link ? `<a href="${esc(r.link)}" target="_blank" rel="noopener" class="link-arrow" style="font-size:13px">продукт ↗</a>` : ""}
+      </div>
+    </div>`;
+}
+
+/* Своя строка в потоке обновляется на месте: перерисовка карты не должна
+   ронять список участников до следующего запроса к серверу. */
+function patchMyFlow() {
+  if (!CACHE.flow) return;
+  const me = CACHE.flow.find(r => r.me);
+  if (me) Object.assign(me, {
+    name: S.name, avatar: S.avatar, project: S.project, about: S.about,
+    link: S.link, open: S.isPublic, dock: S.dock,
+    points: points(), level: level().n,
+    station: currentStationIdx(), walk: walkPos(), demos: S.demos.length,
+  });
+  CACHE.flow.sort((a, b) => b.walk - a.walk || b.points - a.points);
+}
+
+function hashNum(s) {
+  let h = 0;
+  for (let i = 0; i < String(s).length; i++) h = (h * 31 + String(s).charCodeAt(i)) % 9973;
+  return h;
+}
+
+/* ---------------- карта: жизненный цикл ---------------- */
+
+let mapInstance = null;
+let lastCharX = null;
+
+function mountMap() {
+  const cv = document.getElementById("mapCanvas");
+  if (!cv) return;
+  mapInstance = new GAME.CityMap(cv, {
+    onSelect: i => {
+      if (i >= 9) { go("certificate"); return; }
+      S.selStation = i;
+      save();
+      render();
+    },
+  });
+  if (lastCharX !== null) mapInstance.charX = lastCharX;
+  mapInstance.set({
+    stations: STATIONS.map(p => ({
+      done: stationDone(p), tool: p.tool,
+      gate: !!p.cp, gatePassed: cpPassed(p),
+    })),
+    station: currentStationIdx(),
+    walk: walkPos(),
+    avatar: myAvatar(),
+    doorOpen: doorOpen(),
+    peers: flowRows().filter(r => !r.me),
+    name: S.name,
+  });
+}
+
+function unmountMap() {
+  if (mapInstance) {
+    lastCharX = mapInstance.charX;
+    mapInstance.destroy();
+    mapInstance = null;
+  }
+}
+
+/* иконки инструментов на полке */
+function paintToolIcons() {
+  view.querySelectorAll("canvas[data-tool]").forEach(cv => {
+    const rows = GAME.TOOLS[cv.dataset.tool];
+    if (!rows) return;
+    const ctx = cv.getContext("2d");
+    const px = Math.floor(cv.width / 8);
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    ctx.imageSmoothingEnabled = false;
+    GAME.drawSprite(ctx, rows, 0, 0, px);
+  });
 }
 
 /* ---------------- события ---------------- */
 
 function render() {
+  unmountMap();
   view.innerHTML = VIEWS[activeView]();
   refreshChrome();
+  if (activeView === "map") mountMap();
+  paintToolIcons();
   bind();
 }
 
@@ -980,6 +1328,9 @@ async function syncToggle(kind, id, done) {
 function bind() {
   view.querySelectorAll("[data-go]").forEach(el =>
     el.addEventListener("click", e => { e.preventDefault(); go(el.dataset.go); }));
+
+  view.querySelectorAll("[data-station]").forEach(b =>
+    b.addEventListener("click", () => { S.selStation = Number(b.dataset.station); save(); render(); }));
 
   /* вход / регистрация */
   view.querySelectorAll("[data-authtab]").forEach(b =>
@@ -1009,18 +1360,19 @@ function bind() {
       applyMe(data);
       S._reg = false;
       toast(`Добро пожаловать на верфь, ${S.name}!`);
-      go("dashboard");
+      go("map");
     } catch (err2) {
       errEl.textContent = err2.message;
       errEl.style.display = "block";
     }
   });
 
-  /* задачи трека */
+  /* задачи станций */
   view.querySelectorAll("[data-task]").forEach(cb =>
     cb.addEventListener("change", async () => {
       const id = cb.dataset.task;
       const wasLvl = level().n;
+      const wasTools = tools().length;
       const checked = cb.checked;
       try {
         await syncToggle("task", id, checked);
@@ -1028,19 +1380,21 @@ function bind() {
         if (!checked) delete S.done[id];
         save();
         const nowLvl = level().n;
+        const nowTools = tools().length;
         if (checked) {
-          const t = PHASES.flatMap(p => p.tasks).find(x => x.id === id);
-          if (nowLvl > wasLvl) toast(`${LEVELS[nowLvl - 1].emoji} Новый уровень: ${LEVELS[nowLvl - 1].name}!`);
+          const t = STATIONS.flatMap(p => p.tasks).find(x => x.id === id);
+          if (doorOpen() && wasTools < 9) toast("🚪 Дверь MVP открыта — сертификат доступен!");
+          else if (nowTools > wasTools) {
+            const st = STATIONS.find(p => stationDone(p) && p.tasks.some(x => x.id === id));
+            toast(`🧰 Станция закрыта — получен инструмент: ${st ? st.toolName : "новый"}`);
+          } else if (nowLvl > wasLvl) toast(`${LEVELS[nowLvl - 1].emoji} Новый уровень: ${LEVELS[nowLvl - 1].name}!`);
           else toast(`+${t.pts} очков`);
         }
         CACHE.league = null;
+        patchMyFlow();
         render();
       } catch (err2) { toast(err2.message); cb.checked = !checked; }
     }));
-
-  view.querySelectorAll("[data-toggle]").forEach(h =>
-    h.addEventListener("click", () =>
-      h.closest(".phase-card").classList.toggle("open")));
 
   /* безопасность */
   view.querySelectorAll("[data-sec]").forEach(cb =>
@@ -1071,6 +1425,31 @@ function bind() {
       } catch (err2) { toast(err2.message); }
     }));
 
+  /* скрининг сложности */
+  const sf = view.querySelector("#screenForm");
+  if (sf) sf.addEventListener("submit", async e => {
+    e.preventDefault();
+    const answers = {};
+    SCREENING.forEach(qq => {
+      const el = sf.querySelector(`input[name="${qq.id}"]:checked`);
+      answers[qq.id] = el ? Number(el.value) : 0;
+    });
+    const score = Object.values(answers).reduce((a, b) => a + b, 0);
+    try {
+      if (API !== null) {
+        const r = await apiCall("/screening", "POST", { answers });
+        S.dock = r.dock; S.complexity = r.complexity;
+      } else {
+        S.dock = dockFor(score); S.complexity = score;
+      }
+      save();
+      CACHE.league = null;
+      patchMyFlow();
+      toast(`Ваш док: ${DOCKS[S.dock].name} · сложность ${S.complexity}`);
+      go("league");
+    } catch (err2) { toast(err2.message); }
+  });
+
   /* демо */
   const demoForm = view.querySelector("#demoForm");
   if (demoForm) demoForm.addEventListener("submit", async e => {
@@ -1078,15 +1457,22 @@ function bind() {
     const text = view.querySelector("#demoText").value.trim();
     if (!text) return;
     const link = view.querySelector("#demoLink").value.trim();
-    const week = currentPhaseIdx();
+    const about = view.querySelector("#demoAbout").value.trim();
+    const week = currentStationIdx();
     try {
       if (API !== null) {
+        if (about !== S.about || (link && link !== S.link)) {
+          applyMe(await apiCall("/me", "PUT", { about, link: link || S.link }));
+        }
         await apiCall("/demos", "POST", { week, text, link });
         CACHE.demos = (await apiCall("/demos")).demos;
       }
+      S.about = about;
+      if (link) S.link = link;
       S.demos.unshift({ week, text, link, ts: Date.now() });
+      patchMyFlow();
       save();
-      toast(S.demos.length >= 3 ? "🔥 Серия из 3 демо — множитель ×1.1!" : "+50 очков · демо на стене");
+      toast(S.demos.length >= 3 ? "🔥 Серия из 3 демо — множитель ×1.1!" : "+50 очков · демо на стене потока");
       render();
     } catch (err2) { toast(err2.message); }
   });
@@ -1125,26 +1511,79 @@ function bind() {
     b.addEventListener("click", () =>
       navigator.clipboard?.writeText(b.dataset.copy).then(() => toast("Промпт скопирован"))));
 
-  /* эксперты */
+  /* сервисный пул */
   view.querySelectorAll("[data-book]").forEach(b =>
     b.addEventListener("click", () => {
-      toast(`Слот у направления «${EXPERTS[b.dataset.book].dir}» запрошен — ментор подтвердит в Telegram`);
+      toast(`Слот у направления «${SERVICE[b.dataset.book].dir}» запрошен — ментор подтвердит в Telegram`);
     }));
+
+  /* аватар */
+  const avFile = view.querySelector("#avFile");
+  if (avFile) avFile.addEventListener("change", async () => {
+    const f = avFile.files && avFile.files[0];
+    if (!f) return;
+    try {
+      const dataUrl = await GAME.PixelAvatar.fromFile(f);
+      await saveAvatar(dataUrl);
+      toast("Персонаж собран — он уже на карте");
+      render();
+    } catch (e2) { toast(e2.message || "Не удалось обработать фото"); }
+  });
+
+  const avGen = view.querySelector("#avGen");
+  if (avGen) avGen.addEventListener("click", async () => {
+    try {
+      await saveAvatar(GAME.PixelAvatar.generated(S.name + Math.random()));
+      toast("Персонаж собран");
+      render();
+    } catch (e2) { toast(e2.message); }
+  });
+
+  const avClear = view.querySelector("#avClear");
+  if (avClear) avClear.addEventListener("click", async () => {
+    try { await saveAvatar(""); toast("Аватар убран"); render(); }
+    catch (e2) { toast(e2.message); }
+  });
+
+  /* GitHub */
+  const ghBtn = view.querySelector("#ghSync");
+  if (ghBtn) ghBtn.addEventListener("click", async () => {
+    if (API === null) return toast("Синхронизация с GitHub работает при подключённом бэкенде");
+    const repo = (view.querySelector("#pfRepo") || {}).value || S.repo;
+    if (!repo) return toast("Укажите репозиторий в поле выше и сохраните профиль");
+    ghBtn.disabled = true;
+    ghBtn.textContent = "Читаем GitHub…";
+    try {
+      const r = await apiCall("/github/sync", "POST", { repo });
+      S.github = r.github;
+      S.repo = r.github.repo;
+      toast(r.cached ? "Данные из кэша (обновляется раз в 3 минуты)" : `Синхронизировано: ${r.github.weekCommits} коммитов за неделю`);
+      render();
+    } catch (e2) {
+      toast(e2.message);
+      ghBtn.disabled = false;
+      ghBtn.textContent = "Синхронизировать";
+    }
+  });
 
   /* профиль */
   const pf = view.querySelector("#profileForm");
   if (pf) pf.addEventListener("submit", async e => {
     e.preventDefault();
-    const name = view.querySelector("#pfName").value.trim() || S.name;
-    const project = view.querySelector("#pfProject").value.trim() || S.project;
-    const tariff = view.querySelector("#pfTariff").value;
+    const patch = {
+      name: view.querySelector("#pfName").value.trim() || S.name,
+      project: view.querySelector("#pfProject").value.trim() || S.project,
+      tariff: view.querySelector("#pfTariff").value,
+      about: view.querySelector("#pfAbout").value.trim(),
+      link: view.querySelector("#pfLink").value.trim(),
+      repo: view.querySelector("#pfRepo").value.trim(),
+      isPublic: view.querySelector("#pfPublic").checked,
+    };
     try {
-      if (API !== null) {
-        const data = await apiCall("/me", "PUT", { name, project, tariff });
-        applyMe(data);
-      } else {
-        S.name = name; S.project = project; S.tariff = tariff;
-      }
+      if (API !== null) applyMe(await apiCall("/me", "PUT", patch));
+      else Object.assign(S, patch);
+      CACHE.league = null;
+      patchMyFlow();
       save();
       toast("Профиль сохранён");
       render();
@@ -1167,6 +1606,13 @@ function bind() {
   });
 }
 
+async function saveAvatar(dataUrl) {
+  if (API !== null) await apiCall("/avatar", "POST", { avatar: dataUrl });
+  S.avatar = dataUrl;
+  patchMyFlow();
+  save();
+}
+
 /* ---------------- старт ---------------- */
 
 (async () => {
@@ -1182,7 +1628,8 @@ function bind() {
     catch { /* токен истёк — увидим экран входа */ }
   }
   if (API === null) save();
-  go("dashboard");
+  const start = decodeURIComponent(location.hash || "").replace("#", "");
+  go(VIEWS[start] && start !== "auth" ? start : "map");
 })();
 
 })();
