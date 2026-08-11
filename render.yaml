@@ -1,0 +1,21 @@
+# Blueprint для Render: https://render.com → New → Blueprint → этот репозиторий.
+# Free-тариф: диск эфемерный — SQLite обнуляется при каждом деплое/рестарте.
+# Для реальных аккаунтов включить платный инстанс и раскомментировать disk,
+# тогда данные лягут в /var/data (см. SHIPYARD_DATA_DIR).
+services:
+  - type: web
+    name: shipyard-platform
+    runtime: node
+    plan: free
+    buildCommand: ""
+    startCommand: node server/server.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: SHIPYARD_SECRET
+        generateValue: true
+      # - key: SHIPYARD_DATA_DIR
+      #   value: /var/data
+    # disk:
+    #   name: shipyard-data
+    #   mountPath: /var/data
+    #   sizeGB: 1

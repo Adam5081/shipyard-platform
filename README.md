@@ -96,8 +96,25 @@ API: `register/login`, `me` (GET/PUT), `avatar`, `screening`, `toggle`
 
 **Без бэкенда (статика):** открыть `index.html` — фронтенд проверяет
 `/api/health` и, не найдя сервер, работает на localStorage (так живёт версия
-на GitHub Pages). Чтобы страница на Pages ходила в удалённый бэкенд, задайте
-в `app.html` перед подключением `app.js`:
-`<script>window.SHIPYARD_REMOTE_API = "https://ваш-бэкенд";</script>`
+на GitHub Pages). Чтобы страница на Pages ходила в удалённый бэкенд, впишите
+его адрес в `app.html` (`window.SHIPYARD_REMOTE_API`, сейчас пустая строка).
 
 Разделы кабинета доступны по хэшу: `app.html#flow`, `#profile`, `#certificate`.
+
+## Деплой бэкенда (Render)
+
+1. render.com → **New → Blueprint** → выбрать этот репозиторий: `render.yaml`
+   поднимет web-сервис `shipyard-platform` (free, `node server/server.js`,
+   health-check `/api/health`, `SHIPYARD_SECRET` генерируется сам).
+2. Скопировать выданный URL (`https://…onrender.com`) в
+   `window.SHIPYARD_REMOTE_API` в `app.html` и запушить.
+3. Чтобы free-инстанс не засыпал, настроить внешний пинг
+   `https://…onrender.com/api/health` раз в 10 минут (cron-job.org,
+   UptimeRobot или GitHub Actions — заготовка воркфлоу лежит в
+   `deploy/keepalive.yml`, положить её в `.github/workflows/` и задать
+   переменную репозитория `BACKEND_URL`).
+
+⚠️ На free-тарифе диск эфемерный: SQLite обнуляется при деплое/рестарте
+(сид-поток пересоздаётся, реальные аккаунты пропадут). Для боевого набора
+участников нужен платный инстанс с диском — раскомментировать `disk` и
+`SHIPYARD_DATA_DIR=/var/data` в `render.yaml`.

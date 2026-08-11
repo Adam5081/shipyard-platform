@@ -1,0 +1,19 @@
+# Пингует бэкенд, чтобы бесплатный хостинг не засыпал.
+# Заготовка: скопировать в .github/workflows/keepalive.yml.
+# Пуш файлов в .github/workflows требует у токена scope `workflow`
+# (`gh auth refresh -s workflow`), иначе GitHub отклонит push.
+# Включение: Settings → Secrets and variables → Actions → Variables →
+# создать переменную BACKEND_URL = https://<сервис>.onrender.com
+# Пока переменная не задана, воркфлоу ничего не делает.
+name: keepalive
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping backend
+        if: vars.BACKEND_URL != ''
+        run: curl -fsS --max-time 60 "${{ vars.BACKEND_URL }}/api/health" && echo OK

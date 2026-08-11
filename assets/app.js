@@ -1614,10 +1614,19 @@ async function saveAvatar(dataUrl) {
 (async () => {
   const cand = candidateApi();
   if (cand !== null) {
-    try {
-      const r = await fetch(cand + "/api/health", { signal: AbortSignal.timeout(4000) });
-      if (r.ok) API = cand;
-    } catch { API = null; }
+    // Удалённый бесплатный хостинг может просыпаться десятки секунд.
+    // Долго ждём только тех, у кого есть токен, — иначе быстро уходим в локальный режим.
+    const tries = cand === "" ? [4000] : (TOKEN ? [8000, 30000] : [8000]);
+    for (let i = 0; i < tries.length; i++) {
+      if (i > 0) {
+        const v = document.getElementById("view");
+        if (v) v.innerHTML = `<div style="padding:40px 0;color:var(--ink-2);font-size:15px">Сервер просыпается, подключаемся…</div>`;
+      }
+      try {
+        const r = await fetch(cand + "/api/health", { signal: AbortSignal.timeout(tries[i]) });
+        if (r.ok) { API = cand; break; }
+      } catch { API = null; }
+    }
   }
   if (API !== null && TOKEN) {
     try { applyMe(await apiCall("/me")); }

@@ -5,7 +5,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const crypto = require("node:crypto");
 
-const DATA_DIR = path.join(__dirname, "data");
+const DATA_DIR = process.env.SHIPYARD_DATA_DIR || path.join(__dirname, "data");
 fs.mkdirSync(DATA_DIR, { recursive: true });
 
 const db = new DatabaseSync(path.join(DATA_DIR, "shipyard.db"));
@@ -135,4 +135,4 @@ function seed() {
 
 seed();
 
-module.exports = { db, hashPassword };
+module.exports = { db, hashPassword, DATA_DIR };

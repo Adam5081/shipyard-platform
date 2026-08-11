@@ -9,7 +9,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const crypto = require("node:crypto");
 
-const { db, hashPassword } = require("./db");
+const { db, hashPassword, DATA_DIR } = require("./db");
 const {
   TASKS, SEC_IDS, LEGAL_IDS, DOCKS,
   scoreScreening, dockFor,
@@ -24,7 +24,7 @@ const GH_COOLDOWN = 3 * 60000;   // не чаще раза в 3 минуты н�
 
 /* ---------- секрет для токенов (генерируется один раз) ---------- */
 
-const SECRET_FILE = path.join(__dirname, "data", ".secret");
+const SECRET_FILE = path.join(DATA_DIR, ".secret");
 let SECRET = process.env.SHIPYARD_SECRET;
 if (!SECRET) {
   try { SECRET = fs.readFileSync(SECRET_FILE, "utf8").trim(); }
