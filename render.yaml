@@ -13,6 +13,9 @@ services:
     envVars:
       - key: SHIPYARD_SECRET
         generateValue: true
+      # ключ для страницы заявок /admin.html — посмотреть в панели Render
+      - key: SHIPYARD_ADMIN_KEY
+        generateValue: true
       # - key: SHIPYARD_DATA_DIR
       #   value: /var/data
     # disk:

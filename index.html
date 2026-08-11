@@ -7,6 +7,7 @@
 <meta name="description" content="Программа для отраслевых экспертов: вы собираете продукт сами — с Claude Code, производственным пайплайном и экспертами отрасли рядом. Контрольные точки, безопасность, вывод в рабочую среду.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚓</text></svg>">
 <link rel="stylesheet" href="assets/styles.css">
+<script src="assets/config.js"></script>
 </head>
 <body>
 
@@ -21,7 +22,7 @@
       <a href="#team">Кто мы</a>
       <a href="#pricing">Тарифы</a>
       <a href="app.html">Войти</a>
-      <a class="nav-cta" href="#pricing">Подать заявку</a>
+      <a class="nav-cta" href="#apply">Подать заявку</a>
     </div>
   </div>
 </nav>
@@ -32,7 +33,7 @@
     <h1 class="display reveal">От идеи<br>до продукта, который<br><span class="gradient-text">работает у клиента.</span></h1>
     <p class="sub reveal">Для отраслевых экспертов, у которых есть идея, но нет команды разработки. Вы собираете продукт сами — с Claude Code, процессом и экспертами отрасли рядом.</p>
     <div class="hero-cta reveal">
-      <a class="btn btn-primary btn-lg" href="#pricing">Подать заявку на поток</a>
+      <a class="btn btn-primary btn-lg" href="#apply">Подать заявку на поток</a>
       <a class="btn btn-ghost btn-lg" href="app.html">Посмотреть платформу</a>
     </div>
     <p class="hero-note reveal">Подписка вместо найма команды · Права на продукт остаются у вас</p>
@@ -418,7 +419,7 @@
           <li><span class="tick">✓</span>Demo Day — по результатам лиги дока</li>
           <li class="off"><span class="no">—</span>Индивидуальный доступ к экспертам</li>
         </ul>
-        <a class="btn btn-ghost" href="app.html">Подать заявку</a>
+        <a class="btn btn-ghost" href="#apply" data-tariff="Solo">Подать заявку</a>
       </div>
       <div class="price-card featured reveal">
         <span class="price-badge">Популярный выбор</span>
@@ -433,7 +434,7 @@
           <li><span class="tick">✓</span>Настройка инфраструктуры вместе с DevOps</li>
           <li><span class="tick">✓</span>Demo Day — по результатам лиги дока</li>
         </ul>
-        <a class="btn btn-primary" href="app.html">Подать заявку</a>
+        <a class="btn btn-primary" href="#apply" data-tariff="Pro">Подать заявку</a>
       </div>
       <div class="price-card reveal">
         <h3>Partner</h3>
@@ -446,7 +447,7 @@
           <li><span class="tick">✓</span>Полное юридическое сопровождение</li>
           <li><span class="tick">✓</span>Инфраструктура под ключ</li>
         </ul>
-        <a class="btn btn-ghost" href="app.html">Запросить приглашение</a>
+        <a class="btn btn-ghost" href="#apply" data-tariff="Partner">Запросить приглашение</a>
       </div>
     </div>
     <p class="reveal center" style="margin-top:34px;color:var(--ink-3);font-size:14px;text-align:center">Права на код, дизайн и данные всегда остаются у участника. Условия партнёрского трека одинаковы для всех и публикуются до старта.</p>
@@ -503,13 +504,76 @@
   </div>
 </section>
 
+<!-- ===== APPLY ===== -->
+<section class="section" id="apply">
+  <div class="wrap-narrow">
+    <p class="eyebrow reveal center" style="text-align:center">Заявка</p>
+    <h2 class="headline reveal center">Расскажите, что хотите построить.</h2>
+    <p class="sub reveal center" style="margin-top:16px;text-align:center">Читаем каждую заявку и отвечаем лично. Заявка ни к чему не обязывает: сначала разговор, потом решение о потоке.</p>
+
+    <form class="apply-form reveal" id="applyForm" novalidate>
+      <div class="apply-grid">
+        <div class="field">
+          <label for="afName">Имя и фамилия</label>
+          <input id="afName" name="name" type="text" autocomplete="name" required>
+        </div>
+        <div class="field">
+          <label for="afContact">Почта или телеграм</label>
+          <input id="afContact" name="contact" type="text" placeholder="you@mail.kz или @nickname" required>
+        </div>
+        <div class="field">
+          <label for="afCity">Город</label>
+          <input id="afCity" name="city" type="text" placeholder="Астана">
+        </div>
+        <div class="field">
+          <label for="afStage">На какой стадии продукт</label>
+          <select id="afStage" name="stage">
+            <option value="идея">Только идея</option>
+            <option value="прототип">Есть прототип</option>
+            <option value="первые пользователи">Есть первые пользователи</option>
+            <option value="работающий продукт">Работающий продукт</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="afIdea">Что за продукт и чью проблему он решает</label>
+        <textarea id="afIdea" name="idea" rows="5" placeholder="Кто ваш клиент, что у него болит и как он решает это сегодня. Два–три предложения достаточно." required></textarea>
+      </div>
+
+      <div class="field">
+        <label for="afExp">Ваш опыт в отрасли и опыт разработки <span style="font-weight:400">— по желанию</span></label>
+        <textarea id="afExp" name="experience" rows="3" placeholder="Например: 8 лет в логистике, кода не писал никогда."></textarea>
+      </div>
+
+      <div class="field">
+        <label for="afTariff">Интересующий тариф</label>
+        <select id="afTariff" name="tariff">
+          <option value="">Пока не выбрал — нужен разговор</option>
+          <option value="Solo">Solo</option>
+          <option value="Pro">Pro</option>
+          <option value="Partner">Partner — по приглашению</option>
+        </select>
+      </div>
+
+      <!-- ловушка для ботов: человек это поле не видит и не заполняет -->
+      <input class="hp" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+
+      <button class="btn btn-primary btn-lg" type="submit" id="afSubmit">Отправить заявку</button>
+      <p class="apply-note" id="afNote">Права на продукт остаются у вас. Заявку читает человек, а не робот.</p>
+    </form>
+
+    <div class="apply-done" id="afDone" hidden></div>
+  </div>
+</section>
+
 <!-- ===== FINAL CTA ===== -->
 <section class="section section-alt center">
   <div class="wrap-narrow">
     <h2 class="headline reveal">Мы продаём не обучение<br>и не разработку.</h2>
     <p class="sub reveal" style="margin-top:20px">Мы продаём путь, за который идея становится продуктом в руках клиента.</p>
     <div class="hero-cta reveal">
-      <a class="btn btn-primary btn-lg" href="#pricing">Подать заявку</a>
+      <a class="btn btn-primary btn-lg" href="#apply">Подать заявку</a>
       <a class="btn btn-dark btn-lg" href="app.html">Посмотреть платформу</a>
     </div>
   </div>
@@ -533,6 +597,110 @@
   acc.forEach(d => d.addEventListener('toggle', () => {
     if (d.open) acc.forEach(o => { if (o !== d) o.open = false; });
   }));
+
+  /* ---------- форма заявки ---------- */
+
+  const form = document.getElementById('applyForm');
+  const note = document.getElementById('afNote');
+  const done = document.getElementById('afDone');
+  const submit = document.getElementById('afSubmit');
+
+  /* кнопка тарифа подставляет тариф в форму */
+  document.querySelectorAll('[data-tariff]').forEach(a =>
+    a.addEventListener('click', () => { form.tariff.value = a.dataset.tariff; }));
+
+  const apiBase = () => {
+    const remote = window.SHIPYARD_REMOTE_API;
+    if (remote) return String(remote).replace(/\/$/, '');
+    // на GitHub Pages и с диска бэкенда нет; на своём сервере он рядом
+    if (location.protocol === 'file:' || location.hostname.endsWith('github.io')) return null;
+    return '';
+  };
+
+  const asText = d =>
+    `Заявка в SHIPYARD\n\nИмя: ${d.name}\nКонтакт: ${d.contact}\nГород: ${d.city || '—'}\n` +
+    `Стадия: ${d.stage}\nТариф: ${d.tariff || 'не выбран'}\n\nПродукт:\n${d.idea}\n\n` +
+    `Опыт:\n${d.experience || '—'}\n`;
+
+  function fail(message) {
+    note.textContent = message;
+    note.classList.add('err');
+    submit.disabled = false;
+    submit.textContent = 'Отправить заявку';
+  }
+
+  /* бэкенда нет: показываем текст заявки, чтобы человек мог отправить его письмом */
+  function offline(data) {
+    const mail = window.SHIPYARD_CONTACT;
+    const body = asText(data);
+    form.hidden = true;
+    done.hidden = false;
+    done.innerHTML =
+      '<h3>Заявка собрана</h3>' +
+      '<p>Приём заявок на сайте ещё не подключён, поэтому отправьте её ' +
+      (mail ? 'письмом — текст уже готов.' : 'нам удобным способом — текст уже готов.') + '</p>' +
+      '<pre class="apply-copy" id="afText"></pre>' +
+      '<div class="apply-actions">' +
+      '<button class="btn btn-dark" id="afCopy" type="button">Скопировать текст</button>' +
+      (mail ? '<a class="btn btn-primary" id="afMail" href="#">Открыть в почте</a>' : '') +
+      '</div>';
+    document.getElementById('afText').textContent = body;
+    document.getElementById('afCopy').addEventListener('click', () => {
+      navigator.clipboard?.writeText(body);
+      document.getElementById('afCopy').textContent = 'Скопировано';
+    });
+    if (mail) {
+      document.getElementById('afMail').href =
+        'mailto:' + mail + '?subject=' + encodeURIComponent('Заявка в SHIPYARD — ' + data.name) +
+        '&body=' + encodeURIComponent(body);
+    }
+    done.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    note.classList.remove('err');
+
+    const data = {
+      name: form.name.value.trim(),
+      contact: form.contact.value.trim(),
+      city: form.city.value.trim(),
+      stage: form.stage.value,
+      tariff: form.tariff.value,
+      idea: form.idea.value.trim(),
+      experience: form.experience.value.trim(),
+      website: form.website.value,
+    };
+
+    if (data.name.length < 2) return fail('Укажите, как к вам обращаться');
+    if (data.contact.length < 3) return fail('Оставьте почту или телеграм — иначе мы не сможем ответить');
+    if (data.idea.length < 30) return fail('Опишите продукт подробнее: кто клиент и что у него болит');
+
+    submit.disabled = true;
+    submit.textContent = 'Отправляем…';
+
+    const base = apiBase();
+    if (base === null) return offline(data);
+
+    try {
+      const r = await fetch(base + '/api/apply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      const out = await r.json().catch(() => ({}));
+      if (!r.ok) return fail(out.error || 'Не удалось отправить заявку');
+      form.hidden = true;
+      done.hidden = false;
+      done.innerHTML =
+        '<h3>Заявка отправлена</h3>' +
+        '<p>Мы прочитаем её и напишем вам на указанный контакт. Обычно отвечаем в течение пары дней. ' +
+        'Отправлять повторно не нужно.</p>';
+      done.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } catch {
+      offline(data);
+    }
+  });
 </script>
 </body>
 </html>

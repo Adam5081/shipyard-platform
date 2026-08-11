@@ -1028,6 +1028,46 @@ pre.code .h { color: #7fd4e4; font-weight: 600; }
 }
 .field textarea { resize: vertical; min-height: 80px; }
 
+/* форма заявки на лендинге */
+
+.apply-form {
+  background: var(--bg);
+  border-radius: var(--radius-l);
+  padding: 34px 36px;
+  margin-top: 36px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.06);
+}
+.apply-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 20px; }
+.apply-form .btn { width: 100%; margin-top: 8px; }
+.apply-note { margin-top: 14px; font-size: 13.5px; color: var(--ink-3); text-align: center; }
+.apply-note.err { color: #d70015; font-weight: 500; }
+
+/* поле-ловушка: скрыто от людей, доступно ботам */
+.hp { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+
+.apply-done {
+  background: var(--bg);
+  border-radius: var(--radius-l);
+  padding: 34px 36px;
+  margin-top: 36px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.06);
+}
+.apply-done h3 { font-size: 22px; font-weight: 600; letter-spacing: -.015em; margin-bottom: 10px; }
+.apply-done p { color: var(--ink-2); font-size: 15.5px; line-height: 1.55; }
+.apply-copy {
+  margin-top: 18px;
+  padding: 18px 20px;
+  background: var(--bg-alt);
+  border-radius: var(--radius-s);
+  font-family: var(--mono);
+  font-size: 12.5px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  max-height: 320px;
+  overflow-y: auto;
+}
+.apply-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 18px; }
+
 /* toast */
 
 .toast {

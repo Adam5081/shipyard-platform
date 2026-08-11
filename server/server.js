@@ -87,6 +87,13 @@ const q = {
   demoCountVotes: db.prepare("SELECT COUNT(*) AS n FROM votes WHERE demo_id = ?"),
   allUsers: db.prepare("SELECT * FROM users"),
   demoCount: db.prepare("SELECT COUNT(*) AS n FROM demos WHERE user_id = ?"),
+  addApp: db.prepare(`
+    INSERT INTO applications (name, contact, city, idea, stage, tariff, experience, ip_hash, created_at)
+    VALUES (?,?,?,?,?,?,?,?,?)`),
+  allApps: db.prepare("SELECT * FROM applications ORDER BY created_at DESC LIMIT 500"),
+  appById: db.prepare("SELECT * FROM applications WHERE id = ?"),
+  updateApp: db.prepare("UPDATE applications SET status = ?, note = ? WHERE id = ?"),
+  appsFromIp: db.prepare("SELECT COUNT(*) AS n FROM applications WHERE ip_hash = ? AND created_at > ?"),
 };
 
 const TARIFFS = ["Solo", "Pro", "Partner"];
@@ -179,6 +186,29 @@ function auth(req) {
   const h = req.headers.authorization || "";
   const uid = verifyToken(h.startsWith("Bearer ") ? h.slice(7) : null);
   return uid ? q.userById.get(uid) : null;
+}
+
+/* ---------- заявки с лендинга ---------- */
+
+const APP_STAGES = ["идея", "прототип", "первые пользователи", "работающий продукт"];
+const APP_STATUSES = ["new", "contacted", "accepted", "declined"];
+const APP_PER_IP = 3;              // заявок с одного адреса
+const APP_WINDOW = 60 * 60000;     // за час
+
+/* Адрес отправителя не храним — только необратимый хэш, чтобы ограничить спам. */
+function ipHash(req) {
+  const fwd = String(req.headers["x-forwarded-for"] || "").split(",")[0].trim();
+  const ip = fwd || req.socket.remoteAddress || "";
+  return crypto.createHmac("sha256", SECRET).update(ip).digest("hex").slice(0, 32);
+}
+
+const ADMIN_KEY = process.env.SHIPYARD_ADMIN_KEY || "";
+
+function isAdmin(req) {
+  const given = String(req.headers["x-admin-key"] || "");
+  if (!ADMIN_KEY || !given) return false;
+  const a = Buffer.from(given), b = Buffer.from(ADMIN_KEY);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -426,6 +456,59 @@ const routes = {
     });
   },
 
+  /* ---- заявки с лендинга (без входа) ---- */
+
+  "POST /api/apply": async (req, res) => {
+    const b = await readBody(req, 32 * 1024);
+
+    // скрытое поле формы: живой человек его не заполняет
+    if (String(b.website || "").trim()) return send(res, 201, { ok: true });
+
+    const name = String(b.name || "").trim().slice(0, 80);
+    const contact = String(b.contact || "").trim().slice(0, 120);
+    const idea = String(b.idea || "").trim().slice(0, 2000);
+    if (name.length < 2) return err(res, 400, "Укажите имя");
+    if (contact.length < 3) return err(res, 400, "Укажите почту или телеграм для связи");
+    if (contact.includes("@") && !contact.startsWith("@") && !EMAIL_RE.test(contact))
+      return err(res, 400, "Почта указана с ошибкой");
+    if (idea.length < 30) return err(res, 400, "Опишите продукт подробнее — хотя бы пара предложений");
+
+    const hash = ipHash(req);
+    if (q.appsFromIp.get(hash, Date.now() - APP_WINDOW).n >= APP_PER_IP)
+      return err(res, 429, "Заявка уже отправлена. Мы свяжемся с вами — писать ещё раз не нужно");
+
+    const city = String(b.city || "").trim().slice(0, 80);
+    const stage = APP_STAGES.includes(b.stage) ? b.stage : "";
+    const tariff = TARIFFS.includes(normTariff(b.tariff)) ? normTariff(b.tariff) : "";
+    const experience = String(b.experience || "").trim().slice(0, 400);
+
+    const r = q.addApp.run(name, contact, city, idea, stage, tariff, experience, hash, Date.now());
+    console.log(`[заявка #${r.lastInsertRowid}] ${name} · ${contact} · ${tariff || "тариф не выбран"}`);
+    send(res, 201, { ok: true, id: Number(r.lastInsertRowid) });
+  },
+
+  "GET /api/applications": async (req, res) => {
+    if (!isAdmin(req)) return err(res, 401, "Нужен ключ администратора");
+    send(res, 200, {
+      applications: q.allApps.all().map(a => ({
+        id: a.id, name: a.name, contact: a.contact, city: a.city, idea: a.idea,
+        stage: a.stage, tariff: a.tariff, experience: a.experience,
+        status: a.status, note: a.note, ts: a.created_at,
+      })),
+    });
+  },
+
+  "PUT /api/applications": async (req, res) => {
+    if (!isAdmin(req)) return err(res, 401, "Нужен ключ администратора");
+    const b = await readBody(req);
+    const app = q.appById.get(Number(b.id));
+    if (!app) return err(res, 404, "Заявка не найдена");
+    const status = APP_STATUSES.includes(b.status) ? b.status : app.status;
+    const note = String(b.note ?? app.note).trim().slice(0, 1000);
+    q.updateApp.run(status, note, app.id);
+    send(res, 200, { ok: true, status, note });
+  },
+
   "GET /api/health": async (req, res) => send(res, 200, { ok: true, service: "shipyard" }),
 };
 
@@ -462,7 +545,7 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(204, {
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Methods": "GET,POST,PUT,OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type,Authorization",
+      "Access-Control-Allow-Headers": "Content-Type,Authorization,X-Admin-Key",
     });
     return res.end();
   }

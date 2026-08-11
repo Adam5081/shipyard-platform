@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>SHIPYARD — заявки</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚓</text></svg>">
+<link rel="stylesheet" href="assets/styles.css">
+<script src="assets/config.js"></script>
+<style>
+  .adm { max-width: 900px; margin: 0 auto; padding: 40px 24px 80px; }
+  .adm-head { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin-bottom: 24px; }
+  .adm-head h1 { font-size: 30px; font-weight: 700; letter-spacing: -.02em; }
+  .adm-count { color: var(--ink-3); font-size: 15px; }
+  .app-card { background: var(--bg); border-radius: var(--radius-m); padding: 22px 24px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.05); }
+  .app-top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 4px; }
+  .app-top b { font-size: 17px; }
+  .app-meta { color: var(--ink-3); font-size: 13.5px; margin-bottom: 14px; }
+  .app-idea { font-size: 15px; line-height: 1.55; white-space: pre-wrap; margin-bottom: 8px; }
+  .app-exp { font-size: 14px; line-height: 1.5; color: var(--ink-2); white-space: pre-wrap; margin-bottom: 14px; }
+  .app-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .app-row select, .app-row input { border: 1px solid var(--line); border-radius: var(--radius-s); padding: 8px 12px; font-size: 14px; font-family: inherit; background: var(--bg); }
+  .app-row input { flex: 1 1 240px; }
+  .tag { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; padding: 4px 9px; border-radius: 999px; }
+  .t-new { background: #e3f0ff; color: #0055b8; }
+  .t-contacted { background: #fff2d8; color: #8a5a00; }
+  .t-accepted { background: #ddf5e2; color: #17703a; }
+  .t-declined { background: var(--bg-alt); color: var(--ink-3); }
+  .empty { color: var(--ink-2); padding: 40px 0; }
+</style>
+</head>
+<body class="app-body">
+
+<div class="adm">
+  <div class="adm-head">
+    <h1>⚓ Заявки</h1>
+    <span class="adm-count" id="count"></span>
+  </div>
+
+  <div class="panel" id="gate">
+    <h2>Ключ администратора</h2>
+    <p class="muted" style="margin-bottom:16px">Значение переменной окружения <code>SHIPYARD_ADMIN_KEY</code> на сервере. Хранится только в этой вкладке.</p>
+    <div class="field"><input id="key" type="password" autocomplete="off"></div>
+    <button class="btn btn-primary" id="enter">Открыть</button>
+    <p class="muted" id="gateErr" style="margin-top:12px;color:#d70015"></p>
+  </div>
+
+  <div id="list"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const list = document.getElementById('list');
+const gate = document.getElementById('gate');
+const gateErr = document.getElementById('gateErr');
+const countEl = document.getElementById('count');
+const toastEl = document.getElementById('toast');
+
+const API = (window.SHIPYARD_REMOTE_API || '').replace(/\/$/, '');
+const STATUSES = [
+  ['new', 'Новая'],
+  ['contacted', 'Связались'],
+  ['accepted', 'Взяли в поток'],
+  ['declined', 'Отказ'],
+];
+
+let KEY = sessionStorage.getItem('shipyard_admin_key') || '';
+
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function toast(msg) {
+  toastEl.textContent = msg;
+  toastEl.classList.add('show');
+  setTimeout(() => toastEl.classList.remove('show'), 2600);
+}
+
+const fmtDate = ts => new Date(ts).toLocaleString('ru-RU', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
+
+async function call(path, method = 'GET', body) {
+  const r = await fetch(API + path, {
+    method,
+    headers: { 'Content-Type': 'application/json', 'X-Admin-Key': KEY },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error || 'Ошибка сервера');
+  return data;
+}
+
+function card(a) {
+  const status = STATUSES.find(s => s[0] === a.status) || STATUSES[0];
+  return `
+    <div class="app-card" data-id="${a.id}">
+      <div class="app-top">
+        <b>${esc(a.name)}</b>
+        <span class="tag t-${a.status}">${esc(status[1])}</span>
+      </div>
+      <div class="app-meta">
+        ${esc(a.contact)} · ${esc(a.city || 'город не указан')} ·
+        ${esc(a.stage || 'стадия не указана')} · ${esc(a.tariff || 'тариф не выбран')} · ${fmtDate(a.ts)}
+      </div>
+      <div class="app-idea">${esc(a.idea)}</div>
+      ${a.experience ? `<div class="app-exp">Опыт: ${esc(a.experience)}</div>` : ''}
+      <div class="app-row">
+        <select data-status>${STATUSES.map(([v, n]) =>
+          `<option value="${v}" ${v === a.status ? 'selected' : ''}>${n}</option>`).join('')}</select>
+        <input data-note type="text" placeholder="Заметка" value="${esc(a.note)}">
+        <button class="btn btn-dark btn-sm" data-save>Сохранить</button>
+      </div>
+    </div>`;
+}
+
+async function load() {
+  try {
+    const { applications } = await call('/api/applications');
+    gate.hidden = true;
+    countEl.textContent = applications.length
+      ? `${applications.length} · новых: ${applications.filter(a => a.status === 'new').length}`
+      : '';
+    list.innerHTML = applications.length
+      ? applications.map(card).join('')
+      : '<div class="panel"><p class="empty">Заявок пока нет.</p></div>';
+    bind();
+  } catch (e) {
+    gate.hidden = false;
+    list.innerHTML = '';
+    gateErr.textContent = e.message;
+    KEY = '';
+    sessionStorage.removeItem('shipyard_admin_key');
+  }
+}
+
+function bind() {
+  list.querySelectorAll('[data-save]').forEach(b => b.addEventListener('click', async () => {
+    const c = b.closest('.app-card');
+    b.disabled = true;
+    try {
+      await call('/api/applications', 'PUT', {
+        id: Number(c.dataset.id),
+        status: c.querySelector('[data-status]').value,
+        note: c.querySelector('[data-note]').value,
+      });
+      toast('Сохранено');
+      load();
+    } catch (e) { toast(e.message); b.disabled = false; }
+  }));
+}
+
+document.getElementById('enter').addEventListener('click', () => {
+  KEY = document.getElementById('key').value.trim();
+  if (!KEY) return;
+  sessionStorage.setItem('shipyard_admin_key', KEY);
+  gateErr.textContent = '';
+  load();
+});
+
+document.getElementById('key').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('enter').click();
+});
+
+if (KEY) load();
+</script>
+</body>
+</html>

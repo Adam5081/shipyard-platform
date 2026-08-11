@@ -92,12 +92,29 @@ node server/server.js        # Node ≥ 22, зависимостей нет
 
 API: `register/login`, `me` (GET/PUT), `avatar`, `screening`, `toggle`
 (задачи/ИБ/юртрек с серверной валидацией и начислением очков), `demos` + `vote`,
-`flow`, `league`, `github/sync`, `certificate`, `health`.
+`flow`, `league`, `github/sync`, `certificate`, `health`,
+`apply` + `applications` (заявки с лендинга).
+
+## Заявки с лендинга
+
+Секция `#apply` на лендинге отправляет `POST /api/apply` — без входа.
+Защита: скрытое поле-ловушка, серверная валидация и не больше 3 заявок в час
+с одного адреса (адрес не хранится, только его HMAC-хэш).
+
+Заявки читаются на `/admin.html`: страница спрашивает ключ — значение env
+`SHIPYARD_ADMIN_KEY` — и показывает список со статусами
+(новая / связались / взяли в поток / отказ) и заметкой. Ключ живёт только
+в текущей вкладке; без переменной окружения доступ закрыт полностью.
+
+Если бэкенд не поднят (например, на GitHub Pages), форма не теряет заявку:
+она собирает текст, даёт его скопировать и открыть в почте. Адрес почты
+задаётся в `assets/config.js` (`SHIPYARD_CONTACT`); там же живёт
+`SHIPYARD_REMOTE_API` — адрес бэкенда для обеих страниц.
 
 **Без бэкенда (статика):** открыть `index.html` — фронтенд проверяет
 `/api/health` и, не найдя сервер, работает на localStorage (так живёт версия
-на GitHub Pages). Чтобы страница на Pages ходила в удалённый бэкенд, впишите
-его адрес в `app.html` (`window.SHIPYARD_REMOTE_API`, сейчас пустая строка).
+на GitHub Pages). Чтобы страницы ходили в удалённый бэкенд, впишите его адрес
+в `assets/config.js` (`SHIPYARD_REMOTE_API`, сейчас пустая строка).
 
 Разделы кабинета доступны по хэшу: `app.html#flow`, `#profile`, `#certificate`.
 
@@ -107,7 +124,8 @@ API: `register/login`, `me` (GET/PUT), `avatar`, `screening`, `toggle`
    поднимет web-сервис `shipyard-platform` (free, `node server/server.js`,
    health-check `/api/health`, `SHIPYARD_SECRET` генерируется сам).
 2. Скопировать выданный URL (`https://…onrender.com`) в
-   `window.SHIPYARD_REMOTE_API` в `app.html` и запушить.
+   `SHIPYARD_REMOTE_API` в `assets/config.js` и запушить. Ключ для
+   `/admin.html` смотреть там же, в переменных сервиса (`SHIPYARD_ADMIN_KEY`).
 3. Чтобы free-инстанс не засыпал, настроить внешний пинг
    `https://…onrender.com/api/health` раз в 10 минут (cron-job.org,
    UptimeRobot или GitHub Actions — заготовка воркфлоу лежит в

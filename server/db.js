@@ -49,6 +49,25 @@ db.exec(`
     demo_id INTEGER NOT NULL REFERENCES demos(id) ON DELETE CASCADE,
     PRIMARY KEY (user_id, demo_id)
   );
+
+  /* заявки с лендинга: приходят от неавторизованных людей */
+  CREATE TABLE IF NOT EXISTS applications (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    name       TEXT NOT NULL,
+    contact    TEXT NOT NULL,           -- почта или телеграм
+    city       TEXT NOT NULL DEFAULT '',
+    idea       TEXT NOT NULL,           -- что за продукт
+    stage      TEXT NOT NULL DEFAULT '',
+    tariff     TEXT NOT NULL DEFAULT '',
+    experience TEXT NOT NULL DEFAULT '',
+    status     TEXT NOT NULL DEFAULT 'new'
+               CHECK (status IN ('new','contacted','accepted','declined')),
+    note       TEXT NOT NULL DEFAULT '',
+    ip_hash    TEXT NOT NULL DEFAULT '',
+    created_at INTEGER NOT NULL
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_app_created ON applications(created_at DESC);
 `);
 
 /* ---------- миграции: колонки, добавленные после первого релиза ---------- */
