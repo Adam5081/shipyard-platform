@@ -235,21 +235,21 @@ const BADGES = [
 
 const KB = {
   materials: [
-    { icon: "🧭", week: 0, title: "Установка Claude Code и первый проект",        note: "Пошаговая настройка окружения, аутентификация, первый диалог", type: "гайд" },
-    { icon: "🧠", week: 0, title: "Принципы вайб-кодинга: контекст и планирование", note: "Как формулировать требования, когда планировать, когда просить код", type: "гайд" },
-    { icon: "🎙️", week: 1, title: "Шаблон сценария интервью с клиентом",           note: "Готовый сценарий 5–7 вопросов: боль, частота, текущее решение, цена", type: "шаблон" },
-    { icon: "🗺️", week: 1, title: "Карта боли и ценностное предложение",           note: "Рабочий лист: сегмент → боль → альтернативы → наше отличие", type: "шаблон" },
-    { icon: "✂️", week: 2, title: "Как резать объём MVP",                          note: "Правило одного сценария: что выкидываем и почему это безопасно", type: "гайд" },
-    { icon: "📄", week: 2, title: "Шаблон CLAUDE.md",                              note: "Структура файла инструкций: контекст, правила, архитектура, запреты", type: "шаблон" },
-    { icon: "🏗️", week: 3, title: "Спринты с Claude Code: декомпозиция задач",     note: "Как ставить задачи агенту, чтобы не терять контекст между сессиями", type: "гайд" },
-    { icon: "🔌", week: 4, title: "Заготовка: авторизация",                        note: "Готовый модуль: регистрация, вход, сессии, восстановление пароля", type: "заготовка" },
-    { icon: "🗄️", week: 4, title: "Заготовка: база данных и миграции",             note: "Схема, миграции, бэкапы — подключается за один спринт", type: "заготовка" },
-    { icon: "🔍", week: 5, title: "Типовые ошибки вайб-кодинга и как их ловить",   note: "Каталог: захардкоженные секреты, дырявые доступы, молчаливые catch", type: "гайд" },
-    { icon: "🛡️", week: 5, title: "Чек-лист OWASP программы",                      note: "Интерактивная версия — в разделе «Безопасность»", type: "чек-лист" },
-    { icon: "🚀", week: 6, title: "Шаблон инфраструктуры и автодеплой",            note: "Хостинг, домен, CI/CD, мониторинг, резервные копии — по шагам", type: "заготовка" },
-    { icon: "📜", week: 6, title: "Пакет юридических шаблонов",                    note: "Оферта, политика данных, пользовательское соглашение", type: "шаблон" },
-    { icon: "📈", week: 7, title: "Лендинг, цена, каналы",                         note: "Как довести продукт до первых рабочих пользователей", type: "гайд" },
-    { icon: "🎤", week: 8, title: "Структура разбора проекта",                     note: "Проблема, решение, что подтвердилось, метрики — 5 минут", type: "шаблон" },
+    { id: "m_setup",       icon: "🧭", week: 0, title: "Установка Claude Code и первый проект",        note: "Пошаговая настройка окружения, аутентификация, первый диалог", type: "гайд" },
+    { id: "m_vibe",        icon: "🧠", week: 0, title: "Принципы вайб-кодинга: контекст и планирование", note: "Как формулировать требования, когда планировать, когда просить код", type: "гайд" },
+    { id: "m_interview",   icon: "🎙️", week: 1, title: "Шаблон сценария интервью с клиентом",           note: "Готовый сценарий 5–7 вопросов: боль, частота, текущее решение, цена", type: "шаблон" },
+    { id: "m_pain",        icon: "🗺️", week: 1, title: "Карта боли и ценностное предложение",           note: "Рабочий лист: сегмент → боль → альтернативы → наше отличие", type: "шаблон" },
+    { id: "m_scope",       icon: "✂️", week: 2, title: "Как резать объём MVP",                          note: "Правило одного сценария: что выкидываем и почему это безопасно", type: "гайд" },
+    { id: "m_claudemd_ref",icon: "📄", week: 2, title: "Шаблон CLAUDE.md",                              note: "Структура файла инструкций: контекст, правила, архитектура, запреты", type: "шаблон" },
+    { id: "m_sprints",     icon: "🏗️", week: 3, title: "Спринты с Claude Code: декомпозиция задач",     note: "Как ставить задачи агенту, чтобы не терять контекст между сессиями", type: "гайд" },
+    { id: "m_auth",        icon: "🔌", week: 4, title: "Заготовка: авторизация",                        note: "Готовый модуль: регистрация, вход, сессии, восстановление пароля", type: "заготовка" },
+    { id: "m_db",          icon: "🗄️", week: 4, title: "Заготовка: база данных и миграции",             note: "Схема, миграции, бэкапы — подключается за один спринт", type: "заготовка" },
+    { id: "m_mistakes",    icon: "🔍", week: 5, title: "Типовые ошибки вайб-кодинга и как их ловить",   note: "Каталог: захардкоженные секреты, дырявые доступы, молчаливые catch", type: "гайд" },
+    { id: "m_owasp_ref",   icon: "🛡️", week: 5, title: "Чек-лист OWASP программы",                      note: "Интерактивная версия — в разделе «Безопасность»", type: "чек-лист" },
+    { id: "m_infra",       icon: "🚀", week: 6, title: "Шаблон инфраструктуры и автодеплой",            note: "Хостинг, домен, CI/CD, мониторинг, резервные копии — по шагам", type: "заготовка" },
+    { id: "m_legal",       icon: "📜", week: 6, title: "Пакет юридических шаблонов",                    note: "Оферта, политика данных, пользовательское соглашение", type: "шаблон" },
+    { id: "m_gtm",         icon: "📈", week: 7, title: "Лендинг, цена, каналы",                         note: "Как довести продукт до первых рабочих пользователей", type: "гайд" },
+    { id: "m_pitch",       icon: "🎤", week: 8, title: "Структура разбора проекта",                     note: "Проблема, решение, что подтвердилось, метрики — 5 минут", type: "шаблон" },
   ],
   prompts: [
     { icon: "🧱", title: "Промпт: план перед кодом", body: "Изучи CLAUDE.md и требования ниже. Прежде чем писать код, предложи план реализации из 3–5 шагов и задай уточняющие вопросы, если требования неполные. Код пиши только после моего подтверждения плана." },
@@ -393,6 +393,7 @@ const defaultState = () => ({
   done: {}, sec: {}, legal: {},
   demos: [], votes: {},
   kbTab: "materials",
+  kbDoc: null,
   selStation: null,
 });
 
@@ -499,6 +500,7 @@ let activeView = "map";
 
 async function go(name) {
   if (API !== null && !TOKEN) name = "auth";
+  if (activeView !== name) S.kbDoc = null;   // переход по разделам закрывает открытый материал
   activeView = name;
   if (name !== "auth") history.replaceState(null, "", "#" + name);
   document.querySelectorAll(".side-link").forEach(b =>
@@ -921,6 +923,26 @@ const VIEWS = {
   /* ---- база знаний ---- */
   kb() {
     const tab = S.kbTab;
+    const cur = currentStationIdx();
+
+    /* открытый материал — режим чтения */
+    if (tab === "materials" && S.kbDoc) {
+      const m = KB.materials.find(x => x.id === S.kbDoc);
+      const doc = m && (window.KB_DOCS || {})[m.id];
+      if (m && doc && m.week <= cur) {
+        return `
+          <button class="btn btn-ghost btn-sm" id="kbBack" style="margin-bottom:18px">← Все материалы</button>
+          <div class="page-head">
+            <h1>${m.icon} ${esc(m.title)}</h1>
+            <p>Станция ${m.week} · ${esc(m.type)}</p>
+          </div>
+          <div class="panel"><div class="doc">${doc.html}</div>
+            ${doc.copy ? `<button class="btn btn-dark btn-sm" data-copy="${esc(doc.copy)}" style="margin-top:20px">Скопировать шаблон</button>` : ""}
+          </div>`;
+      }
+      S.kbDoc = null;
+    }
+
     const tabs = [
       ["materials", "Материалы станций"],
       ["claudemd", "Шаблон CLAUDE.md"],
@@ -928,13 +950,15 @@ const VIEWS = {
     ];
     let body = "";
     if (tab === "materials") {
-      const cur = currentStationIdx();
-      body = `<div class="panel">${KB.materials.map(m => `
-        <div class="kb-item" style="${m.week > cur ? "opacity:.45" : ""}">
+      body = `<div class="panel">${KB.materials.map(m => {
+        const locked = m.week > cur;
+        return `
+        <div class="kb-item${locked ? "" : " kb-open"}" ${locked ? "" : `data-doc="${m.id}"`} style="${locked ? "opacity:.45" : ""}">
           <div class="k-icon">${m.icon}</div>
-          <div><b>${esc(m.title)}</b><small>Станция ${m.week} · ${esc(m.note)}${m.week > cur ? " · откроется по пути" : ""}</small></div>
-          <span class="k-type">${m.type}</span>
-        </div>`).join("")}</div>`;
+          <div><b>${esc(m.title)}</b><small>Станция ${m.week} · ${esc(m.note)}${locked ? " · откроется по пути" : ""}</small></div>
+          <span class="k-type">${locked ? "🔒 " : ""}${m.type}</span>
+        </div>`;
+      }).join("")}</div>`;
     } else if (tab === "claudemd") {
       body = `
         <div class="panel">
@@ -1496,7 +1520,13 @@ function bind() {
 
   /* база знаний */
   view.querySelectorAll("[data-tab]").forEach(b =>
-    b.addEventListener("click", () => { S.kbTab = b.dataset.tab; save(); render(); }));
+    b.addEventListener("click", () => { S.kbTab = b.dataset.tab; S.kbDoc = null; save(); render(); }));
+
+  view.querySelectorAll("[data-doc]").forEach(b =>
+    b.addEventListener("click", () => { S.kbDoc = b.dataset.doc; save(); render(); window.scrollTo(0, 0); }));
+
+  const kbBack = view.querySelector("#kbBack");
+  if (kbBack) kbBack.addEventListener("click", () => { S.kbDoc = null; save(); render(); });
 
   const copyMd = view.querySelector("#copyMd");
   if (copyMd) copyMd.addEventListener("click", () => {
@@ -1505,7 +1535,7 @@ function bind() {
 
   view.querySelectorAll("[data-copy]").forEach(b =>
     b.addEventListener("click", () =>
-      navigator.clipboard?.writeText(b.dataset.copy).then(() => toast("Промпт скопирован"))));
+      navigator.clipboard?.writeText(b.dataset.copy).then(() => toast("Скопировано в буфер"))));
 
   /* сервисный пул */
   view.querySelectorAll("[data-book]").forEach(b =>
