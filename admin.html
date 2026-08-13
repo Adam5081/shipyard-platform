@@ -28,6 +28,10 @@
   .t-accepted { background: #ddf5e2; color: #17703a; }
   .t-declined { background: var(--bg-alt); color: var(--ink-3); }
   .empty { color: var(--ink-2); padding: 40px 0; }
+  .invite-box { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px;
+    background: var(--bg-alt); border-radius: var(--radius-s); padding: 10px 14px; font-size: 14px; }
+  .invite-box code { font-weight: 700; letter-spacing: .04em; }
+  .invite-box .muted { color: var(--ink-3); font-size: 13px; }
 </style>
 </head>
 <body class="app-body">
@@ -103,6 +107,14 @@ function card(a) {
       </div>
       <div class="app-idea">${esc(a.idea)}</div>
       ${a.experience ? `<div class="app-exp">Опыт: ${esc(a.experience)}</div>` : ''}
+      ${a.invite ? `
+        <div class="invite-box">
+          <code>${esc(a.invite)}</code>
+          ${a.inviteUsedAt
+            ? `<span class="muted">использован ${fmtDate(a.inviteUsedAt)}</span>`
+            : `<button class="btn btn-ghost btn-sm" data-copy="${esc(a.invite)}">Скопировать код</button>
+               <span class="muted">отправьте участнику — по нему он зарегистрируется</span>`}
+        </div>` : ''}
       <div class="app-row">
         <select data-status>${STATUSES.map(([v, n]) =>
           `<option value="${v}" ${v === a.status ? 'selected' : ''}>${n}</option>`).join('')}</select>
@@ -133,6 +145,11 @@ async function load() {
 }
 
 function bind() {
+  list.querySelectorAll('[data-copy]').forEach(b => b.addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(b.dataset.copy); toast('Код скопирован'); }
+    catch { toast('Не удалось скопировать — выделите код вручную'); }
+  }));
+
   list.querySelectorAll('[data-save]').forEach(b => b.addEventListener('click', async () => {
     const c = b.closest('.app-card');
     b.disabled = true;

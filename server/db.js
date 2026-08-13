@@ -89,6 +89,18 @@ for (const [name, decl] of NEW_COLUMNS) {
   if (!existing.has(name)) db.exec(`ALTER TABLE users ADD COLUMN ${name} ${decl}`);
 }
 
+/* Инвайты: код выдаётся заявке при статусе «взяли», регистрация — только по коду. */
+const APP_COLUMNS = [
+  ["invite_code",     "TEXT NOT NULL DEFAULT ''"],    // код приглашения (пустой — не выдан)
+  ["invite_used_at",  "INTEGER NOT NULL DEFAULT 0"],  // когда код использован при регистрации
+  ["invited_user_id", "INTEGER NOT NULL DEFAULT 0"],  // кто зарегистрировался по коду
+];
+
+const existingApp = new Set(db.prepare("PRAGMA table_info(applications)").all().map(c => c.name));
+for (const [name, decl] of APP_COLUMNS) {
+  if (!existingApp.has(name)) db.exec(`ALTER TABLE applications ADD COLUMN ${name} ${decl}`);
+}
+
 function hashPassword(password, salt) {
   return crypto.scryptSync(password, salt, 32).toString("hex");
 }

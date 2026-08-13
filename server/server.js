@@ -94,10 +94,30 @@ const q = {
   appById: db.prepare("SELECT * FROM applications WHERE id = ?"),
   updateApp: db.prepare("UPDATE applications SET status = ?, note = ? WHERE id = ?"),
   appsFromIp: db.prepare("SELECT COUNT(*) AS n FROM applications WHERE ip_hash = ? AND created_at > ?"),
+  appByInvite: db.prepare("SELECT * FROM applications WHERE invite_code = ? AND status = 'accepted'"),
+  inviteExists: db.prepare("SELECT 1 FROM applications WHERE invite_code = ?"),
+  setInvite: db.prepare("UPDATE applications SET invite_code = ? WHERE id = ?"),
+  useInvite: db.prepare("UPDATE applications SET invite_used_at = ?, invited_user_id = ? WHERE id = ?"),
 };
 
 const TARIFFS = ["Solo", "Pro", "Partner"];
 const normTariff = t => (t === "Venture" ? "Partner" : t);
+
+/* ---------- инвайты: регистрация только по коду из одобренной заявки ---------- */
+
+// SHIPYARD_OPEN_REG=1 открывает свободную регистрацию (локальная разработка, демо)
+const OPEN_REG = process.env.SHIPYARD_OPEN_REG === "1";
+
+// без похожих символов (0/O, 1/I/L), чтобы код легко диктовался голосом
+const INVITE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+
+function makeInviteCode() {
+  for (;;) {
+    let code = "SHP-";
+    for (const b of crypto.randomBytes(6)) code += INVITE_ALPHABET[b % INVITE_ALPHABET.length];
+    if (!q.inviteExists.get(code)) return code;
+  }
+}
 
 function userSets(uid) {
   const rows = q.progress.all(uid);
@@ -262,11 +282,26 @@ const routes = {
     if (password.length < 6) return err(res, 400, "Пароль — минимум 6 символов");
     if (!name) return err(res, 400, "Укажите имя");
     if (q.userByEmail.get(email)) return err(res, 409, "Этот e-mail уже зарегистрирован");
+
+    // тариф не выбирается при регистрации — он приходит из одобренной заявки
+    let app = null;
+    let tariff = "Solo";
+    if (OPEN_REG) {
+      tariff = TARIFFS.includes(normTariff(b.tariff)) ? normTariff(b.tariff) : "Solo";
+    } else {
+      const code = String(b.invite || "").trim().toUpperCase();
+      if (!code) return err(res, 403, "Регистрация — по коду приглашения. Он приходит после одобрения заявки");
+      app = q.appByInvite.get(code);
+      if (!app) return err(res, 403, "Код приглашения не найден. Проверьте написание или напишите нам");
+      if (app.invite_used_at) return err(res, 403, "Этот код уже использован. Если это были не вы — напишите нам");
+      if (TARIFFS.includes(normTariff(app.tariff))) tariff = normTariff(app.tariff);
+    }
+
     const salt = crypto.randomBytes(16).toString("hex");
-    const tariff = TARIFFS.includes(normTariff(b.tariff)) ? normTariff(b.tariff) : "Solo";
     const project = String(b.project || "Мой продукт").trim().slice(0, 120) || "Мой продукт";
     const r = q.insertUser.run(email, hashPassword(password, salt), salt, name, project, tariff, Date.now());
     const u = q.userById.get(Number(r.lastInsertRowid));
+    if (app) q.useInvite.run(Date.now(), u.id, app.id);
     send(res, 201, { token: signToken(u.id), ...meState(u) });
   },
 
@@ -291,7 +326,7 @@ const routes = {
     const b = await readBody(req);
     const name = String(b.name ?? u.name).trim().slice(0, 60) || u.name;
     const project = String(b.project ?? u.project).trim().slice(0, 120) || u.project;
-    const tariff = TARIFFS.includes(normTariff(b.tariff)) ? normTariff(b.tariff) : normTariff(u.tariff);
+    const tariff = normTariff(u.tariff); // тариф задаётся заявкой, из профиля не меняется
     const about = String(b.about ?? u.about ?? "").trim().slice(0, 400);
     const link = String(b.link ?? u.link ?? "").trim().slice(0, 300);
     if (link && !/^https?:\/\//.test(link)) return err(res, 400, "Ссылка должна начинаться с http(s)://");
@@ -494,6 +529,7 @@ const routes = {
         id: a.id, name: a.name, contact: a.contact, city: a.city, idea: a.idea,
         stage: a.stage, tariff: a.tariff, experience: a.experience,
         status: a.status, note: a.note, ts: a.created_at,
+        invite: a.invite_code, inviteUsedAt: a.invite_used_at,
       })),
     });
   },
@@ -506,7 +542,13 @@ const routes = {
     const status = APP_STATUSES.includes(b.status) ? b.status : app.status;
     const note = String(b.note ?? app.note).trim().slice(0, 1000);
     q.updateApp.run(status, note, app.id);
-    send(res, 200, { ok: true, status, note });
+    // при статусе «взяли» заявке выдаётся код приглашения — по нему человек регистрируется
+    let invite = app.invite_code;
+    if (status === "accepted" && !invite) {
+      invite = makeInviteCode();
+      q.setInvite.run(invite, app.id);
+    }
+    send(res, 200, { ok: true, status, note, invite, inviteUsedAt: app.invite_used_at });
   },
 
   "GET /api/health": async (req, res) => send(res, 200, { ok: true, service: "shipyard" }),

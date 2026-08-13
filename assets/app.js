@@ -561,9 +561,11 @@ const VIEWS = {
             ${S._reg ? `
               <div class="field"><label>Имя</label><input id="aName" required placeholder="Как к вам обращаться"></div>
               <div class="field"><label>Проект</label><input id="aProject" placeholder="Название вашего продукта"></div>
-              <div class="field"><label>Тариф</label>
-                <select id="aTariff"><option>Solo</option><option selected>Pro</option><option>Partner</option></select>
-              </div>` : ""}
+              <div class="field"><label>Код приглашения</label>
+                <input id="aInvite" required placeholder="SHP-XXXXXX" autocomplete="off" style="text-transform:uppercase">
+              </div>
+              <p class="muted" style="font-size:13px;margin:-6px 0 14px">Код приходит после одобрения заявки.
+                Ещё не подавали? <a href="index.html#apply">Подать заявку</a></p>` : ""}
             <div class="field"><label>E-mail</label><input id="aEmail" type="email" required placeholder="you@example.com"></div>
             <div class="field"><label>Пароль</label><input id="aPass" type="password" required minlength="6" placeholder="Минимум 6 символов"></div>
             <div id="authErr" style="color:var(--red);font-size:14px;margin-bottom:12px;display:none"></div>
@@ -1151,9 +1153,7 @@ const VIEWS = {
               <div class="field"><label>Имя</label><input id="pfName" value="${esc(S.name)}"></div>
               <div class="field"><label>Название проекта</label><input id="pfProject" value="${esc(S.project)}"></div>
               <div class="field"><label>Тариф</label>
-                <select id="pfTariff">
-                  ${["Solo", "Pro", "Partner"].map(t => `<option ${S.tariff === t ? "selected" : ""}>${t}</option>`).join("")}
-                </select>
+                <input value="${esc(S.tariff)}" disabled title="Тариф закреплён в договоре — для изменения напишите нам">
               </div>
             </div>
             <div>
@@ -1370,7 +1370,7 @@ function bind() {
       if (S._reg) {
         body.name = view.querySelector("#aName").value;
         body.project = view.querySelector("#aProject").value;
-        body.tariff = view.querySelector("#aTariff").value;
+        body.invite = view.querySelector("#aInvite").value.trim().toUpperCase();
         data = await apiCall("/register", "POST", body);
       } else {
         data = await apiCall("/login", "POST", body);
@@ -1599,7 +1599,6 @@ function bind() {
     const patch = {
       name: view.querySelector("#pfName").value.trim() || S.name,
       project: view.querySelector("#pfProject").value.trim() || S.project,
-      tariff: view.querySelector("#pfTariff").value,
       about: view.querySelector("#pfAbout").value.trim(),
       link: view.querySelector("#pfLink").value.trim(),
       repo: view.querySelector("#pfRepo").value.trim(),
