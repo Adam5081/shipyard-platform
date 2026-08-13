@@ -52,8 +52,8 @@ const STATIONS = [
     desc: "Урезать до минимума и перевести архитектуру на язык Claude Code.",
     story: "Самая недооценённая станция. Здесь вы режете задуманное до одного сценария, который можно собрать за четыре недели, выбираете стек и переносите архитектуру в CLAUDE.md — файл, по которому агент работает все следующие недели. Плохой чертёж стоит трёх недель переделок, поэтому контрольная точка тут жёсткая.",
     tasks: [
-      { id: "w2_scope", label: "Урезать объём MVP до одного ключевого сценария", pts: 50 },
-      { id: "w2_arch",  label: "Составить техническую карту и выбрать стек", pts: 40 },
+      { id: "w2_scope", label: "Определить реалистичный MVP с минимальными рабочими процессами", pts: 50 },
+      { id: "w2_arch",  label: "Составить roadmap и выбрать техстек", pts: 40 },
       { id: "w2_mock",  label: "Собрать макеты ключевых экранов", pts: 30 },
       { id: "w2_md",    label: "Написать CLAUDE.md: контекст, правила, архитектурные решения", pts: 50 },
       { id: "w2_plan",  label: "Декомпозировать сборку на задачи и спринты", pts: 30 },
@@ -82,7 +82,7 @@ const STATIONS = [
       { id: "w4_auth", label: "Подключить авторизацию из шаблонной заготовки", pts: 40 },
       { id: "w4_db",   label: "Подключить базу данных и миграции из заготовки", pts: 40 },
       { id: "w4_int",  label: "Подключить нужные интеграции (почта, файлы, API)", pts: 40 },
-      { id: "w4_mid",  label: "Пройти промежуточный смотр MVP", pts: 40 },
+      { id: "w4_mid",  label: "Пройти промежуточный скрининг MVP и получить обратную связь", pts: 40 },
     ],
     artifact: "Функционально полный MVP",
     cp: { id: "КТ-3", cond: "Ключевой сценарий работает от начала до конца на реальных данных" },
@@ -101,7 +101,7 @@ const STATIONS = [
     artifact: "Закрытый чек-лист OWASP · отчёт сканирования",
   },
   {
-    id: "w6", week: 6, phase: "Запуск", title: "Продукт в интернете",
+    id: "w6", week: 6, phase: "Запуск", title: "Продукт в сети",
     tool: "rocket", toolName: "Ракета",
     desc: "Хостинг, домен, автодеплой, мониторинг и юридический пакет.",
     story: "Продукт выходит наружу: хостинг, домен, сертификаты, автоматический деплой, мониторинг и резервные копии. Параллельно закрывается юридический пакет — оферта и политика данных, без которых нельзя принимать деньги. С этой станции у вас есть публичная ссылка, которую не стыдно отправить клиенту.",
@@ -116,24 +116,10 @@ const STATIONS = [
     cp: { id: "КТ-4", cond: "Чек-лист безопасности закрыт, продукт доступен по публичной ссылке" },
   },
   {
-    id: "w7", week: 7, phase: "Рабочая среда", title: "Вывод в рабочую среду",
-    tool: "megaphone", toolName: "Рупор",
-    desc: "Продукт попадает в руки первых пользователей и получает первые деньги.",
-    story: "Продукт переезжает из демо в реальную работу: лендинг, цена, первые каналы, аналитика. Цель станции — не «трафик», а первые люди, которые пользуются продуктом в своей работе, и первое подтверждение деньгами: предоплата, пилотное соглашение или подписанное письмо о намерении.",
-    tasks: [
-      { id: "w7_land",  label: "Собрать лендинг продукта и определить цену", pts: 40 },
-      { id: "w7_chan",  label: "Запустить первые каналы и подключить аналитику", pts: 40 },
-      { id: "w7_loi",   label: "Подписать пилотное соглашение или письмо о намерении", pts: 200 },
-      { id: "w7_pay",   label: "Первый платящий клиент (после юридического пакета)", pts: 200 },
-    ],
-    artifact: "Первые пользователи · пилотные соглашения",
-    cp: { id: "КТ-5", cond: "Продукт используется вне вашей команды: есть пилот, предоплата или подписанное письмо" },
-  },
-  {
-    id: "w8", week: 8, phase: "Защита", title: "Защита проекта",
+    id: "w8", week: 7, phase: "Защита", title: "Защита проекта",
     tool: "trophy", toolName: "Кубок",
     desc: "Разбор результата перед отраслевыми экспертами.",
-    story: "Финальная станция перед дверью. Вы собираете разбор проекта: проблема, решение, что подтвердилось, что нет, метрики и план развития. Прогон с ментором, затем защита перед отраслевыми экспертами и письменная обратная связь каждому. За дверью — сертификат и выбор, как жить дальше.",
+    story: "Вы собираете разбор проекта: проблема, решение, что подтвердилось, что нет, метрики и план развития. Прогон с ментором, затем защита перед отраслевыми экспертами и письменная обратная связь каждому. За защитой — последняя станция: продукт выходит в рабочую среду.",
     tasks: [
       { id: "w8_deck",  label: "Собрать разбор проекта: проблема, решение, результат, план", pts: 60 },
       { id: "w8_dry",   label: "Пройти прогон защиты с ментором", pts: 40 },
@@ -141,6 +127,19 @@ const STATIONS = [
       { id: "w8_track", label: "Выбрать трек после программы", pts: 30 },
     ],
     artifact: "Разбор проекта · оценка экспертов · решение по треку",
+  },
+  {
+    id: "w7", week: 8, phase: "Рабочая среда", title: "Вывод в рабочую среду",
+    tool: "megaphone", toolName: "Рупор",
+    desc: "Продукт попадает в руки первых пользователей.",
+    story: "Финальная станция перед дверью. Продукт переезжает из демо в реальную работу: при необходимости собирается лендинг, запускается аналитика — и появляются первые люди, которые пользуются продуктом в своей работе. За дверью — сертификат и выбор, как жить дальше.",
+    tasks: [
+      { id: "w7_land",  label: "Собрать лендинг продукта (при необходимости)", pts: 40 },
+      { id: "w7_chan",  label: "Запустить аналитику продукта", pts: 40 },
+      { id: "w7_pay",   label: "Первые пользователи", pts: 200 },
+    ],
+    artifact: "Продукт в рабочей среде · первые пользователи",
+    cp: { id: "КТ-5", cond: "Продукт используется вне вашей команды: есть первые пользователи" },
   },
 ];
 
@@ -151,8 +150,8 @@ const LEVELS = [
   { n: 4, name: "Builder",      emoji: "🏗️", cond: "Ключевой сценарий работает", station: 4 },
   { n: 5, name: "Sea Trials",   emoji: "🌊", cond: "Тестирование и безопасность закрыты", station: 5 },
   { n: 6, name: "Launched",     emoji: "🚢", cond: "Продукт в проде, юрпакет собран", station: 6 },
-  { n: 7, name: "First Voyage", emoji: "🧭", cond: "Продукт в рабочей среде у первых клиентов", station: 7 },
-  { n: 8, name: "Captain",      emoji: "⚓️", cond: "Защита пройдена", station: 8 },
+  { n: 7, name: "Captain",      emoji: "⚓️", cond: "Защита пройдена", station: 7 },
+  { n: 8, name: "First Voyage", emoji: "🧭", cond: "Продукт в рабочей среде у первых пользователей", station: 8 },
 ];
 
 /* ---------------- скрининг сложности ----------------
@@ -229,7 +228,7 @@ const BADGES = [
   { id: "b_security",  emoji: "🛡️", name: "Security Cleared",  desc: "Чек-лист OWASP и сканирование закрыты", test: s => SECURITY.slice(0, 2).every(g => g.items.every(i => s.sec[i.id])) },
   { id: "b_legal",     emoji: "⚖️", name: "Legal Ready",       desc: "Юридический пакет собран",           test: s => ["l0a","l1","l5","l6"].every(id => s.legal[id]) },
   { id: "b_ship",      emoji: "🚢", name: "Zero Downtime",     desc: "Продукт в проде с мониторингом",     test: s => ["w6_host","w6_cicd","w6_mon","w6_live"].every(id => s.done[id]) },
-  { id: "b_revenue",   emoji: "💸", name: "First Revenue",     desc: "Первый платящий клиент или пилот",   test: s => s.done["w7_loi"] || s.done["w7_pay"] },
+  { id: "b_revenue",   emoji: "🧑‍🤝‍🧑", name: "First Users",       desc: "Первые пользователи продукта",       test: s => s.done["w7_pay"] },
   { id: "b_streak",    emoji: "🔥", name: "Демо-серия",        desc: "3 пятничных демо подряд",            test: s => s.demos.length >= 3 },
 ];
 
@@ -248,8 +247,8 @@ const KB = {
     { id: "m_owasp_ref",   icon: "🛡️", week: 5, title: "Чек-лист OWASP программы",                      note: "Интерактивная версия — в разделе «Безопасность»", type: "чек-лист" },
     { id: "m_infra",       icon: "🚀", week: 6, title: "Шаблон инфраструктуры и автодеплой",            note: "Хостинг, домен, CI/CD, мониторинг, резервные копии — по шагам", type: "заготовка" },
     { id: "m_legal",       icon: "📜", week: 6, title: "Пакет юридических шаблонов",                    note: "Оферта, политика данных, пользовательское соглашение", type: "шаблон" },
-    { id: "m_gtm",         icon: "📈", week: 7, title: "Лендинг, цена, каналы",                         note: "Как довести продукт до первых рабочих пользователей", type: "гайд" },
-    { id: "m_pitch",       icon: "🎤", week: 8, title: "Структура разбора проекта",                     note: "Проблема, решение, что подтвердилось, метрики — 5 минут", type: "шаблон" },
+    { id: "m_pitch",       icon: "🎤", week: 7, title: "Структура разбора проекта",                     note: "Проблема, решение, что подтвердилось, метрики — 5 минут", type: "шаблон" },
+    { id: "m_gtm",         icon: "📈", week: 8, title: "Лендинг, аналитика, первые пользователи",       note: "Как довести продукт до первых рабочих пользователей", type: "гайд" },
   ],
   prompts: [
     { icon: "🧱", title: "Промпт: план перед кодом", body: "Изучи CLAUDE.md и требования ниже. Прежде чем писать код, предложи план реализации из 3–5 шагов и задай уточняющие вопросы, если требования неполные. Код пиши только после моего подтверждения плана." },
@@ -453,8 +452,9 @@ const doorOpen = () => STATIONS.every(stationDone);
 function earnedBadges() { return BADGES.filter(b => b.test(S)); }
 
 function demoDayDate() {
+  // защита — станция 7: конец седьмой недели потока
   const d = new Date(S.startDate);
-  d.setDate(d.getDate() + 56);
+  d.setDate(d.getDate() + 49);
   return d;
 }
 
@@ -479,6 +479,28 @@ function toast(msg) {
   toastEl.classList.add("show");
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => toastEl.classList.remove("show"), 2800);
+}
+
+/* Праздник перехода: аватар радуется, когда закрыта станция или взят уровень.
+   Небольшой дофамин между этапами — по фидбеку продакта. */
+function celebrate(title, sub, emoji = "🎉") {
+  document.querySelector(".cele")?.remove();
+  const el = document.createElement("div");
+  el.className = "cele";
+  el.innerHTML = `
+    <div class="cele-card">
+      <div class="cele-confetti">${["🎉", "✨", "🎊", "⚓", "✨", "🎉"].map((e, i) => `<i style="animation-delay:${i * 0.12}s">${e}</i>`).join("")}</div>
+      ${S.avatar
+        ? `<img class="cele-avatar" src="${S.avatar}" alt="">`
+        : `<div class="cele-emoji">${emoji}</div>`}
+      <b>${esc(title)}</b>
+      <small>${esc(sub)}</small>
+      <button class="btn btn-primary btn-sm">Дальше</button>
+    </div>`;
+  const close = () => { el.classList.add("out"); setTimeout(() => el.remove(), 300); };
+  el.addEventListener("click", e => { if (e.target === el || e.target.tagName === "BUTTON") close(); });
+  document.body.appendChild(el);
+  setTimeout(close, 5000);
 }
 
 function refreshChrome() {
@@ -990,11 +1012,11 @@ const VIEWS = {
 
   /* ---- сервисный пул ---- */
   experts() {
-    const isPro = S.tariff !== "Solo";
+    const hours = S.tariff === "Solo" ? "4 ч/нед" : S.tariff === "Pro" ? "8 ч/нед" : "без лимита";
     return `
       <div class="page-head">
         <h1>Сервисный пул</h1>
-        <p>Групповой контур — всем: два созвона в неделю и ментор в Telegram. Индивидуальные слоты — дифференциатор тарифов Pro и Partner.</p>
+        <p>Групповой контур и ментор в Telegram — всем. Индивидуальные созвоны с экспертами — по часам тарифа: 4 часа в неделю на Solo, 8 — на Pro, без лимита на Partner.</p>
       </div>
       <div class="panel">
         <table class="table">
@@ -1008,9 +1030,7 @@ const VIEWS = {
                 <td style="color:var(--ink-2)">${esc(e.format)}</td>
                 <td style="white-space:nowrap">${esc(e.weeks)}</td>
                 <td>${e.indiv
-                  ? (isPro
-                      ? `<button class="btn btn-ghost btn-sm" data-book="${i}">Слот</button>`
-                      : `<span class="status-chip wait">Pro / Partner</span>`)
+                  ? `<button class="btn btn-ghost btn-sm" data-book="${i}" title="Лимит тарифа: ${hours}">Слот</button>`
                   : `<span class="status-chip done">Всегда на связи</span>`}</td>
               </tr>`).join("")}
           </tbody>
@@ -1029,7 +1049,6 @@ const VIEWS = {
       { ok: cpPassed(STATIONS[2]), label: "КТ-2 — объём MVP утверждён" },
       { ok: cpPassed(STATIONS[4]), label: "КТ-3 — ключевой сценарий на реальных данных" },
       { ok: cpPassed(STATIONS[6]), label: "КТ-4 — безопасность закрыта, продукт в проде" },
-      { ok: cpPassed(STATIONS[7]), label: "КТ-5 — продукт в рабочей среде у первых клиентов" },
       { ok: !!S.done["w8_deck"], label: "Разбор проекта собран" },
       { ok: !!S.done["w8_dry"], label: "Прогон защиты с ментором пройден" },
     ];
@@ -1047,7 +1066,7 @@ const VIEWS = {
       <div class="panel-row cols-2">
         <div class="panel">
           <h2>Готовность к сцене · ${okCount}/${reqs.length}</h2>
-          <p class="muted" style="margin-bottom:10px">Выступают проекты, прошедшие КТ-5. Остальные — зрители и участники разбора.</p>
+          <p class="muted" style="margin-bottom:10px">Выступают проекты, прошедшие КТ-4. Остальные — зрители и участники разбора. После защиты остаётся последняя станция — вывод в рабочую среду.</p>
           ${reqs.map(r => `<div class="req ${r.ok ? "ok" : "no"}"><div class="r-ic">${r.ok ? "✓" : "·"}</div>${esc(r.label)}</div>`).join("")}
         </div>
         <div class="panel">
@@ -1403,11 +1422,11 @@ function bind() {
         const nowTools = tools().length;
         if (checked) {
           const t = STATIONS.flatMap(p => p.tasks).find(x => x.id === id);
-          if (doorOpen() && wasTools < 9) toast("🚪 Дверь MVP открыта — сертификат доступен!");
+          if (doorOpen() && wasTools < 9) celebrate("Дверь MVP открыта!", "Путь пройден — сертификат доступен", "🚪");
           else if (nowTools > wasTools) {
             const st = STATIONS.find(p => stationDone(p) && p.tasks.some(x => x.id === id));
-            toast(`🧰 Станция закрыта — получен инструмент: ${st ? st.toolName : "новый"}`);
-          } else if (nowLvl > wasLvl) toast(`${LEVELS[nowLvl - 1].emoji} Новый уровень: ${LEVELS[nowLvl - 1].name}!`);
+            celebrate("Станция закрыта!", `Получен инструмент: ${st ? st.toolName : "новый"} · путь дальше открыт`, "🧰");
+          } else if (nowLvl > wasLvl) celebrate(`Новый уровень: ${LEVELS[nowLvl - 1].name}!`, LEVELS[nowLvl - 1].cond, LEVELS[nowLvl - 1].emoji);
           else toast(`+${t.pts} очков`);
         }
         CACHE.league = null;

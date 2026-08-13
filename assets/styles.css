@@ -1507,3 +1507,21 @@ pre.code .h { color: #7fd4e4; font-weight: 600; }
   .dd-count { gap: 12px; }
   .map-hint { font-size: 10.5px; padding: 6px 10px; }
 }
+
+/* ===== праздник перехода между этапами ===== */
+.cele { position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center;
+  background: rgba(20, 24, 32, .45); backdrop-filter: blur(3px); animation: cele-in .25s ease; }
+.cele.out { opacity: 0; transition: opacity .3s ease; }
+.cele-card { background: var(--bg); border-radius: var(--radius-m); padding: 34px 40px 28px; text-align: center;
+  box-shadow: 0 20px 60px rgba(0,0,0,.3); max-width: 340px; animation: cele-pop .35s cubic-bezier(.34,1.56,.64,1); }
+.cele-card b { display: block; font-size: 20px; letter-spacing: -.01em; margin-top: 14px; }
+.cele-card small { display: block; color: var(--ink-2); font-size: 14px; margin: 6px 0 18px; }
+.cele-confetti { font-size: 18px; letter-spacing: 6px; }
+.cele-confetti i { display: inline-block; font-style: normal; animation: cele-fall 1.6s ease-in-out infinite; }
+.cele-avatar { width: 96px; height: 96px; margin-top: 14px; image-rendering: pixelated;
+  border-radius: var(--radius-s); animation: cele-jump .7s ease-in-out infinite; }
+.cele-emoji { font-size: 64px; margin-top: 10px; animation: cele-jump .7s ease-in-out infinite; }
+@keyframes cele-in { from { opacity: 0; } }
+@keyframes cele-pop { from { transform: scale(.7); opacity: 0; } }
+@keyframes cele-jump { 0%, 100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-14px) rotate(2deg); } }
+@keyframes cele-fall { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }

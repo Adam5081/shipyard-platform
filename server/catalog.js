@@ -9,8 +9,10 @@ const PHASE_TASKS = [
   { week: 4, gate: "K3", tasks: { w4_auth: 40, w4_db: 40, w4_int: 40, w4_mid: 40 } },
   { week: 5, tasks: { w5_test: 40, w5_rev: 40, w5_scan: 40, w5_owasp: 60 } },
   { week: 6, gate: "K4", tasks: { w6_host: 40, w6_cicd: 40, w6_mon: 30, w6_legal: 50, w6_live: 60 } },
-  { week: 7, gate: "K5", tasks: { w7_land: 40, w7_chan: 40, w7_loi: 200, w7_pay: 200 } },
-  { week: 8, tasks: { w8_deck: 60, w8_dry: 40, w8_pitch: 100, w8_track: 30 } },
+  // этапы 7/8 поменяны местами (защита → 7, вывод в рабочую среду → 8);
+  // префиксы id исторические и в БД не переименовываются
+  { week: 7, tasks: { w8_deck: 60, w8_dry: 40, w8_pitch: 100, w8_track: 30 } },
+  { week: 8, gate: "K5", tasks: { w7_land: 40, w7_chan: 40, w7_pay: 200 } },
 ];
 
 const TASKS = Object.assign({}, ...PHASE_TASKS.map(p => p.tasks));
