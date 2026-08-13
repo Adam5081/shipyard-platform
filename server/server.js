@@ -98,6 +98,7 @@ const q = {
   inviteExists: db.prepare("SELECT 1 FROM applications WHERE invite_code = ?"),
   setInvite: db.prepare("UPDATE applications SET invite_code = ? WHERE id = ?"),
   useInvite: db.prepare("UPDATE applications SET invite_used_at = ?, invited_user_id = ? WHERE id = ?"),
+  lastDone: db.prepare("SELECT MAX(done_at) AS t FROM progress WHERE user_id = ?"),
 };
 
 const TARIFFS = ["Solo", "Pro", "Partner"];
@@ -549,6 +550,25 @@ const routes = {
       q.setInvite.run(invite, app.id);
     }
     send(res, 200, { ok: true, status, note, invite, inviteUsedAt: app.invite_used_at });
+  },
+
+  /* Участники и их прогресс — для админки. Сиды помечаются, а не скрываются:
+     так видно ровно то же, что видят участники в потоке. */
+  "GET /api/admin/users": async (req, res) => {
+    if (!isAdmin(req)) return err(res, 401, "Нужен ключ администратора");
+    const users = q.allUsers.all().map(x => {
+      const s = userStats(x);
+      return {
+        id: x.id, name: x.name, email: x.email, project: x.project,
+        tariff: normTariff(x.tariff), dock: x.dock || "",
+        seed: x.seed_pts > 0,
+        points: s.points, level: s.level, station: s.station, walk: s.walk,
+        demos: q.demoCount.get(x.id).n,
+        createdAt: x.created_at,
+        lastAt: q.lastDone.get(x.id).t || 0,
+      };
+    }).sort((a, b) => b.walk - a.walk || b.points - a.points);
+    send(res, 200, { users });
   },
 
   "GET /api/health": async (req, res) => send(res, 200, { ok: true, service: "shipyard" }),
