@@ -700,7 +700,7 @@ const VIEWS = {
 
       <div class="map-head">
         <div>
-          <div class="mh-label">Станция ${st.week} из 8 · ${esc(STATIONS[cur].phase)}</div>
+          <div class="mh-label">Станция ${st.week} из 8 · ${esc(st.phase)}</div>
           <h1>${esc(S.project)}</h1>
         </div>
         <div class="mh-stats">
@@ -718,7 +718,19 @@ const VIEWS = {
 
       <div class="map-stage">
         <canvas id="mapCanvas"></canvas>
-        <div class="map-hint">Нажмите на станцию, чтобы раскрыть миссию · вы прошли ${prog}% пути</div>
+        <button class="scene-nav prev" data-station="${Math.max(0, sel - 1)}" ${sel === 0 ? "disabled" : ""} aria-label="Предыдущая станция">‹</button>
+        <button class="scene-nav next" data-station="${Math.min(8, sel + 1)}" ${sel === 8 ? "disabled" : ""} aria-label="Следующая станция">›</button>
+        <div class="scene-title">Карта ${sel + 1} из 9 · ${esc(st.title)}</div>
+        <div class="map-hint">${
+          sel === cur
+            ? `Персонаж на этой карте: закрыто ${st.tasks.filter(t => S.done[t.id]).length} из ${st.tasks.length} задач — дойдёт до флага, когда станция будет закрыта · всего пройдено ${prog}% пути`
+            : done ? "Карта пройдена — инструмент собран, дорога открыта"
+            : "Эта карта впереди — персонаж придёт сюда после предыдущих станций"}</div>
+      </div>
+      <div class="scene-dots">
+        ${STATIONS.map((p, i) => `
+          <button class="scene-dot ${stationDone(p) ? "done" : ""} ${i === sel ? "sel" : ""} ${i === cur ? "cur" : ""}"
+            data-station="${i}" title="Станция ${i}: ${esc(p.title)}">${i}</button>`).join("")}
       </div>
 
       <div class="tool-shelf">
@@ -1480,37 +1492,38 @@ function hashNum(s) {
 /* ---------------- карта: жизненный цикл ---------------- */
 
 let mapInstance = null;
-let lastCharX = null;
+let lastScene = null;   // { idx, x } — чтобы персонаж не телепортировался при перерисовке
 
 function mountMap() {
   const cv = document.getElementById("mapCanvas");
   if (!cv) return;
-  mapInstance = new GAME.CityMap(cv, {
-    onSelect: i => {
-      if (i >= 9) { go("certificate"); return; }
-      S.selStation = i;
-      save();
-      render();
-    },
-  });
-  if (lastCharX !== null) mapInstance.charX = lastCharX;
+  const cur = currentStationIdx();
+  const sel = S.selStation === null ? cur : Math.max(0, Math.min(8, S.selStation));
+  const st = STATIONS[sel];
+  const frac = stationDone(st) ? 1 : st.tasks.filter(t => S.done[t.id]).length / st.tasks.length;
+
+  mapInstance = new GAME.StationScene(cv);
   mapInstance.set({
-    stations: STATIONS.map(p => ({
-      done: stationDone(p), tool: p.tool,
-      gate: !!p.cp, gatePassed: cpPassed(p),
-    })),
-    station: currentStationIdx(),
-    walk: walkPos(),
-    avatar: myAvatar(),
+    index: sel,
+    progress: frac,
+    hero: sel === cur,                 // персонаж живёт на своей текущей карте
+    locked: sel > cur,
+    done: stationDone(st),
+    tool: st.tool,
+    gate: !!st.cp,
+    gatePassed: cpPassed(st),
     doorOpen: doorOpen(),
-    peers: flowRows().filter(r => !r.me),
-    name: S.name,
+    avatar: myAvatar(),
+    // соседи, находящиеся на этой же карте, идут рядом по дороге
+    peers: flowRows().filter(r => !r.me && r.station === sel)
+      .map(r => ({ avatar: r.avatar, frac: Math.max(0, Math.min(1, (r.walk || 0) * 9 - sel)) })),
   });
+  if (lastScene && lastScene.idx === sel) mapInstance.charX = lastScene.x;
 }
 
 function unmountMap() {
   if (mapInstance) {
-    lastCharX = mapInstance.charX;
+    lastScene = { idx: mapInstance.data.index, x: mapInstance.charX };
     mapInstance.destroy();
     mapInstance = null;
   }

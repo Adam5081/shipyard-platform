@@ -385,48 +385,138 @@ const darken = (css, k) => {
   return `rgb(${Math.round(m[1] * k)},${Math.round(m[2] * k)},${Math.round(m[3] * k)})`;
 };
 
-/* ---------------- карта пути ---------------- */
+/* ---------------- сцены станций ----------------
+   Каждый этап — отдельная карта: фон на весь кадр, время суток движется
+   от рассвета (станция 0) к ночи (станция 8), персонаж идёт по дороге
+   слева направо по мере закрытия задач станции. */
 
-const PW = 340;          // ширина сцены в пиксель-юнитах
-const PH = 124;          // высота сцены
-const X0 = 22;           // центр первой станции
-const DX = 34;           // шаг между станциями
-const GROUND = 112;      // низ террас
-const TOP = 96;          // верх нулевой террасы
-const RISE = 7;          // подъём на станцию
+const SW = 340;            // ширина сцены в пиксель-юнитах
+const SH = 150;            // высота сцены
+const HORIZON = 100;       // линия горизонта: на ней стоит дальний город
+const ROAD = 124;          // верх дороги, по ней идёт персонаж
+const ROAD_H = 12;
+const SSTART = 26;         // старт персонажа
+const SFINISH = 300;       // финишный флаг
 
-const stationX = i => X0 + i * DX;
-const stationTop = i => TOP - i * RISE;
-const STEPS = 10;        // 9 станций + площадка двери
+/* дальние силуэты Астаны — общие кисти сцен */
 
-function stepAt(px) {
-  return Math.max(0, Math.min(STEPS - 1, Math.round((px - X0) / DX)));
+function fTower(ctx, x, base, w, h, color, win) {
+  ctx.fillStyle = color;
+  ctx.fillRect(x, base - h, w, h);
+  ctx.fillStyle = win || "rgba(255,255,255,.4)";
+  for (let y = base - h + 3; y < base - 2; y += 4) ctx.fillRect(x + 1, y, w - 2, 1);
+  ctx.fillStyle = "rgba(0,0,0,.07)";
+  ctx.fillRect(x + w - 1, base - h, 1, h);
 }
 
-class CityMap {
-  constructor(canvas, opts = {}) {
+function fKhanShatyr(ctx, x, base, color) {
+  ctx.fillStyle = color;
+  for (let j = 0; j < 26; j++) {
+    const w = Math.round(j * 0.9) + 2;
+    ctx.fillRect(Math.round(x - w / 2 + j * 0.18), base - 26 + j, w, 1);
+  }
+  ctx.fillStyle = "rgba(0,0,0,.2)";
+  ctx.fillRect(x, base - 28, 1, 3);
+}
+
+function fBaiterek(ctx, x, base, color) {
+  ctx.fillStyle = color;
+  ctx.fillRect(x - 2, base - 30, 4, 30);
+  ctx.fillRect(x - 5, base - 5, 10, 5);
+  ctx.fillStyle = "rgba(255,255,255,.5)";
+  for (let j = 0; j < 10; j++) ctx.fillRect(x - 3 + (j % 2), base - 27 + j * 2, 6, 1);
+  ctx.fillStyle = "#f2c14e";
+  ctx.fillRect(x - 4, base - 38, 8, 8);
+  ctx.fillRect(x - 5, base - 35, 10, 3);
+  ctx.fillStyle = "#ffe9a8";
+  ctx.fillRect(x - 2, base - 36, 3, 3);
+}
+
+function fNurAlem(ctx, x, base, color) {
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.arc(x, base - 14, 12, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "rgba(255,255,255,.5)";
+  ctx.fillRect(x - 8, base - 20, 5, 3);
+  ctx.fillStyle = "rgba(0,0,0,.08)";
+  ctx.fillRect(x - 12, base - 14, 24, 1);
+  ctx.fillStyle = color;
+  ctx.fillRect(x - 9, base - 3, 18, 3);
+}
+
+function fAkOrda(ctx, x, base) {
+  const ctx2 = ctx;
+  ctx2.fillStyle = "#eef4f9";
+  ctx2.fillRect(x - 12, base - 9, 24, 9);
+  ctx2.beginPath();
+  ctx2.arc(x, base - 9, 8, Math.PI, 0);
+  ctx2.fill();
+  ctx2.fillStyle = "#7fc0e0";
+  ctx2.beginPath();
+  ctx2.arc(x, base - 9, 5, Math.PI, 0);
+  ctx2.fill();
+  ctx2.fillStyle = "#8fa8c0";
+  ctx2.fillRect(x - 1, base - 25, 2, 9);
+  ctx2.fillStyle = "#f2c14e";
+  ctx2.fillRect(x - 2, base - 28, 4, 3);
+}
+
+function fCrane(ctx, x, base, color) {
+  ctx.fillStyle = color;
+  ctx.fillRect(x, base - 34, 3, 34);              // мачта
+  ctx.fillRect(x - 14, base - 34, 34, 2);         // стрела
+  ctx.fillRect(x + 18, base - 32, 1, 6);          // трос
+  ctx.fillStyle = "#f2c14e";
+  ctx.fillRect(x + 16, base - 26, 5, 4);          // груз
+  ctx.fillStyle = color;
+  ctx.fillRect(x - 3, base - 3, 9, 3);            // основание
+}
+
+/* конфигурация сцен: небо, солнце/звёзды, зелень и набор силуэтов */
+
+const SCENES = [
+  { sky: ["#ffd9a0", "#ffeecb", "#f6f2e4"], sun: [36, 30], grass: "#94c065", soil: "#caa877",
+    far: "#d8b48f", mid: "#e2c5a2",
+    marks: ctx => { fCrane(ctx, 70, HORIZON, "#c0a17c"); fTower(ctx, 150, HORIZON, 8, 22, "#d8b48f"); fCrane(ctx, 240, HORIZON, "#c0a17c"); fTower(ctx, 290, HORIZON, 6, 14, "#e2c5a2"); } },
+  { sky: ["#a8d8f0", "#d6ecfa", "#eef7ea"], sun: [60, 22], grass: "#8fbf5f", soil: "#c8a878",
+    far: "#b3c6d8", mid: "#c6d5e2",
+    marks: ctx => { fTower(ctx, 60, HORIZON, 7, 20, "#b3c6d8"); fKhanShatyr(ctx, 170, HORIZON, "#c6d5e2"); fTower(ctx, 270, HORIZON, 6, 16, "#b3c6d8"); } },
+  { sky: ["#8fd0f5", "#cfeaf9", "#f3f7e9"], sun: [100, 16], grass: "#8fbf5f", soil: "#c2a06e",
+    far: "#b3c6d8", mid: "#c6d5e2",
+    marks: ctx => { fTower(ctx, 50, HORIZON, 8, 28, "#b3c6d8"); fTower(ctx, 64, HORIZON, 6, 18, "#c6d5e2"); fTower(ctx, 200, HORIZON, 9, 34, "#b3c6d8"); fTower(ctx, 285, HORIZON, 7, 22, "#c6d5e2"); } },
+  { sky: ["#7cc8f5", "#c8e8fb", "#eef6ee"], sun: [150, 12], grass: "#86b957", soil: "#c2a06e",
+    far: "#b3c6d8", mid: "#c6d5e2",
+    marks: ctx => { fTower(ctx, 60, HORIZON, 7, 24, "#b3c6d8"); fBaiterek(ctx, 170, HORIZON, "#c6d5e2"); fTower(ctx, 280, HORIZON, 8, 26, "#b3c6d8"); } },
+  { sky: ["#6ec0f2", "#bfe4fa", "#e9f4f0"], sun: [190, 10], grass: "#86b957", soil: "#bd9c6a",
+    far: "#a8bfd4", mid: "#bccfe0",
+    marks: ctx => { fTower(ctx, 55, HORIZON, 6, 20, "#a8bfd4"); fNurAlem(ctx, 175, HORIZON, "#a8cade"); fTower(ctx, 290, HORIZON, 7, 24, "#bccfe0"); } },
+  { sky: ["#79c0ee", "#cfe6f6", "#f2ecd9"], sun: [230, 14], grass: "#7fb355", soil: "#bd9c6a",
+    far: "#a8bfd4", mid: "#bccfe0",
+    marks: ctx => { fTower(ctx, 45, HORIZON, 9, 36, "#a8bfd4"); fTower(ctx, 62, HORIZON, 6, 24, "#bccfe0"); fTower(ctx, 190, HORIZON, 8, 30, "#a8bfd4"); fTower(ctx, 285, HORIZON, 10, 40, "#93aac2"); } },
+  { sky: ["#f6b26b", "#f9d9b0", "#f3e6d5"], sun: [260, 26], grass: "#79a84e", soil: "#b08f60",
+    far: "#b08f8a", mid: "#c4a89b",
+    marks: ctx => { fTower(ctx, 55, HORIZON, 7, 26, "#b08f8a"); fAkOrda(ctx, 175, HORIZON); fTower(ctx, 285, HORIZON, 6, 20, "#c4a89b"); } },
+  { sky: ["#7d85b5", "#b4b9d6", "#e0e0ea"], sun: null, stars: true, grass: "#5f7f4a", soil: "#8f7a58",
+    far: "#5a6584", mid: "#6d7897",
+    marks: ctx => { fTower(ctx, 60, HORIZON, 9, 38, "#5a6584", "rgba(255,220,120,.75)"); fTower(ctx, 150, HORIZON, 7, 28, "#6d7897", "rgba(255,220,120,.6)"); fTower(ctx, 260, HORIZON, 10, 44, "#5a6584", "rgba(255,220,120,.75)"); } },
+  { sky: ["#22304f", "#3d4d78", "#7c88ac"], sun: null, stars: true, moon: [280, 22], grass: "#4d6b40", soil: "#6f6048",
+    far: "#3a4763", mid: "#4a577a",
+    marks: ctx => { fTower(ctx, 50, HORIZON, 8, 30, "#3a4763", "rgba(255,220,120,.85)"); fKhanShatyr(ctx, 120, HORIZON, "#4a577a"); fBaiterek(ctx, 200, HORIZON, "#4a577a"); fTower(ctx, 260, HORIZON, 7, 24, "#3a4763", "rgba(255,220,120,.85)"); } },
+];
+
+/* детерминированная «случайность» для звёзд и деревьев */
+const rnd = (i, k) => ((i * 73 + k * 137) % 997) / 997;
+
+class StationScene {
+  constructor(canvas) {
     this.cv = canvas;
     this.ctx = canvas.getContext("2d");
-    this.onSelect = opts.onSelect || (() => {});
-    this.data = { stations: [], walk: 0, station: 0, avatar: "", peers: [], name: "" };
+    this.data = { index: 0, progress: 0, hero: false, avatar: "", peers: [] };
     this.t = 0;
-    this.hover = -1;
-    this.charX = X0;
-    this.targetX = X0;
+    this.charX = SSTART;
+    this.targetX = SSTART;
     this.dead = false;
-
-    this._click = e => {
-      const i = this._pick(e);
-      if (i >= 0) this.onSelect(i);
-    };
-    this._move = e => {
-      const i = this._pick(e);
-      if (i !== this.hover) { this.hover = i; canvas.style.cursor = i >= 0 ? "pointer" : "default"; }
-    };
-    this._leave = () => { this.hover = -1; };
-    canvas.addEventListener("click", this._click);
-    canvas.addEventListener("mousemove", this._move);
-    canvas.addEventListener("mouseleave", this._leave);
 
     this._resize = () => this.resize();
     window.addEventListener("resize", this._resize);
@@ -437,45 +527,34 @@ class CityMap {
   destroy() {
     this.dead = true;
     cancelAnimationFrame(this.raf);
-    this.cv.removeEventListener("click", this._click);
-    this.cv.removeEventListener("mousemove", this._move);
-    this.cv.removeEventListener("mouseleave", this._leave);
     window.removeEventListener("resize", this._resize);
-  }
-
-  _pick(e) {
-    const r = this.cv.getBoundingClientRect();
-    const px = (e.clientX - r.left) / (r.width / PW);
-    const py = (e.clientY - r.top) / (r.height / PH);
-    if (py < 0 || py > PH) return -1;
-    const i = stepAt(px);
-    return i;
   }
 
   resize() {
     const parentW = this.cv.parentElement ? this.cv.parentElement.clientWidth : 900;
     const w = Math.max(320, parentW);
     const dpr = Math.min(2, window.devicePixelRatio || 1);
-    this.scale = w / PW;
+    this.scale = w / SW;
     this.cv.width = Math.round(w * dpr);
-    this.cv.height = Math.round(PH * this.scale * dpr);
+    this.cv.height = Math.round(SH * this.scale * dpr);
     this.cv.style.width = w + "px";
-    this.cv.style.height = Math.round(PH * this.scale) + "px";
+    this.cv.style.height = Math.round(SH * this.scale) + "px";
     this.ctx.setTransform(this.scale * dpr, 0, 0, this.scale * dpr, 0, 0);
     this.ctx.imageSmoothingEnabled = false;
   }
 
   set(data) {
+    const sceneChanged = data.index !== undefined && data.index !== this.data.index;
     Object.assign(this.data, data);
-    const w = Math.max(0, Math.min(1, this.data.walk || 0));
-    this.targetX = X0 + w * (stationX(STEPS - 1) - X0);
-    if (this.charX === X0 && w > 0 && this.t < 2) this.charX = this.targetX;
+    const p = Math.max(0, Math.min(1, this.data.progress || 0));
+    this.targetX = SSTART + p * (SFINISH - 10 - SSTART);
+    // при смене сцены персонаж появляется на месте — бежит только внутри своей карты
+    if (sceneChanged) this.charX = this.targetX;
   }
 
   loop() {
     if (this.dead) return;
     this.t += 1 / 60;
-    // персонаж догоняет свою позицию — движение видно глазом
     const d = this.targetX - this.charX;
     if (Math.abs(d) > 0.15) this.charX += Math.sign(d) * Math.min(Math.abs(d), 0.55);
     else this.charX = this.targetX;
@@ -483,252 +562,191 @@ class CityMap {
     this.raf = requestAnimationFrame(() => this.loop());
   }
 
-  /* ---------- отрисовка ---------- */
+  scene() { return SCENES[Math.max(0, Math.min(8, this.data.index || 0))]; }
 
   draw() {
     const ctx = this.ctx;
-    ctx.clearRect(0, 0, PW, PH);
+    ctx.clearRect(0, 0, SW, SH);
     this.sky();
-    this.terraces();
-    this.city();      // город стоит на террасах и поднимается вместе с треком
-    this.stations();
-    this.door();
+    this.scene().marks(ctx);   // силуэты города на горизонте
+    this.meadow();
+    this.road();
+    this.startPost();
+    this.finish();
     this.peers();
-    this.hero();
+    if (this.data.hero) this.hero();
+    if (this.data.locked) {
+      ctx.fillStyle = "rgba(240,244,248,.45)";      // станция впереди — сцена в дымке
+      ctx.fillRect(0, 0, SW, SH);
+    }
   }
 
   sky() {
     const ctx = this.ctx;
-    const grad = ctx.createLinearGradient(0, 0, 0, PH);
-    grad.addColorStop(0, "#8fd0f5");
-    grad.addColorStop(0.55, "#cfeaf9");
-    grad.addColorStop(1, "#f3f7e9");
+    const sc = this.scene();
+    const grad = ctx.createLinearGradient(0, 0, 0, HORIZON + 8);
+    grad.addColorStop(0, sc.sky[0]);
+    grad.addColorStop(0.6, sc.sky[1]);
+    grad.addColorStop(1, sc.sky[2]);
     ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, PW, PH);
+    ctx.fillRect(0, 0, SW, HORIZON + 8);
 
-    // солнце
-    ctx.fillStyle = "#ffd84d";
-    ctx.fillRect(26, 12, 10, 10);
-    ctx.fillRect(24, 14, 14, 6);
-    ctx.fillRect(28, 10, 6, 14);
+    if (sc.sun) {
+      const [sx, sy] = sc.sun;
+      ctx.fillStyle = "#ffd84d";
+      ctx.fillRect(sx, sy, 10, 10);
+      ctx.fillRect(sx - 2, sy + 2, 14, 6);
+      ctx.fillRect(sx + 2, sy - 2, 6, 14);
+    }
+    if (sc.moon) {
+      const [mx, my] = sc.moon;
+      ctx.fillStyle = "#f2ecd9";
+      ctx.beginPath(); ctx.arc(mx, my, 7, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = sc.sky[0];
+      ctx.beginPath(); ctx.arc(mx - 3, my - 2, 6, 0, Math.PI * 2); ctx.fill();
+    }
+    if (sc.stars) {
+      ctx.fillStyle = "rgba(255,255,255,.85)";
+      for (let k = 0; k < 26; k++) {
+        const x = Math.round(rnd(this.data.index, k) * SW);
+        const y = Math.round(rnd(this.data.index, k + 40) * (HORIZON - 30));
+        const tw = Math.sin(this.t * 2 + k) > 0.4 ? 1 : 0;
+        if (tw) ctx.fillRect(x, y, 1, 1);
+      }
+    }
 
-    // облака — медленный дрейф
-    const clouds = [[30, 16], [120, 10], [200, 20], [255, 13]];
-    ctx.fillStyle = "rgba(255,255,255,.92)";
+    // облака — медленный дрейф (ночью почти не видны)
+    const clouds = [[30, 18], [120, 10], [200, 24], [255, 14]];
+    ctx.fillStyle = sc.stars ? "rgba(255,255,255,.14)" : "rgba(255,255,255,.92)";
     clouds.forEach(([cx, cy], i) => {
-      const x = Math.round((cx + this.t * (3 + i)) % (PW + 40)) - 20;
+      const x = Math.round((cx + this.t * (3 + i)) % (SW + 40)) - 20;
       ctx.fillRect(x, cy, 14, 4);
       ctx.fillRect(x + 3, cy - 3, 8, 4);
       ctx.fillRect(x + 9, cy - 2, 6, 3);
     });
   }
 
-  /* Астана поднимается вместе с треком: на каждой террасе — свой силуэт. */
-  city() {
-    const g = i => stationTop(i);
-    const far = "#b3c6d8", mid = "#c6d5e2";
-
-    this.tower(stationX(0) - 15, g(0), 7, 20, far);
-    this.tower(stationX(0) - 6, g(0), 5, 13, mid);
-
-    this.khanShatyr(stationX(1) - 10, g(1));
-
-    this.tower(stationX(2) - 15, g(2), 6, 24, far);
-    this.tower(stationX(2) - 7, g(2), 8, 16, mid);
-
-    this.baiterek(stationX(3) - 10, g(3));
-
-    this.nurAlem(stationX(4) - 12, g(4));
-
-    this.tower(stationX(5) - 15, g(5), 7, 28, far);
-    this.tower(stationX(5) - 6, g(5), 5, 18, mid);
-
-    this.akOrda(stationX(6) - 15, g(6));
-
-    this.tower(stationX(7) - 14, g(7), 9, 32, far);   // высотная доминанта
-
-    this.tower(stationX(8) - 15, g(8), 6, 20, far);
-    this.tower(stationX(8) - 7, g(8), 5, 14, mid);
-  }
-
-  tower(x, base, w, h, color) {
+  /* луг между горизонтом и дорогой: газон, деревья, кусты */
+  meadow() {
     const ctx = this.ctx;
-    ctx.fillStyle = color;
-    ctx.fillRect(x, base - h, w, h);
-    ctx.fillStyle = "rgba(255,255,255,.4)";
-    for (let y = base - h + 3; y < base - 2; y += 4) ctx.fillRect(x + 1, y, w - 2, 1);
-    ctx.fillStyle = "rgba(0,0,0,.07)";
-    ctx.fillRect(x + w - 1, base - h, 1, h);
-  }
-
-  khanShatyr(x, base) {
-    const ctx = this.ctx;
-    ctx.fillStyle = "#c6d5e2";
-    for (let j = 0; j < 20; j++) {
-      const w = Math.round(j * 0.9) + 2;
-      ctx.fillRect(Math.round(x - w / 2 + j * 0.18), base - j, w, 1);
-    }
-    ctx.fillStyle = "#8fa8c0";
-    ctx.fillRect(x, base - 21, 1, 3);
-  }
-
-  baiterek(x, base) {
-    const ctx = this.ctx;
-    ctx.fillStyle = "#c6d5e2";
-    ctx.fillRect(x - 2, base - 22, 4, 22);
-    ctx.fillRect(x - 4, base - 4, 8, 4);
-    ctx.fillStyle = "rgba(255,255,255,.5)";
-    for (let j = 0; j < 7; j++) ctx.fillRect(x - 3 + (j % 2), base - 20 + j * 2, 6, 1);
-    ctx.fillStyle = "#f2c14e";
-    ctx.fillRect(x - 3, base - 28, 6, 6);
-    ctx.fillRect(x - 4, base - 26, 8, 2);
-    ctx.fillStyle = "#ffe9a8";
-    ctx.fillRect(x - 2, base - 27, 2, 2);
-  }
-
-  nurAlem(x, base) {
-    const ctx = this.ctx;
-    ctx.fillStyle = "#a8cade";
-    ctx.beginPath();
-    ctx.arc(x, base - 11, 9, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "rgba(255,255,255,.5)";
-    ctx.fillRect(x - 6, base - 15, 4, 2);
+    const sc = this.scene();
+    const i = this.data.index || 0;
+    ctx.fillStyle = sc.grass;
+    ctx.fillRect(0, HORIZON, SW, ROAD - HORIZON);
     ctx.fillStyle = "rgba(0,0,0,.06)";
-    ctx.fillRect(x - 9, base - 11, 18, 1);
-    ctx.fillStyle = "#c6d5e2";
-    ctx.fillRect(x - 7, base - 3, 14, 3);
-  }
+    ctx.fillRect(0, HORIZON, SW, 2);
 
-  akOrda(x, base) {
-    const ctx = this.ctx;
-    ctx.fillStyle = "#eef4f9";
-    ctx.fillRect(x - 9, base - 7, 18, 7);
-    ctx.beginPath();
-    ctx.arc(x, base - 7, 6, Math.PI, 0);
-    ctx.fill();
-    ctx.fillStyle = "#7fc0e0";
-    ctx.beginPath();
-    ctx.arc(x, base - 7, 4, Math.PI, 0);
-    ctx.fill();
-    ctx.fillStyle = "#8fa8c0";
-    ctx.fillRect(x - 1, base - 20, 2, 7);
-    ctx.fillStyle = "#f2c14e";
-    ctx.fillRect(x - 2, base - 22, 4, 3);
-  }
-
-  terraces() {
-    const ctx = this.ctx;
-    for (let i = 0; i < STEPS; i++) {
-      const x = stationX(i) - DX / 2;
-      const top = stationTop(i);
-      const gr = ctx.createLinearGradient(0, top, 0, GROUND);
-      gr.addColorStop(0, "#dcc79c");
-      gr.addColorStop(1, "#b4966a");
-      ctx.fillStyle = gr;
-      ctx.fillRect(x, top, DX, GROUND - top);
-      // трава сверху
-      ctx.fillStyle = "#8fbf5f";
-      ctx.fillRect(x, top, DX, 3);
-      ctx.fillStyle = "#79a84e";
-      ctx.fillRect(x, top + 3, DX, 1);
-      // слои породы — очень мягко
-      ctx.fillStyle = "rgba(255,255,255,.16)";
-      for (let y = top + 8; y < GROUND; y += 7) ctx.fillRect(x + 2, y, DX - 4, 1);
-      // теневой уступ слева
-      ctx.fillStyle = "rgba(0,0,0,.10)";
-      ctx.fillRect(x, top, 1, GROUND - top);
-    }
-  }
-
-  stations() {
-    const ctx = this.ctx;
-    const st = this.data.stations || [];
-    for (let i = 0; i < 9; i++) {
-      const s = st[i] || {};
-      const x = stationX(i);
-      const top = stationTop(i);
-      const state = s.done ? "done" : i === this.data.station ? "current" : "wait";
-      const col = state === "done" ? P.g : state === "current" ? P.b : "#9aa0a8";
-
-      // флагшток
-      ctx.fillStyle = "#6b7280";
-      ctx.fillRect(x + 9, top - 15, 1, 15);
-      // полотнище — колышется
-      const wave = Math.round(Math.sin(this.t * 2.5 + i) * 1);
-      ctx.fillStyle = col;
-      ctx.fillRect(x + 10, top - 15, 8, 5);
-      ctx.fillRect(x + 10, top - 10 + wave, 6, 1);
-
-      // номер недели на полотнище
-      ctx.fillStyle = "#fff";
-      ctx.font = "4px monospace";
-      ctx.fillText(String(i), x + 12, top - 11);
-
-      // подсветка при наведении
-      if (this.hover === i) {
-        ctx.fillStyle = "rgba(0,113,227,.18)";
-        ctx.fillRect(x - DX / 2, top - 20, DX, GROUND - top + 20);
-      }
-
-      // собранный инструмент парит над станцией
-      if (s.done && s.tool && TOOLS[s.tool]) {
-        const bob = Math.round(Math.sin(this.t * 2 + i) * 1.5);
-        drawSprite(ctx, TOOLS[s.tool], x - 4, top - 28 + bob, 1);
-        ctx.fillStyle = "rgba(255,255,255,.5)";
-        ctx.fillRect(x - 4, top - 20 + bob, 8, 1);
-      }
-
-      // контрольная точка — шлагбаум между станциями
-      if (s.gate) {
-        const gx = x + DX / 2 - 2;
-        const gtop = Math.min(top, stationTop(i + 1)) - 12;
-        ctx.fillStyle = s.gatePassed ? P.g : "#e0a33a";
-        ctx.fillRect(gx, gtop, 4, 12);
-        ctx.fillStyle = s.gatePassed ? "rgba(52,199,89,.35)" : "rgba(224,163,58,.35)";
-        ctx.fillRect(gx - 1, gtop - 3, 6, 3);
+    for (let k = 0; k < 7; k++) {
+      const x = Math.round(20 + rnd(i, k + 7) * (SW - 40));
+      const y = HORIZON + 4 + Math.round(rnd(i, k + 19) * 10);
+      if (k % 2) {                                   // дерево
+        ctx.fillStyle = "#6f5138";
+        ctx.fillRect(x, y + 4, 2, 5);
+        ctx.fillStyle = darken(sc.grass, 0.62);
+        ctx.fillRect(x - 3, y - 2, 8, 6);
+        ctx.fillRect(x - 1, y - 4, 4, 3);
+      } else {                                       // куст
+        ctx.fillStyle = darken(sc.grass, 0.7);
+        ctx.fillRect(x - 2, y + 4, 6, 3);
       }
     }
   }
 
-  door() {
+  road() {
     const ctx = this.ctx;
-    const x = stationX(9);
-    const top = stationTop(9);
-    const open = !!this.data.doorOpen;
+    const sc = this.scene();
+    ctx.fillStyle = sc.soil;
+    ctx.fillRect(0, ROAD, SW, ROAD_H);
+    ctx.fillStyle = "rgba(0,0,0,.10)";
+    ctx.fillRect(0, ROAD, SW, 1);
+    // разметка тропы
+    ctx.fillStyle = "rgba(255,255,255,.35)";
+    for (let x = 4; x < SW; x += 16) ctx.fillRect(x, ROAD + ROAD_H / 2, 7, 1);
+    // обочина внизу
+    ctx.fillStyle = darken(sc.soil, 0.75);
+    ctx.fillRect(0, ROAD + ROAD_H, SW, SH - ROAD - ROAD_H);
+  }
 
-    // портал
-    ctx.fillStyle = open ? "#2a7d46" : "#5b4632";
-    ctx.fillRect(x - 8, top - 22, 16, 22);
-    ctx.fillStyle = open ? "#7ee08a" : "#7a5c3f";
-    ctx.fillRect(x - 6, top - 20, 12, 20);
-    if (open) {
-      const glow = 0.35 + Math.sin(this.t * 3) * 0.15;
-      ctx.fillStyle = `rgba(255,255,255,${glow})`;
-      ctx.fillRect(x - 6, top - 20, 12, 20);
-    }
-    ctx.fillStyle = P.y;
-    ctx.fillRect(x + 3, top - 11, 2, 2);
-
-    // вывеска MVP
+  startPost() {
+    const ctx = this.ctx;
+    ctx.fillStyle = "#6b7280";
+    ctx.fillRect(8, ROAD - 16, 2, 16);
+    ctx.fillStyle = "#eef2f6";
+    ctx.fillRect(10, ROAD - 16, 12, 8);
     ctx.fillStyle = "#1d1d1f";
-    ctx.fillRect(x - 9, top - 30, 18, 7);
-    ctx.fillStyle = open ? P.g : "#8a8f98";
-    ctx.font = "bold 5px monospace";
-    ctx.fillText("MVP", x - 6, top - 25);
+    ctx.font = "5px monospace";
+    ctx.fillText(String(this.data.index ?? 0), 14, ROAD - 10);
+  }
+
+  /* финиш сцены: флаг станции, шлагбаум КТ или дверь MVP на последней */
+  finish() {
+    const ctx = this.ctx;
+    const x = SFINISH;
+    const d = this.data;
+    const base = ROAD + 2;
+
+    if (d.index === 8) {                             // дверь MVP
+      const open = !!d.doorOpen;
+      ctx.fillStyle = open ? "#2a7d46" : "#5b4632";
+      ctx.fillRect(x - 10, base - 30, 20, 30);
+      ctx.fillStyle = open ? "#7ee08a" : "#7a5c3f";
+      ctx.fillRect(x - 7, base - 27, 14, 27);
+      if (open) {
+        const glow = 0.35 + Math.sin(this.t * 3) * 0.15;
+        ctx.fillStyle = `rgba(255,255,255,${glow})`;
+        ctx.fillRect(x - 7, base - 27, 14, 27);
+      }
+      ctx.fillStyle = P.y;
+      ctx.fillRect(x + 3, base - 15, 2, 2);
+      ctx.fillStyle = "#1d1d1f";
+      ctx.fillRect(x - 12, base - 40, 24, 8);
+      ctx.fillStyle = open ? P.g : "#8a8f98";
+      ctx.font = "bold 6px monospace";
+      ctx.fillText("MVP", x - 8, base - 34);
+      return;
+    }
+
+    const col = d.done ? P.g : d.hero ? P.b : "#9aa0a8";
+    ctx.fillStyle = "#6b7280";
+    ctx.fillRect(x, ROAD - 26, 2, 28);
+    const wave = Math.round(Math.sin(this.t * 2.5) * 1);
+    ctx.fillStyle = col;
+    ctx.fillRect(x + 2, ROAD - 26, 12, 7);
+    ctx.fillRect(x + 2, ROAD - 19 + wave, 9, 2);
+    ctx.fillStyle = "#fff";
+    ctx.font = "5px monospace";
+    ctx.fillText(String((d.index ?? 0) + 1), x + 5, ROAD - 20);
+
+    // контрольная точка — шлагбаум поперёк дороги
+    if (d.gate) {
+      ctx.fillStyle = d.gatePassed ? P.g : "#e0a33a";
+      ctx.fillRect(x + 18, ROAD - 14, 3, 16);
+      const arm = d.gatePassed ? -12 : 0;            // пройдена — стрела поднята
+      ctx.fillRect(x + 18 - (d.gatePassed ? 2 : 14), ROAD - 14 + arm, d.gatePassed ? 4 : 16, 3);
+      ctx.fillStyle = "rgba(0,0,0,.15)";
+      ctx.fillRect(x + 18, ROAD + 1, 3, 1);
+    }
+
+    // инструмент станции парит над финишем, когда станция закрыта
+    if (d.done && d.tool && TOOLS[d.tool]) {
+      const bob = Math.round(Math.sin(this.t * 2) * 1.5);
+      drawSprite(ctx, TOOLS[d.tool], x - 14, ROAD - 42 + bob, 1);
+      ctx.fillStyle = "rgba(255,255,255,.5)";
+      ctx.fillRect(x - 14, ROAD - 33 + bob, 8, 1);
+    }
   }
 
   peers() {
     const ctx = this.ctx;
-    const peers = (this.data.peers || []).filter(p => !p.me).slice(0, 8);
+    const peers = (this.data.peers || []).slice(0, 6);
     peers.forEach((p, idx) => {
-      const px = X0 + Math.max(0, Math.min(1, p.walk || 0)) * (stationX(STEPS - 1) - X0);
-      const top = stationTop(stepAt(px));
+      const frac = Math.max(0, Math.min(1, p.frac || 0));
+      const px = Math.round(SSTART + frac * (SFINISH - 10 - SSTART));
       const bob = Math.sin(this.t * 2 + idx) * 0.6;
+      const hy = Math.round(ROAD - 8 + bob + (idx % 2) * 3);
       ctx.globalAlpha = 0.55;
-      // маленькая фигурка позади героя
       const im = avatarImage(p.avatar);
-      const hx = Math.round(px - 4 + (idx % 3) - 7), hy = Math.round(top - 14 + bob);
+      const hx = px - 12 - (idx % 3) * 6;
       ctx.fillStyle = "#5b6470";
       ctx.fillRect(hx + 3, hy + 9, 3, 5);
       if (im) ctx.drawImage(im, hx, hy, 9, 9);
@@ -740,36 +758,32 @@ class CityMap {
   hero() {
     const ctx = this.ctx;
     const x = Math.round(this.charX);
-    const top = stationTop(stepAt(this.charX));
+    const ground = ROAD + 8;                         // персонаж идёт по дороге
     const moving = Math.abs(this.targetX - this.charX) > 0.2;
     const step = moving ? Math.floor(this.t * 8) % 2 : 0;
     const bob = moving ? (step ? -1 : 0) : Math.round(Math.sin(this.t * 2) * 0.5);
-    const feet = top + bob;
+    const feet = ground + bob;
 
     const col = spriteColors(this.data.avatar) || { jacket: "rgb(63,71,86)", skin: "rgb(232,176,136)" };
     const trousers = darken(col.jacket, 0.78);
 
-    // тень
     ctx.fillStyle = "rgba(0,0,0,.18)";
-    ctx.fillRect(x - 6, top - 1, 13, 2);
+    ctx.fillRect(x - 6, ground - 1, 13, 2);
 
-    // ноги в брюках от костюма
     ctx.fillStyle = trousers;
     if (step) { ctx.fillRect(x - 5, feet - 6, 3, 6); ctx.fillRect(x + 2, feet - 5, 3, 5); }
     else { ctx.fillRect(x - 4, feet - 6, 3, 6); ctx.fillRect(x + 1, feet - 6, 3, 6); }
-    ctx.fillStyle = "#1d1d1f";                       // туфли
+    ctx.fillStyle = "#1d1d1f";
     if (step) { ctx.fillRect(x - 6, feet - 1, 4, 1); ctx.fillRect(x + 2, feet - 1, 4, 1); }
     else { ctx.fillRect(x - 5, feet - 1, 4, 1); ctx.fillRect(x + 1, feet - 1, 4, 1); }
 
-    // руки в рукавах пиджака
     ctx.fillStyle = col.jacket;
     if (step) { ctx.fillRect(x - 10, feet - 16, 2, 5); ctx.fillRect(x + 8, feet - 17, 2, 5); }
     else { ctx.fillRect(x - 10, feet - 17, 2, 5); ctx.fillRect(x + 8, feet - 16, 2, 5); }
-    ctx.fillStyle = col.skin;                        // кисти
+    ctx.fillStyle = col.skin;
     if (step) { ctx.fillRect(x - 10, feet - 11, 2, 1); ctx.fillRect(x + 8, feet - 12, 2, 1); }
     else { ctx.fillRect(x - 10, feet - 12, 2, 1); ctx.fillRect(x + 8, feet - 11, 2, 1); }
 
-    // бюст: голова, плечи, рубашка и галстук — одним спрайтом из фото
     const im = avatarImage(this.data.avatar);
     if (im) ctx.drawImage(im, x - 8, feet - 22, 16, 16);
     else {
@@ -779,6 +793,6 @@ class CityMap {
   }
 }
 
-window.SHIPYARD_GAME = { PixelAvatar, CityMap, TOOLS, drawSprite };
+window.SHIPYARD_GAME = { PixelAvatar, StationScene, TOOLS, drawSprite };
 
 })();
