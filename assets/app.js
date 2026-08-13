@@ -230,6 +230,55 @@ const LEGAL = [
   { id: "l7",  week: "6–7", title: "Заявка на товарный знак",           why: "Защита названия продукта" },
 ];
 
+/* ---------------- навыки персонажа ----------------
+   RPG-прокачка: каждый навык растёт от своих задач, чек-листов и баттлов.
+   5 уровней; уровень = floor(прогресс × 5). Считается на лету из состояния. */
+
+const SKILLS = [
+  { id: "sk_story", icon: "🎤", name: "Питч и контекст",
+    hint: "Презентация проекта и защита",
+    calc: s => taskFrac(["w1_goals", "w1_func", "w1_refs", "w1_deck", "w8_deck", "w8_dry", "w8_pitch"], s) },
+  { id: "sk_vibe", icon: "🧠", name: "Вайб-кодинг",
+    hint: "Работа с Claude Code + баттлы",
+    calc: s => Math.min(1, taskFrac(["w0_cc", "w0_vibe", "w2_md", "w3_s1", "w3_s2"], s) * 0.7
+      + Math.min(1, (s.battlePts || 0) / 250) * 0.3) },
+  { id: "sk_arch", icon: "📐", name: "Архитектура",
+    hint: "Реалистичный MVP, roadmap, техстек",
+    calc: s => taskFrac(["w2_scope", "w2_arch", "w2_mock", "w2_plan"], s) },
+  { id: "sk_build", icon: "🔨", name: "Сборка",
+    hint: "Ядро продукта и обвязка",
+    calc: s => taskFrac(["w3_s1", "w3_s2", "w3_rev", "w4_auth", "w4_db", "w4_int", "w4_mid"], s) },
+  { id: "sk_sec", icon: "🛡️", name: "Безопасность",
+    hint: "Чек-лист OWASP и сканирование",
+    calc: s => { const all = SECURITY.flatMap(g => g.items); return all.filter(i => s.sec[i.id]).length / all.length; } },
+  { id: "sk_legal", icon: "⚖️", name: "Право",
+    hint: "Юридический трек",
+    calc: s => { const n = LEGAL.length; return n ? LEGAL.filter(l => s.legal[l.id]).length / n : 0; } },
+  { id: "sk_ops", icon: "🚀", name: "DevOps",
+    hint: "Прод, автодеплой, мониторинг",
+    calc: s => taskFrac(["w6_host", "w6_cicd", "w6_mon", "w6_live"], s) },
+  { id: "sk_gtm", icon: "📈", name: "Запуск",
+    hint: "Аналитика, демо, первые пользователи",
+    calc: s => Math.min(1, taskFrac(["w7_land", "w7_chan", "w7_pay"], s) * 0.7 + Math.min(1, s.demos.length / 3) * 0.3) },
+];
+
+function taskFrac(ids, s) {
+  return ids.filter(id => s.done[id]).length / ids.length;
+}
+
+const skillFrac = k => Math.max(0, Math.min(1, k.calc(S)));
+const skillLevel = k => Math.floor(skillFrac(k) * 5);
+const skillLevels = () => SKILLS.map(skillLevel);
+
+/* тост о прокачке: вызывается после изменения прогресса со снимком «до» */
+function announceSkillUps(before) {
+  const now = skillLevels();
+  const i = now.findIndex((lvl, idx) => lvl > before[idx]);
+  if (i === -1) return false;
+  toast(`⬆️ Навык «${SKILLS[i].name}» — уровень ${now[i]}${now[i] >= 5 ? " · MAX!" : ""}`);
+  return true;
+}
+
 const BADGES = [
   { id: "b_deck",      emoji: "🎬", name: "Storyteller",       desc: "Презентация проекта собрана",        test: s => s.done["w1_deck"] },
   { id: "b_security",  emoji: "🛡️", name: "Security Cleared",  desc: "Чек-лист OWASP и сканирование закрыты", test: s => SECURITY.slice(0, 2).every(g => g.items.every(i => s.sec[i.id])) },
@@ -531,39 +580,70 @@ function celebrate(title, sub, emoji = "🎉", opts = {}) {
   if (!opts.log) setTimeout(close, 6000); // с главой журнала окно не закрывается само — дать дочитать
 }
 
-/* Колесо лотереи: приз уже выбран сервером, фронт только крутит тикер. */
+/* Слот-машина лотереи: приз уже выбран сервером, фронт крутит три барабана.
+   Барабаны останавливаются по очереди, как в казино, все три — на призе. */
+const PRIZE_EMOJI = {
+  expert_hour: "🧑‍🏫", review_bonus: "🔍", discount10: "💸", merch: "🎁", tariff_week: "🚀",
+};
+
 async function spinLottery(btn) {
   btn.disabled = true;
   let data;
   try { data = await apiCall("/lottery/spin", "POST", {}); }
   catch (e) { btn.disabled = false; return toast(e.message); }
 
-  const pool = (CACHE.lottery?.pool || []).length ? CACHE.lottery.pool : [data.prize.label];
+  const pool = (CACHE.lottery?.pool || []).length ? CACHE.lottery.pool : [data.prize];
   CACHE.lottery = data;
+  const winEmoji = PRIZE_EMOJI[data.prize.id] || "🎁";
+  const CELL = 58, LOOPS = 3;
+
+  // лента барабана: несколько кругов пула + приз последним — на нём и остановимся
+  const strip = () => {
+    const seq = [];
+    for (let l = 0; l < LOOPS; l++) pool.forEach(p => seq.push(PRIZE_EMOJI[p.id] || "🎁"));
+    seq.push(winEmoji);
+    return seq;
+  };
+
   document.querySelector(".cele")?.remove();
   const el = document.createElement("div");
   el.className = "cele";
   el.innerHTML = `
-    <div class="cele-card">
-      <div class="cele-emoji" style="animation:none">🎡</div>
-      <b>Лотерея верфи</b>
-      <div class="wheel-ticker" id="wheelTicker">…</div>
-      <small style="margin-top:10px">Барабан крутится…</small>
+    <div class="cele-card slot-card">
+      <b>🎰 Лотерея верфи</b>
+      <div class="slot-frame">
+        <div class="slot-lights">${Array.from({ length: 14 }, (_, i) => `<i style="animation-delay:${i * 0.1}s"></i>`).join("")}</div>
+        <div class="slot-window">
+          ${[0, 1, 2].map(r => `
+            <div class="reel"><div class="reel-strip" data-reel="${r}">
+              ${strip().map(e => `<span>${e}</span>`).join("")}
+            </div></div>`).join("")}
+        </div>
+      </div>
+      <small class="slot-status">Барабаны крутятся…</small>
     </div>`;
   document.body.appendChild(el);
 
-  const ticker = el.querySelector("#wheelTicker");
-  let i = 0, delay = 60;
-  const step = () => {
-    ticker.textContent = pool[i++ % pool.length];
-    delay = Math.min(300, delay * 1.13); // барабан замедляется
-    if (delay < 290) return setTimeout(step, delay);
-    el.remove();
-    celebrate("Ваш приз!", data.prize.label, "🎁",
-      { share: `⚓ SHIPYARD: колесо верфи выдало мне «${data.prize.label}»! Спины зарабатываются закрытыми станциями.` });
-    render();
-  };
-  step();
+  // разгон и остановка: каждый барабан едет к последней ячейке со своей задержкой
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    el.querySelectorAll(".reel-strip").forEach(s => {
+      const r = Number(s.dataset.reel);
+      const end = (s.children.length - 1) * CELL;
+      s.style.transition = `transform ${1.3 + r * 0.55}s cubic-bezier(.15,.65,.25,1.02)`;
+      s.style.transform = `translateY(-${end}px)`;
+    });
+  }));
+
+  setTimeout(() => {
+    el.querySelector(".slot-frame").classList.add("win");
+    el.querySelector(".slot-status").textContent = data.prize.label;
+    setTimeout(() => {
+      el.remove();
+      celebrate("Джекпот верфи!", data.prize.label, winEmoji,
+        { share: `⚓ SHIPYARD: слот-машина верфи выдала мне «${data.prize.label}»! Спины зарабатываются закрытыми станциями.` });
+      render();
+    }, 1600);
+  }, 2700); // последний барабан останавливается на ~2.4 c
 }
 
 function refreshChrome() {
@@ -601,6 +681,11 @@ async function go(name) {
     }
   } catch (e) { toast(e.message); }
   render();
+  // мягкий каскадный вход панелей — только при смене раздела, не на каждый клик
+  view.classList.remove("view-anim");
+  void view.offsetWidth;
+  view.classList.add("view-anim");
+  setTimeout(() => view.classList.remove("view-anim"), 700);
   document.getElementById("sidebar").classList.remove("open");
   window.scrollTo({ top: 0 });
 }
@@ -756,9 +841,27 @@ const VIEWS = {
             ${CACHE.lottery.prizes.length ? `<small class="ls-won">🎁 Выиграно: ${CACHE.lottery.prizes.map(p => esc(p.label)).join(" · ")}</small>` : ""}
           </div>
           ${CACHE.lottery.available > 0
-            ? `<button class="btn btn-primary btn-sm" data-spin>Крутить · ${CACHE.lottery.available}</button>`
+            ? `<button class="btn btn-primary btn-sm btn-breathe" data-spin>Крутить · ${CACHE.lottery.available}</button>`
             : `<span class="status-chip wait">спинов: 0</span>`}
         </div>` : ""}
+
+      <div class="panel">
+        <h2>Навыки персонажа</h2>
+        <p class="muted" style="margin-bottom:14px">Растут от задач станций, чек-листов и баттлов. Пять уровней в каждом.</p>
+        <div class="skill-grid">
+          ${SKILLS.map(k => {
+            const frac = skillFrac(k), lvl = skillLevel(k);
+            return `
+              <div class="skill ${lvl >= 5 ? "max" : lvl > 0 ? "on" : ""}" title="${esc(k.hint)}">
+                <div class="sk-icon">${k.icon}</div>
+                <div class="sk-main">
+                  <b>${esc(k.name)}<span class="sk-lvl">${lvl >= 5 ? "MAX" : `ур. ${lvl}`}</span></b>
+                  <div class="sk-bar"><i style="width:${Math.round(frac * 100)}%"></i></div>
+                </div>
+              </div>`;
+          }).join("")}
+        </div>
+      </div>
 
       <div class="panel station-panel ${done ? "is-done" : locked ? "is-locked" : "is-current"}">
         <div class="sp-head">
@@ -1660,6 +1763,7 @@ function bind() {
       const id = cb.dataset.task;
       const wasLvl = level().n;
       const wasTools = tools().length;
+      const wasSkills = skillLevels();
       const checked = cb.checked;
       try {
         await syncToggle("task", id, checked);
@@ -1681,7 +1785,7 @@ function bind() {
           } else if (nowLvl > wasLvl) {
             celebrate(`Новый уровень: ${LEVELS[nowLvl - 1].name}!`, LEVELS[nowLvl - 1].cond, LEVELS[nowLvl - 1].emoji,
               { share: `⚓ SHIPYARD: новый уровень — ${LEVELS[nowLvl - 1].name} ${LEVELS[nowLvl - 1].emoji}! ${LEVELS[nowLvl - 1].cond}.` });
-          } else toast(`+${t.pts} очков`);
+          } else if (!announceSkillUps(wasSkills)) toast(`+${t.pts} очков`);
         }
         CACHE.league = null;
         CACHE.lottery = null; // закрытая станция могла добавить спин
@@ -1696,12 +1800,13 @@ function bind() {
   view.querySelectorAll("[data-sec]").forEach(cb =>
     cb.addEventListener("change", async () => {
       const checked = cb.checked;
+      const wasSkills = skillLevels();
       try {
         await syncToggle("sec", cb.dataset.sec, checked);
         S.sec[cb.dataset.sec] = checked;
         if (!checked) delete S.sec[cb.dataset.sec];
         save();
-        if (checked) toast("+10 очков · пункт ИБ закрыт");
+        if (checked && !announceSkillUps(wasSkills)) toast("+10 очков · пункт ИБ закрыт");
         render();
       } catch (err2) { toast(err2.message); cb.checked = !checked; }
     }));
@@ -1711,12 +1816,13 @@ function bind() {
     b.addEventListener("click", async () => {
       const id = b.dataset.legal;
       const val = !S.legal[id];
+      const wasSkills = skillLevels();
       try {
         await syncToggle("legal", id, val);
         S.legal[id] = val;
         if (!val) delete S.legal[id];
         save();
-        if (val) toast("+15 очков · документ готов");
+        if (val && !announceSkillUps(wasSkills)) toast("+15 очков · документ готов");
         render();
       } catch (err2) { toast(err2.message); }
     }));

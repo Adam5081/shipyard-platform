@@ -81,7 +81,7 @@ function intro() {
     <div class="panel">
       <p style="line-height:1.55">Вайб-кодинг ломается не там, где агент плохо пишет код, — а там, где ему
       не дали контекста и не дали остановиться. Проверьте, как вы поведёте себя в десяти реальных ситуациях.</p>
-      <button class="btn btn-primary" id="start" style="width:100%;margin-top:18px">Начать</button>
+      <button class="btn btn-primary btn-breathe" id="start" style="width:100%;margin-top:18px">Начать</button>
     </div>`;
   document.getElementById('start').addEventListener('click', () => {
     quiz = [...POOL].sort(() => Math.random() - 0.5).slice(0, N);

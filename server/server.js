@@ -728,7 +728,7 @@ function lotteryState(uid) {
     available: Math.max(0, earned - used),
     closed, top3,
     prizes: q.userPrizes.all(uid).map(r => ({ id: r.prize_id, label: r.prize_label, ts: r.created_at })),
-    pool: PRIZES.map(p => p.label),
+    pool: PRIZES.map(p => ({ id: p.id, label: p.label })),
   };
 }
 
