@@ -8,5 +8,5 @@
    SHIPYARD_CONTACT — почта для заявок, пока бэкенд не поднят.
    Пусто — форма просто даст скопировать текст заявки. */
 
-window.SHIPYARD_REMOTE_API = "";
+window.SHIPYARD_REMOTE_API = "https://shipyard-platform.onrender.com";
 window.SHIPYARD_CONTACT = "";
