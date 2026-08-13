@@ -68,6 +68,15 @@ db.exec(`
   );
 
   CREATE INDEX IF NOT EXISTS idx_app_created ON applications(created_at DESC);
+
+  /* лотерея верфи: приз выбирает сервер, запись = использованный спин */
+  CREATE TABLE IF NOT EXISTS lottery (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    prize_id    TEXT NOT NULL,
+    prize_label TEXT NOT NULL,
+    created_at  INTEGER NOT NULL
+  );
 `);
 
 /* ---------- миграции: колонки, добавленные после первого релиза ---------- */
@@ -122,7 +131,7 @@ const SEED_PEERS = [
     demo: { week: 2, text: "Урезал MVP с 9 функций до одной: карта поля + заметки агронома. CLAUDE.md утверждён на КТ-2." } },
   { name: "Салтанат Б.", project: "EduPay — оплата кружков для школ", pts: 470, lvl: 3, dock: "B", cx: 10,
     about: "Оплата школьных кружков в одном окне: родитель платит, школа видит поступления.",
-    demo: { week: 2, text: "7 интервью с директорами кружков: боль подтвердили 6 из 7. Ценностное предложение переписала трижды." } },
+    demo: { week: 2, text: "Собрала презентацию проекта через Claude Code: семь блоков, ментор принял с первого раза. Из неё родился CLAUDE.md." } },
   { name: "Тимур А.",    project: "FitDesk — абонементы для студий", pts: 390, lvl: 2, dock: "A", cx: 5,
     about: "Учёт абонементов для небольших фитнес-студий: клиенты, посещения, продления.",
     demo: { week: 3, text: "Каркас на заготовке авторизации программы. Первый спринт закрыт за 4 вечера." } },

@@ -1,4 +1,4 @@
-/* ============================================================
+﻿/* ============================================================
    SHIPYARD Platform — SPA
    Два режима:
    · API-режим — аккаунты и прогресс на бэкенде (server/server.js)
@@ -23,28 +23,28 @@ const STATIONS = [
     tasks: [
       { id: "w0_idea",   label: "Пройти диагностику идеи и получить заключение", pts: 30 },
       { id: "w0_docs",   label: "Подписать договор с программой (права на продукт — у вас)", pts: 20 },
-      { id: "w0_cc",     label: "Установить Claude Code и настроить рабочее окружение", pts: 30 },
+      { id: "w0_cc",     label: "Установить Claude Code и настроить рабочее окружение — live-сессия", pts: 30 },
       { id: "w0_vibe",   label: "Изучить базовые принципы вайб-кодинга: контекст и планирование", pts: 20 },
-      { id: "w0_tg",     label: "Войти в Telegram-группу потока", pts: 10 },
+      { id: "w0_tg",     label: "Вступить в закрытый Telegram-канал потока", pts: 10 },
     ],
     artifact: "Заключение по идее · рабочее окружение · доступ к потоку",
+    log: "Рассвет. У подножия города-горы гудит верфь: где-то наверху, за девятой террасой, стоит дверь с табличкой «MVP». Мастер вручает вам ключ и говорит: «Инструменты здесь не выдают — их зарабатывают на станциях. Остальное — легенды». Вы кладёте ключ в карман и делаете первый шаг.",
   },
   {
-    id: "w1", week: 1, phase: "Требования", title: "Разговор с рынком",
+    id: "w1", week: 1, phase: "Контекст", title: "Презентация проекта",
     tool: "mic", toolName: "Микрофон",
-    desc: "Выйти к рынку до того, как написана первая строка кода.",
-    story: "Подъём начинается с людей, а не с кода. Пять–семь разговоров с теми, кто живёт с вашей болью: как решают сейчас, сколько это стоит, что бесит. По итогам вы формулируете сегмент, боль и ценностное предложение одним предложением, которое понятно постороннему. Инструмент станции — микрофон: навык вытаскивать правду из клиента.",
+    desc: "Полная презентация проекта, собранная через Claude Code, — контекст для всего пути.",
+    story: "Подъём начинается с контекста, а не с кода. На live-сессии разбираем, зачем это нужно: Claude ведёт проект ровно настолько хорошо, насколько хорошо проект описан. Вы собираете презентацию через код — блок за блоком: ожидания и цели, функциональность, примеры похожих проектов и ваши отличия. Это не работа ради работы: из этих блоков рождаются MD-файлы и инструкции, по которым агент работает все следующие станции.",
     tasks: [
-      { id: "w1_i1", label: "Интервью с клиентом №1 (по шаблону сценария)", pts: 30, interview: true },
-      { id: "w1_i2", label: "Интервью с клиентом №2", pts: 30, interview: true },
-      { id: "w1_i3", label: "Интервью с клиентом №3", pts: 30, interview: true },
-      { id: "w1_i4", label: "Интервью с клиентом №4", pts: 30, interview: true },
-      { id: "w1_i5", label: "Интервью с клиентом №5", pts: 30, interview: true },
-      { id: "w1_seg",  label: "Определить сегмент и сформулировать боль", pts: 40 },
-      { id: "w1_vp",   label: "Сформулировать ценностное предложение", pts: 40 },
+      { id: "w1_live",  label: "Live-сессия: зачем проекту контекст и как Claude работает с MD-файлами", pts: 20 },
+      { id: "w1_goals", label: "Прописать ожидания и цели проекта", pts: 30 },
+      { id: "w1_func",  label: "Описать функциональность: что делает продукт и для кого", pts: 40 },
+      { id: "w1_refs",  label: "Собрать примеры похожих проектов и сформулировать отличия", pts: 30 },
+      { id: "w1_deck",  label: "Собрать презентацию проекта через Claude Code — по блокам", pts: 60 },
     ],
-    artifact: "Профиль клиента · карта боли · ценностное предложение",
-    cp: { id: "КТ-1", cond: "Проведено 5–7 интервью, боль подтверждена минимум половиной респондентов" },
+    artifact: "Презентация проекта · контекст для Claude",
+    cp: { id: "КТ-1", cond: "Презентация покрывает все блоки и принята ментором" },
+    log: "Первый подъём оказался не тропой, а мостом через туман: ступени появлялись только тогда, когда вы рассказывали городу, что именно строите. Блок за блоком туман отступал, и из него проступила следующая терраса. Внизу остался тот, кто не смог объяснить свой проект даже себе, — его мост так и не собрался.",
   },
   {
     id: "w2", week: 2, phase: "Проектирование", title: "Чертёж продукта",
@@ -60,6 +60,7 @@ const STATIONS = [
     ],
     artifact: "Техкарта · CLAUDE.md · прототип интерфейса · план спринтов",
     cp: { id: "КТ-2", cond: "Объём MVP умещается в 4 недели сборки. Не умещается — режем ещё" },
+    log: "На второй террасе ветер срывает всё лишнее. Вы разворачиваете чертёж — и он рвётся по краям, оставляя ровно то, что можно построить за четыре недели. Мастер кивает: «Реалистичный план — единственный груз, который не тянет вниз». Ветер стихает, и вы впервые видите вершину.",
   },
   {
     id: "w3", week: 3, phase: "Сборка", title: "Ядро продукта",
@@ -72,6 +73,7 @@ const STATIONS = [
       { id: "w3_rev", label: "Ревью сгенерированного кода вместе с экспертом", pts: 30 },
     ],
     artifact: "Работающий ключевой сценарий",
+    log: "Выше начинается настоящая стройка. Молоток бьёт в такт спринтам, и на голой скале растёт каркас вашего продукта. Ночью вы впервые видите, как в окне макета загорается свет: сценарий прошёл от входа до результата. Где-то далеко внизу этому свету уже кто-то удивился.",
   },
   {
     id: "w4", week: 4, phase: "Сборка", title: "Обвязка",
@@ -86,6 +88,7 @@ const STATIONS = [
     ],
     artifact: "Функционально полный MVP",
     cp: { id: "КТ-3", cond: "Ключевой сценарий работает от начала до конца на реальных данных" },
+    log: "К каркасу подвозят готовые узлы верфи: авторизацию, базу, интеграции. Шестерёнка встаёт на место с щелчком, и механизм оживает целиком. С площадки скрининга город впервые смотрит на то, что вы построили, — и возвращает вам голос: обратную связь, от которой продукт становится твёрже.",
   },
   {
     id: "w5", week: 5, phase: "Проверка", title: "Тестирование и защита",
@@ -99,6 +102,7 @@ const STATIONS = [
       { id: "w5_owasp",label: "Закрыть чек-лист OWASP (раздел «Безопасность»)", pts: 60 },
     ],
     artifact: "Закрытый чек-лист OWASP · отчёт сканирования",
+    log: "На пятой террасе темнеет: здесь водятся тени — захардкоженные секреты, дырявые доступы, молчаливые ошибки. Вы поднимаете щит, и тени одна за другой отступают в свои списки, где их можно пересчитать и закрыть. Теперь продукт можно показывать не только друзьям — и это меняет всё.",
   },
   {
     id: "w6", week: 6, phase: "Запуск", title: "Продукт в сети",
@@ -114,6 +118,7 @@ const STATIONS = [
     ],
     artifact: "Продукт в проде · юридический пакет",
     cp: { id: "КТ-4", cond: "Чек-лист безопасности закрыт, продукт доступен по публичной ссылке" },
+    log: "Ракета уходит вверх, и ваш продукт впервые виден всему городу: у него есть адрес, сертификаты и право принимать людей. Внизу, у подножия, кто-то открывает вашу публичную ссылку. Вы этого человека никогда не встречали — и именно поэтому сегодня особенный день.",
   },
   {
     id: "w8", week: 7, phase: "Защита", title: "Защита проекта",
@@ -127,6 +132,7 @@ const STATIONS = [
       { id: "w8_track", label: "Выбрать трек после программы", pts: 30 },
     ],
     artifact: "Разбор проекта · оценка экспертов · решение по треку",
+    log: "Зал на предпоследней террасе полон: практики города пришли слушать не легенду, а разбор. Пять минут — и наступает тишина, которая дороже аплодисментов: эксперты пишут заметки, и каждая ляжет в ваш журнал. Кубок в руках, но мастер показывает выше: осталась одна терраса.",
   },
   {
     id: "w7", week: 8, phase: "Рабочая среда", title: "Вывод в рабочую среду",
@@ -140,12 +146,13 @@ const STATIONS = [
     ],
     artifact: "Продукт в рабочей среде · первые пользователи",
     cp: { id: "КТ-5", cond: "Продукт используется вне вашей команды: есть первые пользователи" },
+    log: "Последняя терраса — не финиш, а первый рабочий вторник вашего продукта: им пользуются без вашего напоминания. Вы поворачиваете ключ мастера, и дверь MVP открывается. За ней не конец пути — за ней город, в котором теперь работает то, что вы построили. Судовой журнал полон. Пора писать новый.",
   },
 ];
 
 const LEVELS = [
   { n: 1, name: "Sketch",       emoji: "✏️", cond: "Идея описана, диагностика пройдена", station: 0 },
-  { n: 2, name: "Blueprint",    emoji: "📐", cond: "Требования собраны, ЦП сформулировано", station: 1 },
+  { n: 2, name: "Blueprint",    emoji: "📐", cond: "Презентация проекта собрана", station: 1 },
   { n: 3, name: "Keel",         emoji: "🔩", cond: "Архитектура и объём MVP утверждены", station: 2 },
   { n: 4, name: "Builder",      emoji: "🏗️", cond: "Ключевой сценарий работает", station: 4 },
   { n: 5, name: "Sea Trials",   emoji: "🌊", cond: "Тестирование и безопасность закрыты", station: 5 },
@@ -224,7 +231,7 @@ const LEGAL = [
 ];
 
 const BADGES = [
-  { id: "b_interview", emoji: "🎙️", name: "Interview Master",  desc: "5+ интервью с клиентами",            test: s => STATIONS[1].tasks.filter(t => t.interview && s.done[t.id]).length >= 5 },
+  { id: "b_deck",      emoji: "🎬", name: "Storyteller",       desc: "Презентация проекта собрана",        test: s => s.done["w1_deck"] },
   { id: "b_security",  emoji: "🛡️", name: "Security Cleared",  desc: "Чек-лист OWASP и сканирование закрыты", test: s => SECURITY.slice(0, 2).every(g => g.items.every(i => s.sec[i.id])) },
   { id: "b_legal",     emoji: "⚖️", name: "Legal Ready",       desc: "Юридический пакет собран",           test: s => ["l0a","l1","l5","l6"].every(id => s.legal[id]) },
   { id: "b_ship",      emoji: "🚢", name: "Zero Downtime",     desc: "Продукт в проде с мониторингом",     test: s => ["w6_host","w6_cicd","w6_mon","w6_live"].every(id => s.done[id]) },
@@ -236,8 +243,7 @@ const KB = {
   materials: [
     { id: "m_setup",       icon: "🧭", week: 0, title: "Установка Claude Code и первый проект",        note: "Пошаговая настройка окружения, аутентификация, первый диалог", type: "гайд" },
     { id: "m_vibe",        icon: "🧠", week: 0, title: "Принципы вайб-кодинга: контекст и планирование", note: "Как формулировать требования, когда планировать, когда просить код", type: "гайд" },
-    { id: "m_interview",   icon: "🎙️", week: 1, title: "Шаблон сценария интервью с клиентом",           note: "Готовый сценарий 5–7 вопросов: боль, частота, текущее решение, цена", type: "шаблон" },
-    { id: "m_pain",        icon: "🗺️", week: 1, title: "Карта боли и ценностное предложение",           note: "Рабочий лист: сегмент → боль → альтернативы → наше отличие", type: "шаблон" },
+    { id: "m_deck",        icon: "🎬", week: 1, title: "Блоки презентации проекта",                     note: "Готовый список блоков: ожидания, функциональность, похожие проекты, отличия", type: "шаблон" },
     { id: "m_scope",       icon: "✂️", week: 2, title: "Как резать объём MVP",                          note: "Правило одного сценария: что выкидываем и почему это безопасно", type: "гайд" },
     { id: "m_claudemd_ref",icon: "📄", week: 2, title: "Шаблон CLAUDE.md",                              note: "Структура файла инструкций: контекст, правила, архитектура, запреты", type: "шаблон" },
     { id: "m_sprints",     icon: "🏗️", week: 3, title: "Спринты с Claude Code: декомпозиция задач",     note: "Как ставить задачи агенту, чтобы не терять контекст между сессиями", type: "гайд" },
@@ -261,7 +267,7 @@ const KB = {
 const CLAUDE_MD = `# CLAUDE.md — <название продукта>
 
 ## Контекст
-Продукт для <сегмент>: решает боль «<боль из недели 1>».
+Продукт для <сегмент>: решает задачу «<из презентации проекта, станция 1>».
 Ключевой сценарий (единственный в MVP):
 <пользователь> → <действие> → <ценный результат>.
 
@@ -314,7 +320,7 @@ const PEER_DEMOS = [
   { author: "Данияр Т.",  project: "CargoLink", week: 3, text: "Собрал матчинг груза и машины через Claude Code. Показал на реальных заявках двух перевозчиков.", votes: 4 },
   { author: "Мария К.",   project: "LexDraft", week: 3, text: "Генерация договора аренды из анкеты: 12 полей → готовый документ. Юрист потока проверил формулировки.", votes: 6 },
   { author: "Ерлан Ж.",   project: "AgroScan", week: 2, text: "Урезал MVP с 9 функций до одной: карта поля + заметки агронома. CLAUDE.md утверждён на КТ-2.", votes: 3 },
-  { author: "Салтанат Б.",project: "EduPay", week: 2, text: "7 интервью с директорами кружков: боль подтвердили 6 из 7. Ценностное предложение переписала трижды.", votes: 4 },
+  { author: "Салтанат Б.",project: "EduPay", week: 2, text: "Собрала презентацию проекта через Claude Code: семь блоков, ментор принял с первого раза. Из неё родился CLAUDE.md.", votes: 4 },
   { author: "Тимур А.",   project: "FitDesk", week: 3, text: "Каркас на заготовке авторизации программы. Первый спринт закрыт за 4 вечера.", votes: 2 },
 ];
 
@@ -322,7 +328,7 @@ const PEER_DEMOS = [
 
 let API = null;          // "" = same-origin, "https://…" = удалённый, null = локальный режим
 let TOKEN = localStorage.getItem("shipyard_token") || null;
-const CACHE = { demos: null, league: null, flow: null };
+const CACHE = { demos: null, league: null, flow: null, lottery: null };
 
 function candidateApi() {
   const o = localStorage.getItem("shipyard_api");
@@ -355,6 +361,7 @@ function applyMe(d) {
   S.link = u.link || "";
   S.repo = u.repo || "";
   S.isPublic = u.isPublic !== false;
+  if (u.startDate) S.startDate = u.startDate; // время потока отсчитывается от входа в программу
   S.dock = u.dock || "";
   S.complexity = u.complexity || 0;
   S.done = d.done || {};
@@ -367,7 +374,7 @@ function applyMe(d) {
 function logout(rerender = true) {
   TOKEN = null;
   localStorage.removeItem("shipyard_token");
-  CACHE.demos = CACHE.league = CACHE.flow = null;
+  CACHE.demos = CACHE.league = CACHE.flow = CACHE.lottery = null;
   if (rerender) go("map");
 }
 
@@ -482,8 +489,20 @@ function toast(msg) {
 }
 
 /* Праздник перехода: аватар радуется, когда закрыта станция или взят уровень.
-   Небольшой дофамин между этапами — по фидбеку продакта. */
-function celebrate(title, sub, emoji = "🎉") {
+   Небольшой дофамин между этапами — по фидбеку продакта. Значком можно
+   поделиться, открытая глава судового журнала показывается сразу. */
+async function shareAchievement(text) {
+  const full = `${text}\n${location.origin + location.pathname.replace(/app\.html$/, "")}`;
+  try {
+    if (navigator.share) { await navigator.share({ text: full }); return; }
+    throw 0;
+  } catch {
+    try { await navigator.clipboard.writeText(full); toast("Текст значка скопирован — вставьте в соцсеть или чат"); }
+    catch { toast("Не удалось поделиться — выделите текст вручную"); }
+  }
+}
+
+function celebrate(title, sub, emoji = "🎉", opts = {}) {
   document.querySelector(".cele")?.remove();
   const el = document.createElement("div");
   el.className = "cele";
@@ -495,12 +514,54 @@ function celebrate(title, sub, emoji = "🎉") {
         : `<div class="cele-emoji">${emoji}</div>`}
       <b>${esc(title)}</b>
       <small>${esc(sub)}</small>
-      <button class="btn btn-primary btn-sm">Дальше</button>
+      ${opts.log ? `<div class="cele-log">📖 <b>Судовой журнал</b><p>${esc(opts.log)}</p></div>` : ""}
+      <div class="cele-actions">
+        ${opts.share ? `<button class="btn btn-ghost btn-sm" data-share>Поделиться значком</button>` : ""}
+        <button class="btn btn-primary btn-sm" data-close>Дальше</button>
+      </div>
     </div>`;
   const close = () => { el.classList.add("out"); setTimeout(() => el.remove(), 300); };
-  el.addEventListener("click", e => { if (e.target === el || e.target.tagName === "BUTTON") close(); });
+  el.addEventListener("click", e => {
+    if (e.target.closest("[data-share]")) return shareAchievement(opts.share);
+    if (e.target === el || e.target.closest("[data-close]")) close();
+  });
   document.body.appendChild(el);
-  setTimeout(close, 5000);
+  if (!opts.log) setTimeout(close, 6000); // с главой журнала окно не закрывается само — дать дочитать
+}
+
+/* Колесо лотереи: приз уже выбран сервером, фронт только крутит тикер. */
+async function spinLottery(btn) {
+  btn.disabled = true;
+  let data;
+  try { data = await apiCall("/lottery/spin", "POST", {}); }
+  catch (e) { btn.disabled = false; return toast(e.message); }
+
+  const pool = (CACHE.lottery?.pool || []).length ? CACHE.lottery.pool : [data.prize.label];
+  CACHE.lottery = data;
+  document.querySelector(".cele")?.remove();
+  const el = document.createElement("div");
+  el.className = "cele";
+  el.innerHTML = `
+    <div class="cele-card">
+      <div class="cele-emoji" style="animation:none">🎡</div>
+      <b>Лотерея верфи</b>
+      <div class="wheel-ticker" id="wheelTicker">…</div>
+      <small style="margin-top:10px">Барабан крутится…</small>
+    </div>`;
+  document.body.appendChild(el);
+
+  const ticker = el.querySelector("#wheelTicker");
+  let i = 0, delay = 60;
+  const step = () => {
+    ticker.textContent = pool[i++ % pool.length];
+    delay = Math.min(300, delay * 1.13); // барабан замедляется
+    if (delay < 290) return setTimeout(step, delay);
+    el.remove();
+    celebrate("Ваш приз!", data.prize.label, "🎁",
+      { share: `⚓ SHIPYARD: колесо верфи выдало мне «${data.prize.label}»! Спины зарабатываются закрытыми станциями.` });
+    render();
+  };
+  step();
 }
 
 function refreshChrome() {
@@ -532,6 +593,7 @@ async function go(name) {
       if (name === "demos" && !CACHE.demos) CACHE.demos = (await apiCall("/demos")).demos;
       if (name === "league") CACHE.league = (await apiCall("/league")).rows;
       if (name === "flow" || name === "map") CACHE.flow = (await apiCall("/flow")).rows;
+      if (name === "map" && !CACHE.lottery) CACHE.lottery = await apiCall("/lottery");
     }
   } catch (e) { toast(e.message); }
   render();
@@ -611,6 +673,13 @@ const VIEWS = {
     const locked = sel > cur;
     const got = tools();
 
+    /* лайфтаймер потока: сколько времени подписки осталось, 100% → 0% */
+    const FLOW_MS = 56 * 86400000;
+    const timeLeft = Math.max(0, Math.min(1, (S.startDate + FLOW_MS - Date.now()) / FLOW_MS));
+    const timePct = Math.round(timeLeft * 100);
+    const timeCls = timeLeft > 0.5 ? "ok" : timeLeft > 0.2 ? "warn" : "low";
+    const flowDays = Math.max(0, Math.ceil((S.startDate + FLOW_MS - Date.now()) / 86400000));
+
     return `
       ${API === null ? `
         <div class="notice">
@@ -638,6 +707,11 @@ const VIEWS = {
         </div>
       </div>
 
+      <div class="time-bar ${timeCls}" title="Поток: ${flowDays} дн. из 56 осталось">
+        <div class="tb-track"><i style="width:${timePct}%"></i></div>
+        <span>⏳ ${timePct > 0 ? `Осталось <b>${timePct}%</b> времени потока` : "Время потока вышло"}</span>
+      </div>
+
       <div class="map-stage">
         <canvas id="mapCanvas"></canvas>
         <div class="map-hint">Нажмите на станцию, чтобы раскрыть миссию · вы прошли ${prog}% пути</div>
@@ -657,6 +731,18 @@ const VIEWS = {
         </div>
       </div>
 
+      ${API !== null && CACHE.lottery ? `
+        <div class="lottery-strip">
+          <div class="ls-main">
+            <b>🎡 Лотерея верфи</b>
+            <small>Спин за каждые 3 закрытые станции, ещё один — за дверь MVP. Приз выбирает верфь: час эксперта, скидка, апгрейд тарифа…</small>
+            ${CACHE.lottery.prizes.length ? `<small class="ls-won">🎁 Выиграно: ${CACHE.lottery.prizes.map(p => esc(p.label)).join(" · ")}</small>` : ""}
+          </div>
+          ${CACHE.lottery.available > 0
+            ? `<button class="btn btn-primary btn-sm" data-spin>Крутить · ${CACHE.lottery.available}</button>`
+            : `<span class="status-chip wait">спинов: 0</span>`}
+        </div>` : ""}
+
       <div class="panel station-panel ${done ? "is-done" : locked ? "is-locked" : "is-current"}">
         <div class="sp-head">
           <div class="sp-num">${done ? "✓" : st.week}</div>
@@ -674,6 +760,9 @@ const VIEWS = {
           ${st.tasks.map(t => taskRow(t)).join("")}
         </div>
         <div class="artifact-box">📦 <b>Артефакт недели:</b>&nbsp;${esc(st.artifact)}</div>
+        ${done
+          ? `<div class="log-box"><b>📖 Судовой журнал · глава ${sel + 1} из 9</b><p>${esc(st.log)}</p></div>`
+          : `<div class="log-box locked">📖 Глава ${sel + 1} судового журнала откроется, когда станция будет закрыта</div>`}
         ${st.cp ? cpBanner(st) : ""}
         ${done ? `<div class="reward-box">
             <canvas class="tool-ic big" data-tool="${esc(st.tool)}" width="48" height="48"></canvas>
@@ -868,7 +957,7 @@ const VIEWS = {
         </div>
         <div class="panel">
           <h2>За что начисляются очки</h2>
-          ${[["Пятничное демо", "+50"], ["Интервью с клиентом", "+30"], ["Пункт чек-листа ИБ", "+10"],
+          ${[["Пятничное демо", "+50"], ["Блок презентации проекта", "+30"], ["Пункт чек-листа ИБ", "+10"],
              ["Пройденная контрольная точка", "+100"], ["Пилот / первый платёж", "+200"], ["Серия из 3 демо", "×1.1"]]
             .map(([t, v]) => `<div class="req ok"><div class="r-ic" style="background:rgba(0,113,227,.1);color:var(--accent);font-size:11px">${v}</div>${t}</div>`).join("")}
           <p class="muted" style="margin-top:12px">Очки — только за проверяемые артефакты. За «время в системе» и строки кода очков нет.</p>
@@ -1045,7 +1134,7 @@ const VIEWS = {
     const days = Math.floor(diff / 86400000);
     const hours = Math.floor((diff % 86400000) / 3600000);
     const reqs = [
-      { ok: cpPassed(STATIONS[1]), label: "КТ-1 — боль подтверждена интервью" },
+      { ok: cpPassed(STATIONS[1]), label: "КТ-1 — презентация проекта принята" },
       { ok: cpPassed(STATIONS[2]), label: "КТ-2 — объём MVP утверждён" },
       { ok: cpPassed(STATIONS[4]), label: "КТ-3 — ключевой сценарий на реальных данных" },
       { ok: cpPassed(STATIONS[6]), label: "КТ-4 — безопасность закрыта, продукт в проде" },
@@ -1216,13 +1305,14 @@ const VIEWS = {
 
       <div class="panel">
         <h2>Бейджи</h2>
-        <p class="muted" style="margin-bottom:16px">Признание за качество, а не только за скорость.</p>
+        <p class="muted" style="margin-bottom:16px">Признание за качество, а не только за скорость. Заработанным значком можно поделиться.</p>
         <div class="badge-grid">
           ${BADGES.map(b => `
             <div class="badge-card ${badges.includes(b.id) ? "earned" : "locked"}">
               <div class="b-emoji">${b.emoji}</div>
               <b>${esc(b.name)}</b>
               <small>${esc(b.desc)}</small>
+              ${badges.includes(b.id) ? `<button class="btn btn-ghost btn-sm" data-sharebadge="${b.id}" style="margin-top:8px">Поделиться</button>` : ""}
             </div>`).join("")}
         </div>
       </div>`;
@@ -1406,6 +1496,16 @@ function bind() {
     }
   });
 
+  /* лотерея */
+  const spinBtn = view.querySelector("[data-spin]");
+  if (spinBtn) spinBtn.addEventListener("click", () => spinLottery(spinBtn));
+
+  /* поделиться бейджем из профиля */
+  view.querySelectorAll("[data-sharebadge]").forEach(b => b.addEventListener("click", () => {
+    const bd = BADGES.find(x => x.id === b.dataset.sharebadge);
+    if (bd) shareAchievement(`⚓ SHIPYARD: бейдж ${bd.emoji} «${bd.name}» — ${bd.desc}!`);
+  }));
+
   /* задачи станций */
   view.querySelectorAll("[data-task]").forEach(cb =>
     cb.addEventListener("change", async () => {
@@ -1422,16 +1522,25 @@ function bind() {
         const nowTools = tools().length;
         if (checked) {
           const t = STATIONS.flatMap(p => p.tasks).find(x => x.id === id);
-          if (doorOpen() && wasTools < 9) celebrate("Дверь MVP открыта!", "Путь пройден — сертификат доступен", "🚪");
-          else if (nowTools > wasTools) {
+          if (doorOpen() && wasTools < 9) {
+            const last = STATIONS[STATIONS.length - 1];
+            celebrate("Дверь MVP открыта!", "Путь пройден — сертификат доступен", "🚪",
+              { log: last.log, share: "⚓ SHIPYARD: дверь MVP открыта! Девять станций, пять контрольных точек — мой продукт работает в рабочей среде." });
+          } else if (nowTools > wasTools) {
             const st = STATIONS.find(p => stationDone(p) && p.tasks.some(x => x.id === id));
-            celebrate("Станция закрыта!", `Получен инструмент: ${st ? st.toolName : "новый"} · путь дальше открыт`, "🧰");
-          } else if (nowLvl > wasLvl) celebrate(`Новый уровень: ${LEVELS[nowLvl - 1].name}!`, LEVELS[nowLvl - 1].cond, LEVELS[nowLvl - 1].emoji);
-          else toast(`+${t.pts} очков`);
+            celebrate("Станция закрыта!", `Получен инструмент: ${st ? st.toolName : "новый"} · путь дальше открыт`, "🧰",
+              st ? { log: st.log, share: `⚓ SHIPYARD: станция «${st.title}» закрыта — в руках ${st.toolName}! Поднимаюсь к двери MVP.` } : {});
+          } else if (nowLvl > wasLvl) {
+            celebrate(`Новый уровень: ${LEVELS[nowLvl - 1].name}!`, LEVELS[nowLvl - 1].cond, LEVELS[nowLvl - 1].emoji,
+              { share: `⚓ SHIPYARD: новый уровень — ${LEVELS[nowLvl - 1].name} ${LEVELS[nowLvl - 1].emoji}! ${LEVELS[nowLvl - 1].cond}.` });
+          } else toast(`+${t.pts} очков`);
         }
         CACHE.league = null;
+        CACHE.lottery = null; // закрытая станция могла добавить спин
         patchMyFlow();
         render();
+        if (API !== null && activeView === "map")
+          apiCall("/lottery").then(l => { CACHE.lottery = l; if (activeView === "map") render(); }).catch(() => {});
       } catch (err2) { toast(err2.message); cb.checked = !checked; }
     }));
 

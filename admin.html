@@ -188,7 +188,8 @@ function userRow(u) {
         <b>${esc(u.name)}</b>${u.seed ? ' <span class="tag t-declined">сид</span>' : ''}
         <div class="u-sub">${esc(u.project)}</div>
       </td>
-      <td>${esc(u.email)}<div class="u-sub">${esc(u.tariff)}${u.dock ? ' · док ' + esc(u.dock) : ''}</div></td>
+      <td>${esc(u.email)}<div class="u-sub">${esc(u.tariff)}${u.dock ? ' · док ' + esc(u.dock) : ''}</div>
+        ${u.prizes && u.prizes.length ? `<div class="u-sub">🎁 ${u.prizes.map(esc).join(' · ')}</div>` : ''}</td>
       <td>
         ${u.station} из 8 · ур. ${u.level}
         <div class="u-bar"><i style="width:${Math.round(u.walk * 100)}%"></i></div>

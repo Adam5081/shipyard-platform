@@ -3,7 +3,7 @@
 
 const PHASE_TASKS = [
   { week: 0, tasks: { w0_idea: 30, w0_docs: 20, w0_cc: 30, w0_vibe: 20, w0_tg: 10 } },
-  { week: 1, gate: "K1", tasks: { w1_i1: 30, w1_i2: 30, w1_i3: 30, w1_i4: 30, w1_i5: 30, w1_seg: 40, w1_vp: 40 } },
+  { week: 1, gate: "K1", tasks: { w1_live: 20, w1_goals: 30, w1_func: 40, w1_refs: 30, w1_deck: 60 } },
   { week: 2, gate: "K2", tasks: { w2_scope: 50, w2_arch: 40, w2_mock: 30, w2_md: 50, w2_plan: 30 } },
   { week: 3, tasks: { w3_s1: 50, w3_s2: 60, w3_rev: 30 } },
   { week: 4, gate: "K3", tasks: { w4_auth: 40, w4_db: 40, w4_int: 40, w4_mid: 40 } },

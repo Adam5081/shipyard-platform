@@ -11,7 +11,7 @@ const crypto = require("node:crypto");
 
 const { db, hashPassword, DATA_DIR } = require("./db");
 const {
-  TASKS, SEC_IDS, LEGAL_IDS, DOCKS,
+  PHASE_TASKS, TASKS, SEC_IDS, LEGAL_IDS, DOCKS,
   scoreScreening, dockFor,
   computePoints, computeLevel, computeStation, computeWalk,
 } = require("./catalog");
@@ -99,6 +99,9 @@ const q = {
   setInvite: db.prepare("UPDATE applications SET invite_code = ? WHERE id = ?"),
   useInvite: db.prepare("UPDATE applications SET invite_used_at = ?, invited_user_id = ? WHERE id = ?"),
   lastDone: db.prepare("SELECT MAX(done_at) AS t FROM progress WHERE user_id = ?"),
+  spinCount: db.prepare("SELECT COUNT(*) AS n FROM lottery WHERE user_id = ?"),
+  userPrizes: db.prepare("SELECT prize_id, prize_label, created_at FROM lottery WHERE user_id = ? ORDER BY id"),
+  insertSpin: db.prepare("INSERT INTO lottery (user_id, prize_id, prize_label, created_at) VALUES (?,?,?,?)"),
 };
 
 const TARIFFS = ["Solo", "Pro", "Partner"];
@@ -173,6 +176,7 @@ function meState(u) {
       tariff: normTariff(u.tariff), avatar: u.avatar || "", about: u.about || "",
       link: u.link || "", repo: u.repo || "", isPublic: !!u.is_public,
       dock: u.dock || "", complexity: u.complexity || 0,
+      startDate: u.created_at,
     },
     done: toObj(doneSet),
     sec: toObj(secSet),
@@ -566,13 +570,60 @@ const routes = {
         demos: q.demoCount.get(x.id).n,
         createdAt: x.created_at,
         lastAt: q.lastDone.get(x.id).t || 0,
+        prizes: q.userPrizes.all(x.id).map(r => r.prize_label),
       };
     }).sort((a, b) => b.walk - a.walk || b.points - a.points);
     send(res, 200, { users });
   },
 
+  /* ---------- лотерея верфи ----------
+     Спины зарабатываются прогрессом и считаются ТОЛЬКО на сервере:
+     1 спин за каждые 3 закрытые станции + 1 за дверь MVP (все 9).
+     Приз тоже выбирает сервер — фронт лишь показывает колесо. */
+  "GET /api/lottery": async (req, res) => {
+    const u = auth(req);
+    if (!u) return err(res, 401, "Нужен вход");
+    send(res, 200, lotteryState(u.id));
+  },
+
+  "POST /api/lottery/spin": async (req, res) => {
+    const u = auth(req);
+    if (!u) return err(res, 401, "Нужен вход");
+    const st = lotteryState(u.id);
+    if (st.available <= 0) return err(res, 403, "Спины ещё не заработаны: спин даётся за каждые 3 закрытые станции");
+    const total = PRIZES.reduce((s, p) => s + p.w, 0);
+    let roll = crypto.randomInt(total);
+    const prize = PRIZES.find(p => (roll -= p.w) < 0) || PRIZES[PRIZES.length - 1];
+    q.insertSpin.run(u.id, prize.id, prize.label, Date.now());
+    send(res, 200, { prize: { id: prize.id, label: prize.label }, ...lotteryState(u.id) });
+  },
+
   "GET /api/health": async (req, res) => send(res, 200, { ok: true, service: "shipyard" }),
 };
+
+/* призы лотереи: веса подобраны так, чтобы час эксперта выпадал часто,
+   а апгрейд тарифа оставался редкой удачей; исполняет призы ментор вручную */
+const PRIZES = [
+  { id: "expert_hour",  label: "+1 час индивидуально с экспертом",       w: 35 },
+  { id: "review_bonus", label: "Внеочередное ревью проекта ментором",     w: 30 },
+  { id: "discount10",   label: "Скидка 10% на следующий месяц",           w: 20 },
+  { id: "merch",        label: "Мерч SHIPYARD от верфи",                  w: 10 },
+  { id: "tariff_week",  label: "Апгрейд тарифа на неделю",                w: 5 },
+];
+
+function lotteryState(uid) {
+  const { doneSet } = userSets(uid);
+  const closed = PHASE_TASKS.filter(p => Object.keys(p.tasks).every(id => doneSet.has(id))).length;
+  const earned = Math.floor(closed / 3) + (closed === PHASE_TASKS.length ? 1 : 0);
+  const used = q.spinCount.get(uid).n;
+  return {
+    earned, used,
+    available: Math.max(0, earned - used),
+    closed,
+    prizes: q.userPrizes.all(uid).map(r => ({ id: r.prize_id, label: r.prize_label, ts: r.created_at })),
+    pool: PRIZES.map(p => p.label),
+  };
+}
 
 /* ---------- статика ---------- */
 
