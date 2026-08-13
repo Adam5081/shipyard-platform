@@ -527,6 +527,17 @@ function myAvatar() {
 }
 const peerAvatar = p => p.avatar || GAME.PixelAvatar.generated(p.name || "?");
 
+/* конструктор персонажа: палитры частей и текущий черновик */
+const AV_PARTS = [
+  { key: "skin",   label: "Кожа",    colors: ["#f6d7b8", "#f0c8a0", "#e0a87e", "#c98a5a", "#a06a42", "#7c4f2f"] },
+  { key: "hair",   label: "Волосы",  colors: ["#1d1d1f", "#3d2a1d", "#6b4423", "#c9a35f", "#b5502a", "#b8bcc4"] },
+  { key: "jacket", label: "Пиджак",  colors: ["#3f4756", "#2f3a4a", "#55504a", "#5b2733", "#2f5240", "#7a6a52"] },
+  { key: "shirt",  label: "Рубашка", colors: ["#f1f2f5", "#cfe3f5", "#d9d9de", "#23252a"] },
+  { key: "tie",    label: "Галстук", colors: ["#8c2b3a", "#1f4e79", "#2f6b4f", "#c07a2a", "#5b3f8c", "#1d1d1f"] },
+];
+
+const AV = { skin: "#f0c8a0", hair: "#3d2a1d", jacket: "#3f4756", shirt: "#f1f2f5", tie: "#8c2b3a" };
+
 /* ---------------- каркас ---------------- */
 
 const view = document.getElementById("view");
@@ -776,6 +787,12 @@ const VIEWS = {
           <b>Демо-режим.</b> Бэкенд не подключён: прогресс хранится в этом браузере, аккаунтов и общего
           потока нет, участники рядом — из демонстрационного набора. Всё остальное работает по-настоящему:
           карта, миссии, инструменты, персонаж из вашего фото.
+        </div>` : ""}
+      ${!S.avatar ? `
+        <div class="notice">
+          <b>🎨 Соберите своего персонажа.</b> Загрузите фото — платформа соберёт пиксельного героя по его цветам,
+          — или соберите вручную в конструкторе. Персонаж будет идти по картам станций и радоваться на праздниках.
+          <button class="btn btn-primary btn-sm" data-go="profile" style="margin-left:auto">Создать персонажа</button>
         </div>` : ""}
       ${!S.dock ? `
         <div class="notice">
@@ -1416,9 +1433,22 @@ const VIEWS = {
               <label class="btn btn-primary btn-sm">
                 Загрузить фото<input type="file" id="avFile" accept="image/*" hidden>
               </label>
-              <button class="btn btn-ghost btn-sm" id="avGen">Собрать без фото</button>
+              <button class="btn btn-ghost btn-sm" id="avGen">Случайный</button>
               ${S.avatar ? `<button class="btn btn-ghost btn-sm" id="avClear">Убрать</button>` : ""}
             </div>
+          </div>
+          <div class="av-builder">
+            <small class="muted">Или соберите вручную — превью слева обновляется сразу:</small>
+            ${AV_PARTS.map(part => `
+              <div class="sw-row">
+                <span>${part.label}</span>
+                <div class="sw-list">
+                  ${part.colors.map(c => `
+                    <button class="sw ${AV[part.key] === c ? "sel" : ""}" data-avpart="${part.key}"
+                      data-avcolor="${c}" style="background:${c}" title="${part.label}"></button>`).join("")}
+                </div>
+              </div>`).join("")}
+            <button class="btn btn-dark btn-sm" id="avSave" style="margin-top:10px">Сохранить персонажа</button>
           </div>
         </div>
 
@@ -1955,6 +1985,25 @@ function bind() {
   if (avClear) avClear.addEventListener("click", async () => {
     try { await saveAvatar(""); toast("Аватар убран"); render(); }
     catch (e2) { toast(e2.message); }
+  });
+
+  /* конструктор персонажа: свотч меняет черновик и превью, сохранение — кнопкой */
+  view.querySelectorAll("[data-avpart]").forEach(b => b.addEventListener("click", () => {
+    AV[b.dataset.avpart] = b.dataset.avcolor;
+    const row = b.closest(".sw-list");
+    row.querySelectorAll(".sw").forEach(x => x.classList.toggle("sel", x === b));
+    const prev = view.querySelector("#avPreview");
+    if (prev) prev.src = GAME.PixelAvatar.build(AV);
+  }));
+
+  const avSave = view.querySelector("#avSave");
+  if (avSave) avSave.addEventListener("click", async () => {
+    try {
+      await saveAvatar(GAME.PixelAvatar.build(AV));
+      celebrate("Персонаж готов!", "Он уже идёт по карте пути", "🎨",
+        { share: "⚓ SHIPYARD: собрал своего пиксельного персонажа — он поднимается по картам к двери MVP!" });
+      render();
+    } catch (e2) { toast(e2.message); }
   });
 
   /* GitHub */

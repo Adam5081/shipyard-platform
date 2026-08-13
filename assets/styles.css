@@ -1654,3 +1654,14 @@ pre.code .h { color: #7fd4e4; font-weight: 600; }
 @media (prefers-reduced-motion: reduce) {
   .btn-breathe, .view-anim > *, .cele-avatar, .cele-emoji, .slot-lights i { animation: none !important; }
 }
+
+/* ===== конструктор персонажа ===== */
+.av-builder { margin-top: 16px; border-top: 1px solid var(--line); padding-top: 14px; }
+.av-builder > small { display: block; margin-bottom: 10px; }
+.sw-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.sw-row > span { width: 74px; font-size: 13px; color: var(--ink-2); flex-shrink: 0; }
+.sw-list { display: flex; gap: 6px; flex-wrap: wrap; }
+.sw { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--line); cursor: pointer;
+  padding: 0; transition: transform .12s ease, border-color .12s; }
+.sw:hover { transform: scale(1.15); }
+.sw.sel { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(0,113,227,.25); transform: scale(1.1); }
