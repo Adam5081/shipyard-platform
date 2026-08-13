@@ -67,6 +67,7 @@ function phaseDone(phase, doneSet) {
   return Object.keys(phase.tasks).every(id => doneSet.has(id));
 }
 
+/* demoCount = число НЕДЕЛЬ с демо, а не число постов: спам на стену очков не даёт */
 function computePoints({ doneSet, secSet, legalSet, demoCount, battlePts = 0 }) {
   let pts = 0;
   for (const id of doneSet) if (TASKS[id]) pts += TASKS[id];

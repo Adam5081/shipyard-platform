@@ -113,6 +113,14 @@ const q = {
   resolveBattle: db.prepare("UPDATE battles SET winner_id = ?, resolved_at = ? WHERE id = ?"),
   addBattlePts: db.prepare("UPDATE users SET battle_pts = battle_pts + ? WHERE id = ?"),
   realUsers: db.prepare("SELECT * FROM users WHERE seed_pts = 0"),
+  demoWeeks: db.prepare("SELECT COUNT(DISTINCT week) AS n FROM demos WHERE user_id = ?"),
+  addBonusSpin: db.prepare("UPDATE users SET bonus_spins = bonus_spins + 1 WHERE id = ?"),
+  pairResolvedSince: db.prepare(`SELECT COUNT(*) AS n FROM battles WHERE winner_id != 0 AND resolved_at > @since
+    AND ((challenger_id = @a AND opponent_id = @b) OR (challenger_id = @b AND opponent_id = @a)) AND id != @self`),
+  battlePtsSince: db.prepare(`SELECT COALESCE(SUM(CASE WHEN challenger_id = @uid THEN ch_award ELSE op_award END), 0) AS n
+    FROM battles WHERE winner_id != 0 AND resolved_at > @since AND (challenger_id = @uid OR opponent_id = @uid)`),
+  setAwards: db.prepare("UPDATE battles SET ch_award = ?, op_award = ? WHERE id = ?"),
+  taskTimes: db.prepare("SELECT item_id, done_at FROM progress WHERE user_id = ? AND kind = 'task'"),
 };
 
 const TARIFFS = ["Solo", "Pro", "Partner"];
@@ -155,7 +163,7 @@ function userStats(u) {
     return { points: u.seed_pts, level: lvl, station, walk: station / 8 };
   }
   const sets = userSets(u.id);
-  const demoCount = q.demoCount.get(u.id).n;
+  const demoCount = q.demoWeeks.get(u.id).n;   // зачёт — по уникальным неделям
   return {
     points: computePoints({ ...sets, demoCount, battlePts: u.battle_pts || 0 }),
     level: computeLevel(sets.doneSet),
@@ -388,9 +396,20 @@ const routes = {
       (kind === "sec" && SEC_IDS.includes(id)) ||
       (kind === "legal" && LEGAL_IDS.includes(id));
     if (!valid) return err(res, 400, "Неизвестный пункт");
+    const closedBefore = closedStations(u.id);
     if (b.done) q.addProgress.run(u.id, kind, id, Date.now());
     else q.delProgress.run(u.id, kind, id);
-    send(res, 200, { ok: true, ...userStats(q.userById.get(u.id)) });
+
+    /* «Счастливый билет»: закрытие станции с шансом даёт бонус-спин лотереи.
+       Азарт по расписанию переменного подкрепления, но фарм невозможен:
+       станций всего 9, билетов не больше LUCKY_MAX за поток. */
+    let lucky = false;
+    if (b.done && kind === "task" && closedStations(u.id) > closedBefore
+        && u.bonus_spins < LUCKY_MAX && crypto.randomInt(100) < LUCKY_CHANCE) {
+      q.addBonusSpin.run(u.id);
+      lucky = true;
+    }
+    send(res, 200, { ok: true, lucky, ...userStats(q.userById.get(u.id)) });
   },
 
   "GET /api/demos": async (req, res) => {
@@ -574,15 +593,17 @@ const routes = {
     if (!isAdmin(req)) return err(res, 401, "Нужен ключ администратора");
     const users = q.allUsers.all().map(x => {
       const s = userStats(x);
+      const seed = x.seed_pts > 0;
       return {
         id: x.id, name: x.name, email: x.email, project: x.project,
         tariff: normTariff(x.tariff), dock: x.dock || "",
-        seed: x.seed_pts > 0,
+        seed,
         points: s.points, level: s.level, station: s.station, walk: s.walk,
         demos: q.demoCount.get(x.id).n,
         createdAt: x.created_at,
         lastAt: q.lastDone.get(x.id).t || 0,
         prizes: q.userPrizes.all(x.id).map(r => r.prize_label),
+        economy: seed ? null : userEconomy(x),
       };
     }).sort((a, b) => b.walk - a.walk || b.points - a.points);
     send(res, 200, { users });
@@ -661,11 +682,20 @@ const routes = {
       if (fresh.ch_score !== fresh.op_score) winner = fresh.ch_score > fresh.op_score ? fresh.challenger_id : fresh.opponent_id;
       else if (fresh.ch_ms !== fresh.op_ms) winner = fresh.ch_ms < fresh.op_ms ? fresh.challenger_id : fresh.opponent_id;
       q.resolveBattle.run(winner, Date.now(), bt.id);
-      if (winner === -1) { q.addBattlePts.run(BATTLE_DRAW_PTS, fresh.challenger_id); q.addBattlePts.run(BATTLE_DRAW_PTS, fresh.opponent_id); }
-      else {
-        q.addBattlePts.run(BATTLE_WIN_PTS, winner);
-        q.addBattlePts.run(BATTLE_LOSE_PTS, winner === fresh.challenger_id ? fresh.opponent_id : fresh.challenger_id);
-      }
+
+      /* Антифарм: реванш той же пары в течение 7 дней — дружеский (0 очков);
+         сверх недельного потолка BATTLE_WEEK_CAP очки тоже не начисляются.
+         Сыграть можно сколько угодно — на экономику влияет только зачётное. */
+      const weekAgo = Date.now() - 7 * 86400000;
+      const friendly = q.pairResolvedSince.get({ a: fresh.challenger_id, b: fresh.opponent_id, since: weekAgo, self: fresh.id }).n > 0;
+      const base = uid2 =>
+        winner === -1 ? BATTLE_DRAW_PTS : winner === uid2 ? BATTLE_WIN_PTS : BATTLE_LOSE_PTS;
+      const capped = uid2 => Math.max(0, Math.min(base(uid2), BATTLE_WEEK_CAP - q.battlePtsSince.get({ uid: uid2, since: weekAgo }).n));
+      const chAward = friendly ? 0 : capped(fresh.challenger_id);
+      const opAward = friendly ? 0 : capped(fresh.opponent_id);
+      q.setAwards.run(chAward, opAward, fresh.id);
+      if (chAward) q.addBattlePts.run(chAward, fresh.challenger_id);
+      if (opAward) q.addBattlePts.run(opAward, fresh.opponent_id);
     }
     // разбор — только после сдачи собственных ответов
     const review = qidx.map((qi, i) => ({
@@ -683,6 +713,9 @@ const routes = {
 
 const { QUIZ_QUESTIONS } = require("../assets/quiz");
 const BATTLE_QN = 5, BATTLE_WIN_PTS = 50, BATTLE_LOSE_PTS = 10, BATTLE_DRAW_PTS = 25;
+const BATTLE_WEEK_CAP = 150;   // потолок очков с баттлов за 7 дней — сговор двух аккаунтов бессмысленен
+const LUCKY_CHANCE = 20;       // % шанс «счастливого билета» при закрытии станции
+const LUCKY_MAX = 2;           // билетов за поток
 
 function battleView(b, uid) {
   const meCh = b.challenger_id === uid;
@@ -697,6 +730,7 @@ function battleView(b, uid) {
     myScore: my.score, theirScore: done ? their.score : null, // чужой счёт виден после развязки
     status: done ? "done" : my.score === null ? "yours" : "waiting",
     result: !done ? null : b.winner_id === -1 ? "draw" : b.winner_id === uid ? "win" : "loss",
+    myAward: done ? (meCh ? b.ch_award : b.op_award) : null,   // 0 = дружеский или потолок недели
     total: BATTLE_QN,
     // вопросы отдаются только когда ход за вами — и без правильных ответов
     questions: !done && my.score === null
@@ -715,13 +749,18 @@ const PRIZES = [
   { id: "tariff_week",  label: "Апгрейд тарифа на неделю",                w: 5 },
 ];
 
-function lotteryState(uid) {
+function closedStations(uid) {
   const { doneSet } = userSets(uid);
-  const closed = PHASE_TASKS.filter(p => Object.keys(p.tasks).every(id => doneSet.has(id))).length;
+  return PHASE_TASKS.filter(p => Object.keys(p.tasks).every(id => doneSet.has(id))).length;
+}
+
+function lotteryState(uid) {
+  const closed = closedStations(uid);
   let earned = Math.floor(closed / 3) + (closed === PHASE_TASKS.length ? 1 : 0);
   // бонус финала: топ-3 своего дока среди реальных участников — ещё один спин
   const top3 = closed === PHASE_TASKS.length && dockRank(uid) <= 3;
   if (top3) earned += 1;
+  earned += q.userById.get(uid).bonus_spins || 0;   // «счастливые билеты»
   const used = q.spinCount.get(uid).n;
   return {
     earned, used,
@@ -729,6 +768,35 @@ function lotteryState(uid) {
     closed, top3,
     prizes: q.userPrizes.all(uid).map(r => ({ id: r.prize_id, label: r.prize_label, ts: r.created_at })),
     pool: PRIZES.map(p => ({ id: p.id, label: p.label })),
+  };
+}
+
+/* Разбивка экономики участника для админ-дэшборда: откуда очки, спины
+   и не закрывал ли он станции подозрительно быстро (маркер самонакрутки —
+   повод ментору проверить артефакты перед подтверждением КТ). */
+function userEconomy(u) {
+  const sets = userSets(u.id);
+  let taskPts = 0;
+  for (const id of sets.doneSet) if (TASKS[id]) taskPts += TASKS[id];
+  const gates = PHASE_TASKS.filter(p => p.gate && Object.keys(p.tasks).every(id => sets.doneSet.has(id))).length;
+  const lot = lotteryState(u.id);
+
+  // станция закрыта менее чем за 10 минут от первой до последней отметки — флаг
+  const times = new Map(q.taskTimes.all(u.id).map(r => [r.item_id, r.done_at]));
+  const fast = [];
+  PHASE_TASKS.forEach((p, i) => {
+    const ids = Object.keys(p.tasks);
+    if (!ids.every(id => times.has(id))) return;
+    const ts = ids.map(id => times.get(id));
+    if (Math.max(...ts) - Math.min(...ts) < 10 * 60000) fast.push(i);
+  });
+
+  return {
+    taskPts, gatePts: gates * 100,
+    secPts: sets.secSet.size * 10, legalPts: sets.legalSet.size * 15,
+    demoPts: q.demoWeeks.get(u.id).n * 50, battlePts: u.battle_pts || 0,
+    spinsEarned: lot.earned, spinsUsed: lot.used, luckyTickets: u.bonus_spins || 0,
+    fastStations: fast,
   };
 }
 

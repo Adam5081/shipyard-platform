@@ -104,7 +104,8 @@ const NEW_COLUMNS = [
   ["complexity", "INTEGER NOT NULL DEFAULT 0"],    // баллы скрининга сложности
   ["gh_cache",   "TEXT NOT NULL DEFAULT ''"],      // кэш ответа GitHub (JSON)
   ["gh_at",      "INTEGER NOT NULL DEFAULT 0"],    // время последней синхронизации
-  ["battle_pts", "INTEGER NOT NULL DEFAULT 0"],    // очки лиги, заработанные в баттлах
+  ["battle_pts",  "INTEGER NOT NULL DEFAULT 0"],   // очки лиги, заработанные в баттлах
+  ["bonus_spins", "INTEGER NOT NULL DEFAULT 0"],   // «счастливые билеты» лотереи (макс. 2 за поток)
 ];
 
 const existing = new Set(db.prepare("PRAGMA table_info(users)").all().map(c => c.name));
@@ -122,6 +123,18 @@ const APP_COLUMNS = [
 const existingApp = new Set(db.prepare("PRAGMA table_info(applications)").all().map(c => c.name));
 for (const [name, decl] of APP_COLUMNS) {
   if (!existingApp.has(name)) db.exec(`ALTER TABLE applications ADD COLUMN ${name} ${decl}`);
+}
+
+/* Аудит наград баттлов: сколько очков реально начислено каждой стороне
+   (0 — дружеский реванш или недельный потолок). */
+const BATTLE_COLUMNS = [
+  ["ch_award", "INTEGER NOT NULL DEFAULT 0"],
+  ["op_award", "INTEGER NOT NULL DEFAULT 0"],
+];
+
+const existingBattle = new Set(db.prepare("PRAGMA table_info(battles)").all().map(c => c.name));
+for (const [name, decl] of BATTLE_COLUMNS) {
+  if (!existingBattle.has(name)) db.exec(`ALTER TABLE battles ADD COLUMN ${name} ${decl}`);
 }
 
 function hashPassword(password, salt) {

@@ -483,8 +483,9 @@ function points() {
   for (const p of STATIONS) if (p.cp && cpPassed(p)) pts += 100;
   for (const g of SECURITY) for (const i of g.items) if (S.sec[i.id]) pts += 10;
   for (const id in S.legal) if (S.legal[id]) pts += 15;
-  pts += S.demos.length * 50;
-  if (S.demos.length >= 3) pts = Math.round(pts * 1.1);
+  const demoWeeks = new Set(S.demos.map(d => d.week)).size; // зачёт — по уникальным неделям
+  pts += demoWeeks * 50;
+  if (demoWeeks >= 3) pts = Math.round(pts * 1.1);
   pts += S.battlePts || 0; // очки баттлов, начисленные сервером
   return pts;
 }
@@ -836,7 +837,7 @@ const VIEWS = {
         <div class="lottery-strip">
           <div class="ls-main">
             <b>🎡 Лотерея верфи</b>
-            <small>Спин за каждые 3 закрытые станции, ещё один — за дверь MVP, бонус — топ-3 своего дока на финише. Приз выбирает верфь: час эксперта, скидка, апгрейд тарифа…</small>
+            <small>Спин за каждые 3 закрытые станции, ещё один — за дверь MVP, бонус — топ-3 своего дока на финише. Иногда за закрытую станцию выпадает 🎟️ счастливый билет. Приз выбирает верфь: час эксперта, скидка, апгрейд тарифа…</small>
             ${CACHE.lottery.top3 ? `<small class="ls-won">🏅 Вы в топ-3 своего дока — бонусный спин начислен</small>` : ""}
             ${CACHE.lottery.prizes.length ? `<small class="ls-won">🎁 Выиграно: ${CACHE.lottery.prizes.map(p => esc(p.label)).join(" · ")}</small>` : ""}
           </div>
@@ -1293,7 +1294,8 @@ const VIEWS = {
       <div class="page-head">
         <h1>Баттлы</h1>
         <p>Пять вопросов о вайб-кодинге, одинаковых для обоих. Побеждает точность, при равенстве — скорость.
-           Победа — +50 очков лиги, ничья — +25, участие — +10.</p>
+           Победа — +50 очков лиги, ничья — +25, участие — +10. Зачётный баттл с одним соперником — раз в неделю
+           (реванши дружеские, без очков), потолок очков с баттлов — 150 в неделю.</p>
       </div>
       <div class="panel">
         <h2>Вызвать на баттл</h2>
@@ -1524,9 +1526,9 @@ function battleRow(b) {
     ? `<button class="btn btn-primary btn-sm" data-bplay="${b.id}">Играть</button>`
     : b.status === "waiting"
       ? `<span class="status-chip wait">ждём соперника</span>`
-      : b.result === "win" ? `<span class="status-chip done">победа ${b.myScore}:${b.theirScore}</span>`
-      : b.result === "draw" ? `<span class="status-chip wait">ничья ${b.myScore}:${b.theirScore}</span>`
-      : `<span class="status-chip">поражение ${b.myScore}:${b.theirScore}</span>`;
+      : b.result === "win" ? `<span class="status-chip done">победа ${b.myScore}:${b.theirScore}${b.myAward ? ` · +${b.myAward}` : " · дружеский"}</span>`
+      : b.result === "draw" ? `<span class="status-chip wait">ничья ${b.myScore}:${b.theirScore}${b.myAward ? ` · +${b.myAward}` : " · дружеский"}</span>`
+      : `<span class="status-chip">поражение ${b.myScore}:${b.theirScore}${b.myAward ? ` · +${b.myAward}` : ""}</span>`;
   return `
     <div class="battle-row">
       <div>
@@ -1657,8 +1659,8 @@ function render() {
 }
 
 async function syncToggle(kind, id, done) {
-  if (API === null) return;
-  await apiCall("/toggle", "POST", { kind, id, done });
+  if (API === null) return null;
+  return apiCall("/toggle", "POST", { kind, id, done });
 }
 
 function bind() {
@@ -1766,10 +1768,12 @@ function bind() {
       const wasSkills = skillLevels();
       const checked = cb.checked;
       try {
-        await syncToggle("task", id, checked);
+        const resp = await syncToggle("task", id, checked);
         S.done[id] = checked;
         if (!checked) delete S.done[id];
         save();
+        // «счастливый билет» показываем поверх праздника станции, с паузой
+        if (resp?.lucky) setTimeout(() => toast("🎟️ Счастливый билет верфи — +1 спин лотереи!"), 1600);
         const nowLvl = level().n;
         const nowTools = tools().length;
         if (checked) {
