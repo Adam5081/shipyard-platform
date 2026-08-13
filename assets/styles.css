@@ -1556,3 +1556,30 @@ pre.code .h { color: #7fd4e4; font-weight: 600; }
 .lottery-strip .ls-won { color: var(--ink-2); }
 .wheel-ticker { margin-top: 14px; font-size: 17px; font-weight: 700; min-height: 44px; display: flex;
   align-items: center; justify-content: center; background: var(--bg-alt); border-radius: var(--radius-s); padding: 10px 14px; }
+
+/* ===== полоса игры «Вайб-чек» на лендинге ===== */
+.vibe-strip { display: flex; align-items: center; gap: 20px; margin-top: 34px;
+  background: var(--bg); border-radius: var(--radius-m); padding: 20px 26px; box-shadow: 0 1px 3px rgba(0,0,0,.05); }
+.vibe-strip b { display: block; font-size: 16px; margin-bottom: 4px; }
+.vibe-strip span { font-size: 14px; color: var(--ink-2); line-height: 1.45; }
+.vibe-strip > div { flex: 1; min-width: 0; }
+@media (max-width: 640px) { .vibe-strip { flex-direction: column; align-items: stretch; text-align: center; } }
+
+/* ===== баттлы ===== */
+.battle-new { display: flex; gap: 10px; flex-wrap: wrap; }
+.battle-new select { flex: 1; min-width: 220px; }
+.battle-q { font-size: 17px; font-weight: 600; line-height: 1.45; margin-bottom: 16px; }
+.battle-opt { display: block; width: 100%; text-align: left; font-family: inherit; font-size: 15px; line-height: 1.4;
+  background: var(--bg); border: 1.5px solid var(--line); border-radius: var(--radius-s);
+  padding: 13px 16px; margin-bottom: 10px; cursor: pointer; transition: border-color .15s; }
+.battle-opt:hover { border-color: var(--accent); }
+.battle-row { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.battle-row:last-child { border-bottom: none; }
+.battle-row > div { flex: 1; min-width: 0; }
+.battle-row b { display: block; font-size: 15px; }
+.battle-row small { color: var(--ink-3); font-size: 13px; }
+.battle-rev { padding: 12px 0; border-bottom: 1px solid var(--line); }
+.battle-rev:last-of-type { border-bottom: none; }
+.battle-rev b { display: block; font-size: 14px; line-height: 1.4; }
+.battle-rev small { display: block; font-size: 13px; margin-top: 4px; color: var(--ink-2); }
+.battle-rev small.why { color: var(--ink-3); font-style: italic; }

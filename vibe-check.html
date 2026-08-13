@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Вайб-чек — проверь свой вайб-кодинг · SHIPYARD</title>
+<meta name="description" content="10 ситуаций из реальной работы с Claude Code. Узнай, кто ты: зритель, приёмщик или капитан вайб-кода.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚓</text></svg>">
+<link rel="stylesheet" href="assets/styles.css">
+<script src="assets/quiz.js"></script>
+<style>
+  .vc { max-width: 620px; margin: 0 auto; padding: 48px 20px 80px; }
+  .vc-head { text-align: center; margin-bottom: 30px; }
+  .vc-head .logo { font-size: 44px; }
+  .vc-head h1 { font-size: 30px; font-weight: 700; letter-spacing: -.02em; margin-top: 8px; }
+  .vc-head p { color: var(--ink-2); margin-top: 8px; }
+  .vc-progress { display: flex; gap: 5px; margin-bottom: 18px; }
+  .vc-progress i { flex: 1; height: 5px; border-radius: 999px; background: var(--bg-alt); }
+  .vc-progress i.on { background: var(--accent); }
+  .vc-progress i.bad { background: #ff3b30; }
+  .vc-q { font-size: 18px; font-weight: 600; line-height: 1.45; margin-bottom: 18px; }
+  .vc-opt { display: block; width: 100%; text-align: left; font-family: inherit; font-size: 15px; line-height: 1.4;
+    background: var(--bg); border: 1.5px solid var(--line); border-radius: var(--radius-s);
+    padding: 13px 16px; margin-bottom: 10px; cursor: pointer; transition: border-color .15s, background .15s; }
+  .vc-opt:hover { border-color: var(--accent); }
+  .vc-opt.right { border-color: #34c759; background: #eafaf0; }
+  .vc-opt.wrong { border-color: #ff3b30; background: #fdeeed; }
+  .vc-opt:disabled { cursor: default; opacity: .85; }
+  .vc-why { background: var(--bg-alt); border-radius: var(--radius-s); padding: 13px 16px; font-size: 14px;
+    color: var(--ink-2); line-height: 1.5; margin: 14px 0; }
+  .vc-result { text-align: center; }
+  .vc-result .big { font-size: 64px; animation: vc-jump .8s ease-in-out infinite; display: inline-block; }
+  .vc-result h2 { font-size: 26px; margin-top: 12px; letter-spacing: -.01em; }
+  .vc-result .score { color: var(--ink-2); margin-top: 6px; }
+  .vc-result .note { font-size: 14px; color: var(--ink-3); margin-top: 14px; line-height: 1.5; }
+  .vc-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 22px; }
+  .vc-cta { margin-top: 34px; background: var(--bg); border-radius: var(--radius-m); padding: 22px 24px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.05); text-align: center; }
+  .vc-cta b { display: block; margin-bottom: 6px; }
+  .vc-cta p { font-size: 14px; color: var(--ink-2); margin-bottom: 14px; }
+  @keyframes vc-jump { 0%, 100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-10px) rotate(2deg); } }
+</style>
+</head>
+<body class="app-body">
+
+<div class="vc">
+  <div class="vc-head">
+    <div class="logo">⚓</div>
+    <h1>Вайб-чек</h1>
+    <p>10 ситуаций из реальной работы с Claude Code. Без регистрации, две минуты.</p>
+  </div>
+  <div id="stage"></div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+const POOL = window.QUIZ_QUESTIONS;
+const N = 10;
+const stage = document.getElementById('stage');
+const toastEl = document.getElementById('toast');
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+let quiz = [], idx = 0, score = 0, marks = [];
+
+function toast(msg) {
+  toastEl.textContent = msg;
+  toastEl.classList.add('show');
+  setTimeout(() => toastEl.classList.remove('show'), 2600);
+}
+
+const TITLES = [
+  [10, '⚓', 'Капитан вайб-кода', 'Вам можно доверить штурвал: контекст, план, приёмка — всё на месте.'],
+  [8,  '🧭', 'Штурман контекста', 'Курс верный: вы понимаете, как управлять агентом, а не надеяться на него.'],
+  [5,  '🔍', 'Приёмщик', 'Хорошая база: вы уже не зритель. Осталось закрепить ритм — план, сессии, коммиты.'],
+  [0,  '🍿', 'Зритель', 'Пока агент работает, а вы смотрите. Это лечится: начните с плана до кода.'],
+];
+
+function intro() {
+  stage.innerHTML = `
+    <div class="panel">
+      <p style="line-height:1.55">Вайб-кодинг ломается не там, где агент плохо пишет код, — а там, где ему
+      не дали контекста и не дали остановиться. Проверьте, как вы поведёте себя в десяти реальных ситуациях.</p>
+      <button class="btn btn-primary" id="start" style="width:100%;margin-top:18px">Начать</button>
+    </div>`;
+  document.getElementById('start').addEventListener('click', () => {
+    quiz = [...POOL].sort(() => Math.random() - 0.5).slice(0, N);
+    idx = 0; score = 0; marks = [];
+    question();
+  });
+}
+
+function question() {
+  const item = quiz[idx];
+  stage.innerHTML = `
+    <div class="vc-progress">${quiz.map((_, i) =>
+      `<i class="${i < idx ? (marks[i] ? 'on' : 'bad') : ''}"></i>`).join('')}</div>
+    <div class="panel">
+      <div class="vc-q">${idx + 1}. ${esc(item.q)}</div>
+      ${item.opts.map((o, i) => `<button class="vc-opt" data-i="${i}">${esc(o)}</button>`).join('')}
+      <div id="after"></div>
+    </div>`;
+  stage.querySelectorAll('.vc-opt').forEach(b => b.addEventListener('click', () => {
+    const i = Number(b.dataset.i);
+    const right = i === item.a;
+    if (right) score++;
+    marks[idx] = right;
+    stage.querySelectorAll('.vc-opt').forEach(x => {
+      x.disabled = true;
+      if (Number(x.dataset.i) === item.a) x.classList.add('right');
+      else if (x === b) x.classList.add('wrong');
+    });
+    document.getElementById('after').innerHTML = `
+      <div class="vc-why">${right ? '✅' : '❌'} ${esc(item.why)}</div>
+      <button class="btn btn-primary" id="next" style="width:100%">${idx + 1 < quiz.length ? 'Дальше' : 'Результат'}</button>`;
+    document.getElementById('next').addEventListener('click', () => {
+      idx++;
+      idx < quiz.length ? question() : result();
+    });
+  }));
+}
+
+function result() {
+  const t = TITLES.find(x => score >= x[0]);
+  stage.innerHTML = `
+    <div class="panel vc-result">
+      <span class="big">${t[1]}</span>
+      <h2>${esc(t[2])}</h2>
+      <div class="score">${score} из ${quiz.length}</div>
+      <p class="note">${esc(t[3])}</p>
+      <div class="vc-actions">
+        <button class="btn btn-primary" id="share">Поделиться результатом</button>
+        <button class="btn btn-ghost" id="again">Сыграть ещё раз</button>
+      </div>
+    </div>
+    <div class="vc-cta">
+      <b>Понравилось думать как строитель продукта?</b>
+      <p>SHIPYARD — программа, где вы собираете свой продукт через Claude Code вместе с экспертами: девять станций, живой поток, дверь MVP в конце.</p>
+      <a class="btn btn-dark" href="index.html#apply">Подать заявку на поток</a>
+    </div>`;
+  document.getElementById('again').addEventListener('click', intro);
+  document.getElementById('share').addEventListener('click', async () => {
+    const url = location.origin + location.pathname;
+    const text = `⚓ Вайб-чек SHIPYARD: ${score}/${quiz.length} — «${t[2]}» ${t[1]}\nПроверь свой вайб-кодинг: ${url}`;
+    try {
+      if (navigator.share) return await navigator.share({ text });
+      throw 0;
+    } catch {
+      try { await navigator.clipboard.writeText(text); toast('Результат скопирован — вставьте в чат или соцсеть'); }
+      catch { toast('Не удалось скопировать'); }
+    }
+  });
+}
+
+intro();
+</script>
+</body>
+</html>

@@ -328,7 +328,7 @@ const PEER_DEMOS = [
 
 let API = null;          // "" = same-origin, "https://…" = удалённый, null = локальный режим
 let TOKEN = localStorage.getItem("shipyard_token") || null;
-const CACHE = { demos: null, league: null, flow: null, lottery: null };
+const CACHE = { demos: null, league: null, flow: null, lottery: null, battles: null };
 
 function candidateApi() {
   const o = localStorage.getItem("shipyard_api");
@@ -362,6 +362,7 @@ function applyMe(d) {
   S.repo = u.repo || "";
   S.isPublic = u.isPublic !== false;
   if (u.startDate) S.startDate = u.startDate; // время потока отсчитывается от входа в программу
+  S.battlePts = u.battlePts || 0;
   S.dock = u.dock || "";
   S.complexity = u.complexity || 0;
   S.done = d.done || {};
@@ -374,7 +375,7 @@ function applyMe(d) {
 function logout(rerender = true) {
   TOKEN = null;
   localStorage.removeItem("shipyard_token");
-  CACHE.demos = CACHE.league = CACHE.flow = CACHE.lottery = null;
+  CACHE.demos = CACHE.league = CACHE.flow = CACHE.lottery = CACHE.battles = null;
   if (rerender) go("map");
 }
 
@@ -435,6 +436,7 @@ function points() {
   for (const id in S.legal) if (S.legal[id]) pts += 15;
   pts += S.demos.length * 50;
   if (S.demos.length >= 3) pts = Math.round(pts * 1.1);
+  pts += S.battlePts || 0; // очки баттлов, начисленные сервером
   return pts;
 }
 
@@ -584,6 +586,7 @@ let activeView = "map";
 async function go(name) {
   if (API !== null && !TOKEN) name = "auth";
   if (activeView !== name) S.kbDoc = null;   // переход по разделам закрывает открытый материал
+  if (name !== "battles") { BATTLE.play = null; BATTLE.review = null; }
   activeView = name;
   if (name !== "auth") history.replaceState(null, "", "#" + name);
   document.querySelectorAll(".side-link").forEach(b =>
@@ -594,6 +597,7 @@ async function go(name) {
       if (name === "league") CACHE.league = (await apiCall("/league")).rows;
       if (name === "flow" || name === "map") CACHE.flow = (await apiCall("/flow")).rows;
       if (name === "map" && !CACHE.lottery) CACHE.lottery = await apiCall("/lottery");
+      if (name === "battles" && !CACHE.battles) CACHE.battles = await apiCall("/battles");
     }
   } catch (e) { toast(e.message); }
   render();
@@ -735,7 +739,8 @@ const VIEWS = {
         <div class="lottery-strip">
           <div class="ls-main">
             <b>🎡 Лотерея верфи</b>
-            <small>Спин за каждые 3 закрытые станции, ещё один — за дверь MVP. Приз выбирает верфь: час эксперта, скидка, апгрейд тарифа…</small>
+            <small>Спин за каждые 3 закрытые станции, ещё один — за дверь MVP, бонус — топ-3 своего дока на финише. Приз выбирает верфь: час эксперта, скидка, апгрейд тарифа…</small>
+            ${CACHE.lottery.top3 ? `<small class="ls-won">🏅 Вы в топ-3 своего дока — бонусный спин начислен</small>` : ""}
             ${CACHE.lottery.prizes.length ? `<small class="ls-won">🎁 Выиграно: ${CACHE.lottery.prizes.map(p => esc(p.label)).join(" · ")}</small>` : ""}
           </div>
           ${CACHE.lottery.available > 0
@@ -1127,6 +1132,71 @@ const VIEWS = {
       </div>`;
   },
 
+  /* ---- баттлы ---- */
+  battles() {
+    if (API === null) return `
+      <div class="page-head"><h1>Баттлы</h1><p>Пять вопросов о вайб-кодинге против соперника из потока.</p></div>
+      <div class="notice"><b>Демо-режим.</b> Баттлы работают при подключённом бэкенде.
+        Пока можно <a href="vibe-check.html" target="_blank" rel="noopener">потренироваться в открытой игре «Вайб-чек» ↗</a></div>`;
+
+    if (BATTLE.play) {
+      const p = BATTLE.play;
+      const item = p.questions[p.idx];
+      return `
+        <div class="page-head"><h1>Баттл ⚔️</h1><p>Вопрос ${p.idx + 1} из ${p.questions.length} · время идёт, счёт считает сервер</p></div>
+        <div class="panel">
+          <div class="battle-q">${esc(item.q)}</div>
+          ${item.opts.map((o, i) => `<button class="battle-opt" data-bopt="${i}">${esc(o)}</button>`).join("")}
+        </div>`;
+    }
+
+    if (BATTLE.review) {
+      const r = BATTLE.review;
+      return `
+        <div class="page-head"><h1>Ответы приняты</h1>
+          <p>${r.status === "done"
+            ? (r.result === "win" ? "🏆 Победа! +50 очков лиги"
+              : r.result === "draw" ? "🤝 Ничья — по +25 очков обоим"
+              : `Соперник оказался точнее (${r.theirScore} из ${r.total}) · +10 очков за участие`)
+            : "Ждём соперника — результат появится в списке баттлов"}</p></div>
+        <div class="panel">
+          <h2>Ваш счёт: ${r.myScore} из ${r.total}</h2>
+          ${r.review.map(x => `
+            <div class="battle-rev ${x.right ? "ok" : "no"}">
+              <b>${x.right ? "✅" : "❌"} ${esc(x.q)}</b>
+              ${x.right ? "" : `<small>Ваш ответ: ${esc(x.yours)}</small><small>Верный: ${esc(x.correct)}</small>`}
+              <small class="why">${esc(x.why)}</small>
+            </div>`).join("")}
+          <button class="btn btn-primary btn-sm" data-bback style="margin-top:12px">К списку баттлов</button>
+        </div>`;
+    }
+
+    const B = CACHE.battles || { battles: [], opponents: [] };
+    const open = B.battles.filter(b => b.status !== "done");
+    const finished = B.battles.filter(b => b.status === "done");
+    return `
+      <div class="page-head">
+        <h1>Баттлы</h1>
+        <p>Пять вопросов о вайб-кодинге, одинаковых для обоих. Побеждает точность, при равенстве — скорость.
+           Победа — +50 очков лиги, ничья — +25, участие — +10.</p>
+      </div>
+      <div class="panel">
+        <h2>Вызвать на баттл</h2>
+        ${B.opponents.length ? `
+          <div class="battle-new">
+            <select id="bOpp">${B.opponents.map(o =>
+              `<option value="${o.id}">${esc(o.name)}${o.project ? " · " + esc(o.project) : ""}</option>`).join("")}</select>
+            <button class="btn btn-primary btn-sm" id="bChallenge">Вызвать</button>
+          </div>`
+          : `<p class="empty">В потоке пока нет соперников.</p>`}
+        <p class="muted" style="font-size:13px;margin-top:10px">Потренироваться без ставок можно в открытой игре
+          <a href="vibe-check.html" target="_blank" rel="noopener">«Вайб-чек» ↗</a> — её можно отправить и друзьям не из потока.</p>
+      </div>
+      ${open.length ? `<div class="panel"><h2>Идут сейчас</h2>${open.map(battleRow).join("")}</div>` : ""}
+      ${finished.length ? `<div class="panel"><h2>Завершённые</h2>${finished.map(battleRow).join("")}</div>` : ""}
+      ${!B.battles.length ? `<div class="panel"><p class="empty">Баттлов ещё не было. Вызовите первого соперника!</p></div>` : ""}`;
+  },
+
   /* ---- Demo Day ---- */
   demoday() {
     const dd = demoDayDate();
@@ -1331,6 +1401,27 @@ function taskRow(t) {
     </div>`;
 }
 
+/* транзитное состояние баттла: активная игра и разбор после сдачи */
+const BATTLE = { play: null, review: null };
+
+function battleRow(b) {
+  const chip = b.status === "yours"
+    ? `<button class="btn btn-primary btn-sm" data-bplay="${b.id}">Играть</button>`
+    : b.status === "waiting"
+      ? `<span class="status-chip wait">ждём соперника</span>`
+      : b.result === "win" ? `<span class="status-chip done">победа ${b.myScore}:${b.theirScore}</span>`
+      : b.result === "draw" ? `<span class="status-chip wait">ничья ${b.myScore}:${b.theirScore}</span>`
+      : `<span class="status-chip">поражение ${b.myScore}:${b.theirScore}</span>`;
+  return `
+    <div class="battle-row">
+      <div>
+        <b>⚔️ ${esc(b.vs.name)}</b>
+        <small>${esc(b.vs.project || "проект скрыт")} · ${b.challengedByMe ? "ваш вызов" : "вас вызвали"}</small>
+      </div>
+      ${chip}
+    </div>`;
+}
+
 function cpBanner(p) {
   const passed = cpPassed(p);
   return `
@@ -1499,6 +1590,50 @@ function bind() {
   /* лотерея */
   const spinBtn = view.querySelector("[data-spin]");
   if (spinBtn) spinBtn.addEventListener("click", () => spinLottery(spinBtn));
+
+  /* баттлы */
+  const bChallenge = view.querySelector("#bChallenge");
+  if (bChallenge) bChallenge.addEventListener("click", async () => {
+    bChallenge.disabled = true;
+    try {
+      await apiCall("/battles", "POST", { opponentId: Number(view.querySelector("#bOpp").value) });
+      CACHE.battles = await apiCall("/battles");
+      toast("Вызов отправлен — соперник увидит баттл у себя");
+      render();
+    } catch (e2) { toast(e2.message); bChallenge.disabled = false; }
+  });
+
+  view.querySelectorAll("[data-bplay]").forEach(b => b.addEventListener("click", () => {
+    const bt = (CACHE.battles?.battles || []).find(x => x.id === Number(b.dataset.bplay));
+    if (!bt || !bt.questions) return toast("Баттл недоступен — обновите список");
+    BATTLE.play = { id: bt.id, questions: bt.questions, idx: 0, answers: [], startedAt: Date.now() };
+    render();
+  }));
+
+  view.querySelectorAll("[data-bopt]").forEach(b => b.addEventListener("click", async () => {
+    const p = BATTLE.play;
+    if (!p) return;
+    p.answers.push(Number(b.dataset.bopt));
+    if (++p.idx < p.questions.length) return render();
+    BATTLE.play = null;
+    try {
+      const r = await apiCall("/battles/submit", "POST", { id: p.id, answers: p.answers, ms: Date.now() - p.startedAt });
+      BATTLE.review = r;
+      CACHE.battles = CACHE.league = CACHE.flow = null;
+      if (r.status === "done") applyMe(await apiCall("/me")); // очки лиги обновились
+      if (r.result === "win")
+        celebrate("Баттл выигран!", "+50 очков лиги дока", "⚔️",
+          { share: `⚓ SHIPYARD: выиграл баттл по вайб-кодингу со счётом ${r.myScore}/${r.total}! ⚔️` });
+    } catch (e2) { toast(e2.message); }
+    render();
+  }));
+
+  const bBack = view.querySelector("[data-bback]");
+  if (bBack) bBack.addEventListener("click", async () => {
+    BATTLE.review = null;
+    try { if (!CACHE.battles) CACHE.battles = await apiCall("/battles"); } catch {}
+    render();
+  });
 
   /* поделиться бейджем из профиля */
   view.querySelectorAll("[data-sharebadge]").forEach(b => b.addEventListener("click", () => {

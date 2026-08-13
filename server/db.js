@@ -77,6 +77,19 @@ db.exec(`
     prize_label TEXT NOT NULL,
     created_at  INTEGER NOT NULL
   );
+
+  /* баттлы на знании вайб-кодинга: вопросы и подсчёт — только на сервере */
+  CREATE TABLE IF NOT EXISTS battles (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    challenger_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    opponent_id   INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    questions     TEXT NOT NULL,                 -- JSON: индексы вопросов пула
+    ch_score      INTEGER, ch_ms INTEGER,        -- NULL = ещё не отвечал
+    op_score      INTEGER, op_ms INTEGER,
+    winner_id     INTEGER NOT NULL DEFAULT 0,    -- 0 = идёт, -1 = ничья
+    created_at    INTEGER NOT NULL,
+    resolved_at   INTEGER NOT NULL DEFAULT 0
+  );
 `);
 
 /* ---------- миграции: колонки, добавленные после первого релиза ---------- */
@@ -91,6 +104,7 @@ const NEW_COLUMNS = [
   ["complexity", "INTEGER NOT NULL DEFAULT 0"],    // баллы скрининга сложности
   ["gh_cache",   "TEXT NOT NULL DEFAULT ''"],      // кэш ответа GitHub (JSON)
   ["gh_at",      "INTEGER NOT NULL DEFAULT 0"],    // время последней синхронизации
+  ["battle_pts", "INTEGER NOT NULL DEFAULT 0"],    // очки лиги, заработанные в баттлах
 ];
 
 const existing = new Set(db.prepare("PRAGMA table_info(users)").all().map(c => c.name));

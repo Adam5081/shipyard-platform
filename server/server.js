@@ -102,6 +102,17 @@ const q = {
   spinCount: db.prepare("SELECT COUNT(*) AS n FROM lottery WHERE user_id = ?"),
   userPrizes: db.prepare("SELECT prize_id, prize_label, created_at FROM lottery WHERE user_id = ? ORDER BY id"),
   insertSpin: db.prepare("INSERT INTO lottery (user_id, prize_id, prize_label, created_at) VALUES (?,?,?,?)"),
+  myBattles: db.prepare("SELECT * FROM battles WHERE challenger_id = ? OR opponent_id = ? ORDER BY id DESC LIMIT 50"),
+  battleById: db.prepare("SELECT * FROM battles WHERE id = ?"),
+  openBetween: db.prepare(`SELECT 1 FROM battles WHERE winner_id = 0
+    AND ((challenger_id = @a AND opponent_id = @b) OR (challenger_id = @b AND opponent_id = @a))`),
+  myOpenBattles: db.prepare("SELECT COUNT(*) AS n FROM battles WHERE challenger_id = ? AND winner_id = 0"),
+  insertBattle: db.prepare("INSERT INTO battles (challenger_id, opponent_id, questions, created_at) VALUES (?,?,?,?)"),
+  setChAnswer: db.prepare("UPDATE battles SET ch_score = ?, ch_ms = ? WHERE id = ?"),
+  setOpAnswer: db.prepare("UPDATE battles SET op_score = ?, op_ms = ? WHERE id = ?"),
+  resolveBattle: db.prepare("UPDATE battles SET winner_id = ?, resolved_at = ? WHERE id = ?"),
+  addBattlePts: db.prepare("UPDATE users SET battle_pts = battle_pts + ? WHERE id = ?"),
+  realUsers: db.prepare("SELECT * FROM users WHERE seed_pts = 0"),
 };
 
 const TARIFFS = ["Solo", "Pro", "Partner"];
@@ -146,7 +157,7 @@ function userStats(u) {
   const sets = userSets(u.id);
   const demoCount = q.demoCount.get(u.id).n;
   return {
-    points: computePoints({ ...sets, demoCount }),
+    points: computePoints({ ...sets, demoCount, battlePts: u.battle_pts || 0 }),
     level: computeLevel(sets.doneSet),
     station: computeStation(sets.doneSet),
     walk: computeWalk(sets.doneSet),
@@ -177,6 +188,7 @@ function meState(u) {
       link: u.link || "", repo: u.repo || "", isPublic: !!u.is_public,
       dock: u.dock || "", complexity: u.complexity || 0,
       startDate: u.created_at,
+      battlePts: u.battle_pts || 0,
     },
     done: toObj(doneSet),
     sec: toObj(secSet),
@@ -598,8 +610,100 @@ const routes = {
     send(res, 200, { prize: { id: prize.id, label: prize.label }, ...lotteryState(u.id) });
   },
 
+  /* ---------- баттлы на знании вайб-кодинга ----------
+     Вопросы выбирает сервер, счёт считает сервер. Победа — выше счёт,
+     при равном — быстрее время. Очки идут в лигу (battle_pts). */
+  "GET /api/battles": async (req, res) => {
+    const u = auth(req);
+    if (!u) return err(res, 401, "Нужен вход");
+    const battles = q.myBattles.all(u.id, u.id).map(b => battleView(b, u.id));
+    const opponents = q.realUsers.all()
+      .filter(x => x.id !== u.id)
+      .map(x => ({ id: x.id, name: x.name, project: x.is_public ? x.project : "" }));
+    send(res, 200, { battles, opponents });
+  },
+
+  "POST /api/battles": async (req, res) => {
+    const u = auth(req);
+    if (!u) return err(res, 401, "Нужен вход");
+    const b = await readBody(req);
+    const opp = q.userById.get(Number(b.opponentId || 0));
+    if (!opp || opp.id === u.id) return err(res, 400, "Выберите соперника из потока");
+    if (opp.seed_pts > 0) return err(res, 400, "Этого участника нельзя вызвать на баттл");
+    if (q.openBetween.get({ a: u.id, b: opp.id })) return err(res, 409, "У вас уже идёт баттл с этим участником");
+    if (q.myOpenBattles.get(u.id).n >= 3) return err(res, 429, "Не больше трёх открытых вызовов одновременно");
+    const idx = new Set();
+    while (idx.size < BATTLE_QN) idx.add(crypto.randomInt(QUIZ_QUESTIONS.length));
+    const r = q.insertBattle.run(u.id, opp.id, JSON.stringify([...idx]), Date.now());
+    send(res, 201, battleView(q.battleById.get(Number(r.lastInsertRowid)), u.id));
+  },
+
+  "POST /api/battles/submit": async (req, res) => {
+    const u = auth(req);
+    if (!u) return err(res, 401, "Нужен вход");
+    const b = await readBody(req);
+    const bt = q.battleById.get(Number(b.id || 0));
+    if (!bt) return err(res, 404, "Баттл не найден");
+    const role = bt.challenger_id === u.id ? "ch" : bt.opponent_id === u.id ? "op" : null;
+    if (!role) return err(res, 403, "Это не ваш баттл");
+    if (bt.winner_id !== 0) return err(res, 409, "Баттл уже завершён");
+    if ((role === "ch" ? bt.ch_score : bt.op_score) !== null) return err(res, 409, "Вы уже отвечали в этом баттле");
+
+    const qidx = JSON.parse(bt.questions);
+    const answers = Array.isArray(b.answers) ? b.answers : [];
+    const score = qidx.reduce((s, qi, i) => s + (Number(answers[i]) === QUIZ_QUESTIONS[qi].a ? 1 : 0), 0);
+    const ms = Math.max(1000, Math.min(30 * 60000, Number(b.ms) || 30 * 60000));
+    (role === "ch" ? q.setChAnswer : q.setOpAnswer).run(score, ms, bt.id);
+
+    const fresh = q.battleById.get(bt.id);
+    if (fresh.ch_score !== null && fresh.op_score !== null) {
+      let winner = -1; // ничья
+      if (fresh.ch_score !== fresh.op_score) winner = fresh.ch_score > fresh.op_score ? fresh.challenger_id : fresh.opponent_id;
+      else if (fresh.ch_ms !== fresh.op_ms) winner = fresh.ch_ms < fresh.op_ms ? fresh.challenger_id : fresh.opponent_id;
+      q.resolveBattle.run(winner, Date.now(), bt.id);
+      if (winner === -1) { q.addBattlePts.run(BATTLE_DRAW_PTS, fresh.challenger_id); q.addBattlePts.run(BATTLE_DRAW_PTS, fresh.opponent_id); }
+      else {
+        q.addBattlePts.run(BATTLE_WIN_PTS, winner);
+        q.addBattlePts.run(BATTLE_LOSE_PTS, winner === fresh.challenger_id ? fresh.opponent_id : fresh.challenger_id);
+      }
+    }
+    // разбор — только после сдачи собственных ответов
+    const review = qidx.map((qi, i) => ({
+      q: QUIZ_QUESTIONS[qi].q, correct: QUIZ_QUESTIONS[qi].opts[QUIZ_QUESTIONS[qi].a],
+      yours: QUIZ_QUESTIONS[qi].opts[Number(answers[i])] ?? "—",
+      right: Number(answers[i]) === QUIZ_QUESTIONS[qi].a, why: QUIZ_QUESTIONS[qi].why,
+    }));
+    send(res, 200, { ...battleView(q.battleById.get(bt.id), u.id), review });
+  },
+
   "GET /api/health": async (req, res) => send(res, 200, { ok: true, service: "shipyard" }),
 };
+
+/* ---------- баттлы: константы и представление ---------- */
+
+const { QUIZ_QUESTIONS } = require("../assets/quiz");
+const BATTLE_QN = 5, BATTLE_WIN_PTS = 50, BATTLE_LOSE_PTS = 10, BATTLE_DRAW_PTS = 25;
+
+function battleView(b, uid) {
+  const meCh = b.challenger_id === uid;
+  const my = meCh ? { score: b.ch_score, ms: b.ch_ms } : { score: b.op_score, ms: b.op_ms };
+  const their = meCh ? { score: b.op_score, ms: b.op_ms } : { score: b.ch_score, ms: b.ch_ms };
+  const vs = q.userById.get(meCh ? b.opponent_id : b.challenger_id);
+  const done = b.winner_id !== 0;
+  return {
+    id: b.id, ts: b.created_at,
+    vs: vs ? { name: vs.name, project: vs.is_public ? vs.project : "" } : { name: "—", project: "" },
+    challengedByMe: meCh,
+    myScore: my.score, theirScore: done ? their.score : null, // чужой счёт виден после развязки
+    status: done ? "done" : my.score === null ? "yours" : "waiting",
+    result: !done ? null : b.winner_id === -1 ? "draw" : b.winner_id === uid ? "win" : "loss",
+    total: BATTLE_QN,
+    // вопросы отдаются только когда ход за вами — и без правильных ответов
+    questions: !done && my.score === null
+      ? JSON.parse(b.questions).map(qi => ({ q: QUIZ_QUESTIONS[qi].q, opts: QUIZ_QUESTIONS[qi].opts }))
+      : null,
+  };
+}
 
 /* призы лотереи: веса подобраны так, чтобы час эксперта выпадал часто,
    а апгрейд тарифа оставался редкой удачей; исполняет призы ментор вручную */
@@ -614,15 +718,30 @@ const PRIZES = [
 function lotteryState(uid) {
   const { doneSet } = userSets(uid);
   const closed = PHASE_TASKS.filter(p => Object.keys(p.tasks).every(id => doneSet.has(id))).length;
-  const earned = Math.floor(closed / 3) + (closed === PHASE_TASKS.length ? 1 : 0);
+  let earned = Math.floor(closed / 3) + (closed === PHASE_TASKS.length ? 1 : 0);
+  // бонус финала: топ-3 своего дока среди реальных участников — ещё один спин
+  const top3 = closed === PHASE_TASKS.length && dockRank(uid) <= 3;
+  if (top3) earned += 1;
   const used = q.spinCount.get(uid).n;
   return {
     earned, used,
     available: Math.max(0, earned - used),
-    closed,
+    closed, top3,
     prizes: q.userPrizes.all(uid).map(r => ({ id: r.prize_id, label: r.prize_label, ts: r.created_at })),
     pool: PRIZES.map(p => p.label),
   };
+}
+
+/* место участника в лиге своего дока; сиды не соперники — исключаются */
+function dockRank(uid) {
+  const me = q.userById.get(uid);
+  if (!me || !me.dock) return Infinity;
+  const rows = q.realUsers.all()
+    .filter(x => x.dock === me.dock)
+    .map(x => ({ id: x.id, pts: userStats(x).points }))
+    .sort((a, b) => b.pts - a.pts);
+  const i = rows.findIndex(r => r.id === uid);
+  return i === -1 ? Infinity : i + 1;
 }
 
 /* ---------- статика ---------- */

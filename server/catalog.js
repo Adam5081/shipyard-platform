@@ -67,7 +67,7 @@ function phaseDone(phase, doneSet) {
   return Object.keys(phase.tasks).every(id => doneSet.has(id));
 }
 
-function computePoints({ doneSet, secSet, legalSet, demoCount }) {
+function computePoints({ doneSet, secSet, legalSet, demoCount, battlePts = 0 }) {
   let pts = 0;
   for (const id of doneSet) if (TASKS[id]) pts += TASKS[id];
   for (const p of PHASE_TASKS) if (p.gate && phaseDone(p, doneSet)) pts += 100;
@@ -75,6 +75,7 @@ function computePoints({ doneSet, secSet, legalSet, demoCount }) {
   pts += legalSet.size * 15;
   pts += demoCount * 50;
   if (demoCount >= 3) pts = Math.round(pts * 1.1);
+  pts += battlePts; // очки баттлов — вне демо-множителя
   return pts;
 }
 
