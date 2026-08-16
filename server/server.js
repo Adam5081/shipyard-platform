@@ -8,8 +8,9 @@ const http = require("node:http");
 const fs = require("node:fs");
 const path = require("node:path");
 const crypto = require("node:crypto");
+const zlib = require("node:zlib");
 
-const { db, hashPassword, DATA_DIR } = require("./db");
+const { db, hashPassword, hashPasswordAsync, DATA_DIR } = require("./db");
 const {
   PHASE_TASKS, TASKS, SEC_IDS, LEGAL_IDS, DOCKS,
   scoreScreening, dockFor,
@@ -259,12 +260,31 @@ function meState(u) {
 
 const send = (res, code, data) => {
   const body = JSON.stringify(data);
-  res.writeHead(code, {
+  const head = {
     "Content-Type": "application/json; charset=utf-8",
     "Access-Control-Allow-Origin": "*",
-  });
+  };
+  // большие ответы (flow, лига, база) сжимаются — заметно на мобильном интернете
+  const ae = String(res.req?.headers["accept-encoding"] || "");
+  if (body.length > 2048 && ae.includes("gzip")) {
+    head["Content-Encoding"] = "gzip";
+    res.writeHead(code, head);
+    return res.end(zlib.gzipSync(Buffer.from(body)));
+  }
+  res.writeHead(code, head);
   res.end(body);
 };
+
+/* лёгкий TTL-кэш тяжёлых сводок: считать очки всех участников на каждый
+   запрос карты дорого при сотне человек; 3 секунды устаревания незаметны */
+const memo = new Map();
+function memoized(key, ttl, build) {
+  const hit = memo.get(key);
+  if (hit && Date.now() - hit.t < ttl) return hit.v;
+  const v = build();
+  memo.set(key, { t: Date.now(), v });
+  return v;
+}
 
 const err = (res, code, message) => send(res, code, { error: message });
 
@@ -393,7 +413,7 @@ const routes = {
 
     const salt = crypto.randomBytes(16).toString("hex");
     const project = String(b.project || "Мой продукт").trim().slice(0, 120) || "Мой продукт";
-    const r = q.insertUser.run(email, hashPassword(password, salt), salt, name, project, tariff, Date.now());
+    const r = q.insertUser.run(email, await hashPasswordAsync(password, salt), salt, name, project, tariff, Date.now());
     const u = q.userById.get(Number(r.lastInsertRowid));
     if (app) q.useInvite.run(Date.now(), u.id, app.id);
     notifyTg(`✅ Регистрация в Taulau: ${name} (${email}) · тариф ${tariff}`);
@@ -406,7 +426,7 @@ const routes = {
     const b = await readBody(req);
     const email = String(b.email || "").trim().toLowerCase();
     const u = q.userByEmail.get(email);
-    const bad = !u || hashPassword(String(b.password || ""), u.salt) !== u.pass_hash;
+    const bad = !u || await hashPasswordAsync(String(b.password || ""), u.salt) !== u.pass_hash;
     noteLoginFail(req, bad);
     if (bad) return err(res, 401, "Неверный e-mail или пароль");
     send(res, 200, { token: signToken(u.id), ...meState(u) });
@@ -551,38 +571,45 @@ const routes = {
     const u = auth(req);
     if (!u) return err(res, 401, "Нужен вход");
     const dock = u.dock || "";
-    const rows = q.allUsers.all()
+    const rows = memoized("league:" + dock, 3000, () => q.allUsers.all()
       .filter(x => (x.dock || "") === dock)
       .map(x => {
         const s = userStats(x);
         const p = publicUser(x);
-        const me = x.id === u.id;
         return {
-          name: x.name, project: (me ? x.project : p.project) || "проект скрыт", avatar: p.avatar,
-          pts: s.points, lvl: s.level, station: s.station, me,
+          id: x.id, name: x.name, project: p.project || "проект скрыт", avatar: p.avatar,
+          pts: s.points, lvl: s.level, station: s.station, _project: x.project,
         };
       })
-      .sort((a, b) => b.pts - a.pts)
+      .sort((a, b) => b.pts - a.pts))
+      .map(r => {
+        const me = r.id === u.id;
+        const { _project, ...pub } = r;
+        return { ...pub, me, project: me ? (_project || "проект скрыт") : pub.project };
+      })
       .slice(0, 20);
     send(res, 200, { rows, dock, docks: DOCKS });
   },
 
-  /* Дашборд потока: кто где идёт по карте. */
+  /* Дашборд потока: кто где идёт по карте. Общая часть кэшируется,
+     личные поля (свой скрытый проект) подставляются per-request. */
   "GET /api/flow": async (req, res) => {
     const u = auth(req);
     if (!u) return err(res, 401, "Нужен вход");
-    const rows = q.allUsers.all().map(x => {
+    const base = memoized("flow", 3000, () => q.allUsers.all().map(x => {
       const s = userStats(x);
-      const me = x.id === u.id;
-      const p = publicUser(x);
-      // себе проект виден всегда; open показывает, видят ли его остальные
-      if (me) { p.project = x.project; p.about = x.about; p.link = x.link; }
       return {
-        ...p, me,
+        ...publicUser(x),
         points: s.points, level: s.level, station: s.station, walk: s.walk,
         demos: q.demoCount.get(x.id).n,
+        _project: x.project, _about: x.about, _link: x.link,   // видны только самому себе
       };
-    }).sort((a, b) => b.walk - a.walk || b.points - a.points);
+    }).sort((a, b) => b.walk - a.walk || b.points - a.points));
+    const rows = base.map(r => {
+      const me = r.id === u.id;
+      const { _project, _about, _link, ...pub } = r;
+      return me ? { ...pub, me, project: _project, about: _about, link: _link } : { ...pub, me };
+    });
     send(res, 200, { rows, docks: DOCKS });
   },
 
@@ -683,7 +710,7 @@ const routes = {
      так видно ровно то же, что видят участники в потоке. */
   "GET /api/admin/users": async (req, res) => {
     if (!isAdmin(req)) return err(res, 401, "Нужен ключ администратора");
-    const users = q.allUsers.all().map(x => {
+    const users = memoized("admin-users", 3000, () => q.allUsers.all().map(x => {
       const s = userStats(x);
       const seed = x.seed_pts > 0;
       return {
@@ -697,7 +724,7 @@ const routes = {
         prizes: q.userPrizes.all(x.id).map(r => r.prize_label),
         economy: seed ? null : userEconomy(x),
       };
-    }).sort((a, b) => b.walk - a.walk || b.points - a.points);
+    }).sort((a, b) => b.walk - a.walk || b.points - a.points));
     send(res, 200, { users });
   },
 
@@ -732,7 +759,7 @@ const routes = {
     let pwd = "";
     for (const byte of crypto.randomBytes(10)) pwd += INVITE_ALPHABET[byte % INVITE_ALPHABET.length];
     const salt = crypto.randomBytes(16).toString("hex");
-    q.setPassword.run(hashPassword(pwd, salt), salt, user.id);
+    q.setPassword.run(await hashPasswordAsync(pwd, salt), salt, user.id);
     send(res, 200, { ok: true, password: pwd });
   },
 
@@ -745,6 +772,7 @@ const routes = {
     if (!user || !PHASE_TASKS.some(p => p.gate === gate)) return err(res, 400, "Участник или КТ не найдены");
     if (b.approved) q.approveGate.run(user.id, gate, Date.now());
     else q.revokeGate.run(user.id, gate);
+    memo.clear();   // очки и статусы изменились — сводки пересчитаются
     send(res, 200, { ok: true, gates: gateStates(user.id) });
   },
 
@@ -965,15 +993,46 @@ const MIME = {
   ".md": "text/markdown; charset=utf-8",
 };
 
+/* Статика: кэш в памяти по mtime + заранее сжатый gzip. Файлов немного,
+   поэтому после прогрева диск не трогается вовсе. */
+const staticCache = new Map();
+const GZIP_EXT = new Set([".html", ".css", ".js", ".svg", ".md", ".json"]);
+
 function serveStatic(req, res, pathname) {
   if (pathname === "/") pathname = "/index.html";
   const file = path.normalize(path.join(ROOT, pathname));
   if (!file.startsWith(ROOT)) { res.writeHead(403); return res.end("forbidden"); }
-  fs.readFile(file, (e, buf) => {
-    if (e) { res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" }); return res.end("Не найдено"); }
-    res.writeHead(200, { "Content-Type": MIME[path.extname(file)] || "application/octet-stream" });
-    res.end(buf);
-  });
+
+  let st;
+  try { st = fs.statSync(file); } catch { st = null; }
+  if (!st || !st.isFile()) {
+    res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
+    return res.end("Не найдено");
+  }
+
+  let hit = staticCache.get(file);
+  if (!hit || hit.mtime !== st.mtimeMs) {
+    const buf = fs.readFileSync(file);
+    const ext = path.extname(file);
+    hit = { mtime: st.mtimeMs, buf, gz: GZIP_EXT.has(ext) && buf.length > 1024 ? zlib.gzipSync(buf) : null };
+    staticCache.set(file, hit);
+  }
+
+  const head = { "Content-Type": MIME[path.extname(file)] || "application/octet-stream" };
+  // ассеты версионируются query-параметром — можно кэшировать надолго;
+  // html отдаётся свежим, чтобы обновления доходили сразу
+  head["Cache-Control"] = pathname.startsWith("/assets/")
+    ? "public, max-age=604800"
+    : "no-cache";
+
+  const ae = String(req.headers["accept-encoding"] || "");
+  if (hit.gz && ae.includes("gzip")) {
+    head["Content-Encoding"] = "gzip";
+    res.writeHead(200, head);
+    return res.end(hit.gz);
+  }
+  res.writeHead(200, head);
+  res.end(hit.buf);
 }
 
 /* ---------- сервер ---------- */

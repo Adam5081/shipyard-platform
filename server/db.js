@@ -150,6 +150,13 @@ function hashPassword(password, salt) {
   return crypto.scryptSync(password, salt, 32).toString("hex");
 }
 
+/* Асинхронная версия для маршрутов входа/регистрации: scrypt считается в
+   пуле потоков и не блокирует event loop, когда сто человек входят разом. */
+function hashPasswordAsync(password, salt) {
+  return new Promise((resolve, reject) =>
+    crypto.scrypt(password, salt, 32, (e, buf) => e ? reject(e) : resolve(buf.toString("hex"))));
+}
+
 /* --- сид пилотного потока: 7 участников со стеной демо, как в концепции --- */
 
 const SEED_PEERS = [
@@ -211,4 +218,4 @@ function seed() {
 
 seed();
 
-module.exports = { db, hashPassword, DATA_DIR };
+module.exports = { db, hashPassword, hashPasswordAsync, DATA_DIR };
