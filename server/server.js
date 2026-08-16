@@ -280,6 +280,25 @@ function ipHash(req) {
   return crypto.createHmac("sha256", SECRET).update(ip).digest("hex").slice(0, 32);
 }
 
+/* Защита входа от перебора: 10 неудачных попыток с адреса за 10 минут — пауза.
+   Держим в памяти: при рестарте счётчики обнуляются, для пилота достаточно. */
+const LOGIN_TRIES = 10, LOGIN_WINDOW = 10 * 60000;
+const loginFails = new Map();
+
+function loginBlocked(req) {
+  const rec = loginFails.get(ipHash(req));
+  return rec && rec.n >= LOGIN_TRIES && Date.now() - rec.t < LOGIN_WINDOW;
+}
+
+function noteLoginFail(req, failed) {
+  const key = ipHash(req);
+  if (!failed) { loginFails.delete(key); return; }
+  const rec = loginFails.get(key);
+  if (!rec || Date.now() - rec.t > LOGIN_WINDOW) loginFails.set(key, { n: 1, t: Date.now() });
+  else rec.n++;
+  if (loginFails.size > 5000) loginFails.clear();   // страховка от разрастания
+}
+
 const ADMIN_KEY = process.env.SHIPYARD_ADMIN_KEY || "";
 
 function isAdmin(req) {
@@ -364,11 +383,14 @@ const routes = {
   },
 
   "POST /api/login": async (req, res) => {
+    if (loginBlocked(req))
+      return err(res, 429, "Слишком много попыток входа — подождите 10 минут");
     const b = await readBody(req);
     const email = String(b.email || "").trim().toLowerCase();
     const u = q.userByEmail.get(email);
-    if (!u || hashPassword(String(b.password || ""), u.salt) !== u.pass_hash)
-      return err(res, 401, "Неверный e-mail или пароль");
+    const bad = !u || hashPassword(String(b.password || ""), u.salt) !== u.pass_hash;
+    noteLoginFail(req, bad);
+    if (bad) return err(res, 401, "Неверный e-mail или пароль");
     send(res, 200, { token: signToken(u.id), ...meState(u) });
   },
 
@@ -650,6 +672,27 @@ const routes = {
       };
     }).sort((a, b) => b.walk - a.walk || b.points - a.points);
     send(res, 200, { users });
+  },
+
+  /* выгрузка резервной копии базы: скачивается по админ-ключу.
+     VACUUM INTO даёт консистентный снимок даже при WAL. */
+  "GET /api/admin/backup": async (req, res) => {
+    if (!isAdmin(req)) return err(res, 401, "Нужен ключ администратора");
+    const tmp = path.join(DATA_DIR, `backup-${Date.now()}.db`);
+    try {
+      db.exec(`VACUUM INTO '${tmp.replace(/'/g, "''")}'`);
+      const buf = fs.readFileSync(tmp);
+      res.writeHead(200, {
+        "Content-Type": "application/octet-stream",
+        "Content-Disposition": `attachment; filename="shipyard-${new Date().toISOString().slice(0, 10)}.db"`,
+        "Access-Control-Allow-Origin": "*",
+      });
+      res.end(buf);
+    } catch (e) {
+      err(res, 500, "Не удалось собрать резервную копию");
+    } finally {
+      try { fs.unlinkSync(tmp); } catch {}
+    }
   },
 
   /* подтверждение / отзыв КТ ментором */
