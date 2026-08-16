@@ -373,7 +373,7 @@ function spriteColors(dataUrl) {
     return `rgb(${d[0]},${d[1]},${d[2]})`;
   };
   let colors = null;
-  try { colors = { jacket: at(2, 14), skin: at(5, 4), tie: at(7, 14) }; }
+  try { colors = { jacket: at(2, 14), skin: at(5, 4), tie: at(7, 14), shirt: at(7, 13) }; }
   catch { colors = null; }                    // холст «испачкан» — работаем на запасных цветах
   if (colors) colorCache.set(dataUrl, colors);
   return colors;
@@ -670,12 +670,12 @@ class StationScene {
   startPost() {
     const ctx = this.ctx;
     ctx.fillStyle = "#6b7280";
-    ctx.fillRect(8, ROAD - 16, 2, 16);
+    ctx.fillRect(8, ROAD - 28, 3, 28);
     ctx.fillStyle = "#eef2f6";
-    ctx.fillRect(10, ROAD - 16, 12, 8);
+    ctx.fillRect(11, ROAD - 28, 16, 11);
     ctx.fillStyle = "#1d1d1f";
-    ctx.font = "5px monospace";
-    ctx.fillText(String(this.data.index ?? 0), 14, ROAD - 10);
+    ctx.font = "7px monospace";
+    ctx.fillText(String(this.data.index ?? 0), 16, ROAD - 19);
   }
 
   /* финиш сцены: флаг станции, шлагбаум КТ или дверь MVP на последней */
@@ -685,54 +685,54 @@ class StationScene {
     const d = this.data;
     const base = ROAD + 2;
 
-    if (d.index === 8) {                             // дверь MVP
+    if (d.index === 8) {                             // дверь MVP — в рост персонажа
       const open = !!d.doorOpen;
       ctx.fillStyle = open ? "#2a7d46" : "#5b4632";
-      ctx.fillRect(x - 10, base - 30, 20, 30);
+      ctx.fillRect(x - 16, base - 74, 32, 74);
       ctx.fillStyle = open ? "#7ee08a" : "#7a5c3f";
-      ctx.fillRect(x - 7, base - 27, 14, 27);
+      ctx.fillRect(x - 12, base - 69, 24, 69);
       if (open) {
         const glow = 0.35 + Math.sin(this.t * 3) * 0.15;
         ctx.fillStyle = `rgba(255,255,255,${glow})`;
-        ctx.fillRect(x - 7, base - 27, 14, 27);
+        ctx.fillRect(x - 12, base - 69, 24, 69);
       }
       ctx.fillStyle = P.y;
-      ctx.fillRect(x + 3, base - 15, 2, 2);
+      ctx.fillRect(x + 6, base - 38, 3, 3);
       ctx.fillStyle = "#1d1d1f";
-      ctx.fillRect(x - 12, base - 40, 24, 8);
+      ctx.fillRect(x - 19, base - 88, 38, 12);
       ctx.fillStyle = open ? P.g : "#8a8f98";
-      ctx.font = "bold 6px monospace";
-      ctx.fillText("MVP", x - 8, base - 34);
+      ctx.font = "bold 9px monospace";
+      ctx.fillText("MVP", x - 13, base - 79);
       return;
     }
 
     const col = d.done ? P.g : d.hero ? P.b : "#9aa0a8";
     ctx.fillStyle = "#6b7280";
-    ctx.fillRect(x, ROAD - 26, 2, 28);
+    ctx.fillRect(x, ROAD - 52, 3, 54);
     const wave = Math.round(Math.sin(this.t * 2.5) * 1);
     ctx.fillStyle = col;
-    ctx.fillRect(x + 2, ROAD - 26, 12, 7);
-    ctx.fillRect(x + 2, ROAD - 19 + wave, 9, 2);
+    ctx.fillRect(x + 3, ROAD - 52, 18, 11);
+    ctx.fillRect(x + 3, ROAD - 41 + wave, 13, 3);
     ctx.fillStyle = "#fff";
-    ctx.font = "5px monospace";
-    ctx.fillText(String((d.index ?? 0) + 1), x + 5, ROAD - 20);
+    ctx.font = "7px monospace";
+    ctx.fillText(String((d.index ?? 0) + 1), x + 8, ROAD - 44);
 
     // контрольная точка — шлагбаум поперёк дороги
     if (d.gate) {
       ctx.fillStyle = d.gatePassed ? P.g : "#e0a33a";
-      ctx.fillRect(x + 18, ROAD - 14, 3, 16);
-      const arm = d.gatePassed ? -12 : 0;            // пройдена — стрела поднята
-      ctx.fillRect(x + 18 - (d.gatePassed ? 2 : 14), ROAD - 14 + arm, d.gatePassed ? 4 : 16, 3);
+      ctx.fillRect(x + 26, ROAD - 30, 4, 32);
+      const arm = d.gatePassed ? -24 : 0;            // пройдена — стрела поднята
+      ctx.fillRect(x + 26 - (d.gatePassed ? 3 : 24), ROAD - 30 + arm, d.gatePassed ? 6 : 27, 4);
       ctx.fillStyle = "rgba(0,0,0,.15)";
-      ctx.fillRect(x + 18, ROAD + 1, 3, 1);
+      ctx.fillRect(x + 26, ROAD + 2, 4, 1);
     }
 
     // инструмент станции парит над финишем, когда станция закрыта
     if (d.done && d.tool && TOOLS[d.tool]) {
       const bob = Math.round(Math.sin(this.t * 2) * 1.5);
-      drawSprite(ctx, TOOLS[d.tool], x - 14, ROAD - 42 + bob, 1);
+      drawSprite(ctx, TOOLS[d.tool], x - 22, ROAD - 74 + bob, 2);
       ctx.fillStyle = "rgba(255,255,255,.5)";
-      ctx.fillRect(x - 14, ROAD - 33 + bob, 8, 1);
+      ctx.fillRect(x - 22, ROAD - 56 + bob, 16, 2);
     }
   }
 
@@ -743,64 +743,82 @@ class StationScene {
       const frac = Math.max(0, Math.min(1, p.frac || 0));
       const px = Math.round(SSTART + frac * (SFINISH - 24 - SSTART));
       const bob = Math.sin(this.t * 2 + idx) * 0.6;
-      const hy = Math.round(ROAD - 12 + bob + (idx % 2) * 3);
+      const hy = Math.round(ROAD - 20 + bob + (idx % 2) * 3);
       ctx.globalAlpha = 0.5;
       const im = avatarImage(p.avatar);
-      const hx = px - 18 - (idx % 3) * 8;
+      const hx = px - 26 - (idx % 3) * 10;
       ctx.fillStyle = "#5b6470";
-      ctx.fillRect(hx + 4, hy + 13, 3, 7);
-      ctx.fillRect(hx + 8, hy + 13, 3, 7);
-      if (im) ctx.drawImage(im, hx, hy, 14, 14);
-      else { ctx.fillStyle = "#d2b48c"; ctx.fillRect(hx + 2, hy + 2, 10, 10); }
+      ctx.fillRect(hx + 6, hy + 19, 4, 9);
+      ctx.fillRect(hx + 11, hy + 19, 4, 9);
+      if (im) ctx.drawImage(im, hx, hy, 20, 20);
+      else { ctx.fillStyle = "#d2b48c"; ctx.fillRect(hx + 3, hy + 3, 14, 14); }
       ctx.globalAlpha = 1;
     });
   }
 
-  /* Персонаж переднего плана: крупный, примерно как боец в файтинге
-     на Сеге относительно экрана — треть высоты сцены и больше. Бюст —
-     спрайт-аватар 16×16, растянутый в 3 раза без сглаживания, ноги и
-     руки дорисовываются в 4-фазном цикле ходьбы. */
+  /* Персонаж переднего плана в пропорциях бойца из Mortal Kombat на Сеге:
+     рост ~98px при сцене 150 (две трети экрана), голова — небольшая часть
+     роста, полноценные торс, руки и ноги. Голова вырезается из спрайта-
+     аватара (узнаваемое лицо), костюм дорисовывается его же цветами. */
   hero() {
     const ctx = this.ctx;
     const x = Math.round(this.charX);
     const ground = ROAD + 10;
     const moving = Math.abs(this.targetX - this.charX) > 0.2;
     const f = moving ? Math.floor(this.t * 9) % 4 : 0;   // фаза шага
-    const stride = [0, 3, 0, -3][f];                     // вынос ног
-    const bob = moving ? [0, -2, 0, -2][f] : Math.round(Math.sin(this.t * 2));
+    const stride = [0, 5, 0, -5][f];                     // вынос ног
+    const bob = moving ? [0, -2, 0, -2][f] : Math.round(Math.sin(this.t * 1.6));
     const feet = ground + bob;
 
-    const col = spriteColors(this.data.avatar) || { jacket: "rgb(63,71,86)", skin: "rgb(232,176,136)" };
-    const trousers = darken(col.jacket, 0.78);
+    const col = spriteColors(this.data.avatar) ||
+      { jacket: "rgb(63,71,86)", skin: "rgb(232,176,136)", shirt: "rgb(241,242,245)", tie: "rgb(140,43,58)" };
+    const trousers = darken(col.jacket, 0.72);
+    const jacketDark = darken(col.jacket, 0.8);
 
     // тень на дороге
     ctx.fillStyle = "rgba(0,0,0,.18)";
-    ctx.fillRect(x - 16, ground + 1, 33, 3);
+    ctx.fillRect(x - 20, ground + 1, 41, 3);
 
     // ноги маятником: одна вперёд, другая назад
     ctx.fillStyle = trousers;
-    ctx.fillRect(x - 9 + stride, feet - 16, 6, 16);
-    ctx.fillRect(x + 3 - stride, feet - 16, 6, 16);
-    ctx.fillStyle = "#1d1d1f";
-    ctx.fillRect(x - 10 + stride, feet - 3, 8, 3);       // ботинки
-    ctx.fillRect(x + 2 - stride, feet - 3, 8, 3);
+    ctx.fillRect(x - 11 + stride, feet - 40, 9, 37);
+    ctx.fillRect(x + 2 - stride, feet - 40, 9, 37);
+    ctx.fillStyle = "#1d1d1f";                           // ботинки
+    ctx.fillRect(x - 13 + stride, feet - 4, 12, 4);
+    ctx.fillRect(x + 1 - stride, feet - 4, 12, 4);
+
+    // торс: пиджак с плечами, рубашка клином, галстук, ремень
+    ctx.fillStyle = col.jacket;
+    ctx.fillRect(x - 13, feet - 72, 26, 32);
+    ctx.fillRect(x - 15, feet - 72, 30, 7);              // плечи
+    ctx.fillStyle = col.shirt || "rgb(241,242,245)";
+    ctx.fillRect(x - 4, feet - 72, 8, 12);
+    ctx.fillStyle = col.tie || jacketDark;
+    ctx.fillRect(x - 1, feet - 72, 3, 16);
+    ctx.fillStyle = jacketDark;                          // лацканы и ремень
+    ctx.fillRect(x - 7, feet - 72, 2, 13);
+    ctx.fillRect(x + 5, feet - 72, 2, 13);
+    ctx.fillRect(x - 13, feet - 42, 26, 2);
 
     // руки в противофазе с ногами
-    const arm = moving ? [0, 2, 0, -2][f] : 0;
+    const arm = moving ? [0, 4, 0, -4][f] : 0;
     ctx.fillStyle = col.jacket;
-    ctx.fillRect(x - 26, feet - 31 - arm, 5, 15);
-    ctx.fillRect(x + 21, feet - 31 + arm, 5, 15);
+    ctx.fillRect(x - 20, feet - 70, 6, 30 + arm);
+    ctx.fillRect(x + 14, feet - 70, 6, 30 - arm);
     ctx.fillStyle = col.skin;                            // кисти
-    ctx.fillRect(x - 26, feet - 16 - arm, 5, 3);
-    ctx.fillRect(x + 21, feet - 16 + arm, 5, 3);
+    ctx.fillRect(x - 20, feet - 40 + arm, 6, 4);
+    ctx.fillRect(x + 14, feet - 40 - arm, 6, 4);
 
-    // бюст: голова, пиджак, галстук из аватара — 48×48 поверх ног
+    // шея и голова из аватара: берётся только лицо с причёской
+    ctx.fillStyle = col.skin;
+    ctx.fillRect(x - 3, feet - 77, 6, 5);
     const im = avatarImage(this.data.avatar);
-    if (im) ctx.drawImage(im, x - 24, feet - 64, 48, 48);
-    else {
-      ctx.fillStyle = col.skin; ctx.fillRect(x - 12, feet - 58, 24, 21);
-      ctx.fillStyle = "#3d2a1d"; ctx.fillRect(x - 12, feet - 64, 24, 8);
-      ctx.fillStyle = col.jacket; ctx.fillRect(x - 21, feet - 31, 42, 15);
+    if (im) {
+      const S = im.naturalWidth / 16;                    // голова в спрайте: колонки 3–12, строки 0–10
+      ctx.drawImage(im, 3 * S, 0, 10 * S, 11 * S, x - 10, feet - 98, 20, 22);
+    } else {
+      ctx.fillStyle = col.skin; ctx.fillRect(x - 8, feet - 94, 16, 17);
+      ctx.fillStyle = "#3d2a1d"; ctx.fillRect(x - 9, feet - 98, 18, 7);
     }
   }
 }
