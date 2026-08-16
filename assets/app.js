@@ -1,5 +1,5 @@
-﻿/* ============================================================
-   SHIPYARD Platform — SPA
+/* ============================================================
+   Taulau Platform — SPA
    Два режима:
    · API-режим — аккаунты и прогресс на бэкенде (server/server.js)
    · локальный — localStorage, если бэкенд недоступен (GitHub Pages)
@@ -28,7 +28,7 @@ const STATIONS = [
       { id: "w0_tg",     label: "Вступить в закрытый Telegram-канал потока", pts: 10 },
     ],
     artifact: "Заключение по идее · рабочее окружение · доступ к потоку",
-    log: "Рассвет. У подножия города-горы гудит верфь: где-то наверху, за девятой террасой, стоит дверь с табличкой «MVP». Мастер вручает вам ключ и говорит: «Инструменты здесь не выдают — их зарабатывают на станциях. Остальное — легенды». Вы кладёте ключ в карман и делаете первый шаг.",
+    log: "Рассвет. У подножия города-горы гудит базовый лагерь Taulau: где-то наверху, за девятой террасой, стоит дверь с табличкой «MVP». Мастер вручает вам ключ и говорит: «Инструменты здесь не выдают — их зарабатывают на станциях. Остальное — легенды». Вы кладёте ключ в карман и делаете первый шаг.",
   },
   {
     id: "w1", week: 1, phase: "Контекст", title: "Презентация проекта",
@@ -88,7 +88,7 @@ const STATIONS = [
     ],
     artifact: "Функционально полный MVP",
     cp: { id: "КТ-3", cond: "Ключевой сценарий работает от начала до конца на реальных данных" },
-    log: "К каркасу подвозят готовые узлы верфи: авторизацию, базу, интеграции. Шестерёнка встаёт на место с щелчком, и механизм оживает целиком. С площадки скрининга город впервые смотрит на то, что вы построили, — и возвращает вам голос: обратную связь, от которой продукт становится твёрже.",
+    log: "К каркасу подвозят готовые узлы Taulau: авторизацию, базу, интеграции. Шестерёнка встаёт на место с щелчком, и механизм оживает целиком. С площадки скрининга город впервые смотрит на то, что вы построили, — и возвращает вам голос: обратную связь, от которой продукт становится твёрже.",
   },
   {
     id: "w5", week: 5, phase: "Проверка", title: "Тестирование и защита",
@@ -591,7 +591,7 @@ function celebrate(title, sub, emoji = "🎉", opts = {}) {
   el.className = "cele";
   el.innerHTML = `
     <div class="cele-card">
-      <div class="cele-confetti">${["🎉", "✨", "🎊", "⚓", "✨", "🎉"].map((e, i) => `<i style="animation-delay:${i * 0.12}s">${e}</i>`).join("")}</div>
+      <div class="cele-confetti">${["🎉", "✨", "🎊", "🏔️", "✨", "🎉"].map((e, i) => `<i style="animation-delay:${i * 0.12}s">${e}</i>`).join("")}</div>
       ${S.avatar
         ? `<img class="cele-avatar" src="${S.avatar}" alt="">`
         : `<div class="cele-emoji">${emoji}</div>`}
@@ -642,7 +642,7 @@ async function spinLottery(btn) {
   el.className = "cele";
   el.innerHTML = `
     <div class="cele-card slot-card">
-      <b>🎰 Лотерея верфи</b>
+      <b>🎰 Лотерея Taulau</b>
       <div class="slot-frame">
         <div class="slot-lights">${Array.from({ length: 14 }, (_, i) => `<i style="animation-delay:${i * 0.1}s"></i>`).join("")}</div>
         <div class="slot-window">
@@ -671,8 +671,8 @@ async function spinLottery(btn) {
     el.querySelector(".slot-status").textContent = data.prize.label;
     setTimeout(() => {
       el.remove();
-      celebrate("Джекпот верфи!", data.prize.label, winEmoji,
-        { share: `⚓ SHIPYARD: слот-машина верфи выдала мне «${data.prize.label}»! Спины зарабатываются закрытыми станциями.` });
+      celebrate("Джекпот Taulau!", data.prize.label, winEmoji,
+        { share: `🏔️ Taulau: слот-машина Taulau выдала мне «${data.prize.label}»! Спины зарабатываются закрытыми станциями.` });
       render();
     }, 1600);
   }, 2700); // последний барабан останавливается на ~2.4 c
@@ -753,8 +753,8 @@ const VIEWS = {
     return `
       <div style="max-width:440px;margin:8vh auto 0">
         <div style="text-align:center;margin-bottom:26px">
-          <div style="font-size:44px">⚓</div>
-          <h1 style="font-size:28px;font-weight:700;letter-spacing:-.02em;margin-top:8px">SHIPYARD</h1>
+          <div style="margin:0 auto;width:52px"><svg viewBox="0 0 100 100" width="52" height="52"><rect width="100" height="100" rx="22" fill="#0071e3"/><path d="M27 34h46M50 34v32q0 13 13 13 7 0 10-6" stroke="#fff" stroke-width="11" fill="none" stroke-linecap="round"/></svg></div>
+          <h1 style="font-size:28px;font-weight:700;letter-spacing:-.02em;margin-top:8px">TAULAU</h1>
           <p class="muted" style="margin-top:6px">Войдите, чтобы путь, демо и лига жили на сервере</p>
         </div>
         <div class="panel">
@@ -767,7 +767,7 @@ const VIEWS = {
               <div class="field"><label>Имя</label><input id="aName" required placeholder="Как к вам обращаться"></div>
               <div class="field"><label>Проект</label><input id="aProject" placeholder="Название вашего продукта"></div>
               <div class="field"><label>Код приглашения</label>
-                <input id="aInvite" required placeholder="SHP-XXXXXX" autocomplete="off" style="text-transform:uppercase">
+                <input id="aInvite" required placeholder="TAU-XXXXXX" autocomplete="off" style="text-transform:uppercase">
               </div>
               <p class="muted" style="font-size:13px;margin:-6px 0 14px">Код приходит после одобрения заявки.
                 Ещё не подавали? <a href="index.html#apply">Подать заявку</a></p>` : ""}
@@ -873,8 +873,8 @@ const VIEWS = {
       ${API !== null && CACHE.lottery ? `
         <div class="lottery-strip">
           <div class="ls-main">
-            <b>🎡 Лотерея верфи</b>
-            <small>Спин за каждые 3 закрытые станции, ещё один — за дверь MVP, бонус — топ-3 своего дока на финише. Иногда за закрытую станцию выпадает 🎟️ счастливый билет. Приз выбирает верфь: час эксперта, скидка, апгрейд тарифа…</small>
+            <b>🎡 Лотерея Taulau</b>
+            <small>Спин за каждые 3 закрытые станции, ещё один — за дверь MVP, бонус — топ-3 своего дока на финише. Иногда за закрытую станцию выпадает 🎟️ счастливый билет. Приз выбирает Taulau: час эксперта, скидка, апгрейд тарифа…</small>
             ${CACHE.lottery.top3 ? `<small class="ls-won">🏅 Вы в топ-3 своего дока — бонусный спин начислен</small>` : ""}
             ${CACHE.lottery.prizes.length ? `<small class="ls-won">🎁 Выиграно: ${CACHE.lottery.prizes.map(p => esc(p.label)).join(" · ")}</small>` : ""}
           </div>
@@ -1405,7 +1405,7 @@ const VIEWS = {
   certificate() {
     const open = doorOpen();
     const lvl = level();
-    const num = `SHP-1-${String(hashNum(S.email || S.name)).padStart(4, "0")}`;
+    const num = `TAU-1-${String(hashNum(S.email || S.name)).padStart(4, "0")}`;
     return `
       <div class="page-head">
         <h1>Сертификат</h1>
@@ -1413,7 +1413,7 @@ const VIEWS = {
       </div>
       <div class="cert ${open ? "open" : "locked"}">
         <div class="cert-inner">
-          <div class="cert-top">⚓ SHIPYARD · Поток №1</div>
+          <div class="cert-top">τ TAULAU · Поток №1</div>
           <div class="cert-name">${esc(S.name)}</div>
           <div class="cert-sub">прошёл путь от идеи до продукта в рабочей среде</div>
           <div class="cert-project">${esc(S.project)}</div>
@@ -1755,7 +1755,7 @@ function bind() {
       localStorage.setItem("shipyard_token", TOKEN);
       applyMe(data);
       S._reg = false;
-      toast(`Добро пожаловать на верфь, ${S.name}!`);
+      toast(`Добро пожаловать в Taulau, ${S.name}!`);
       go("map");
     } catch (err2) {
       errEl.textContent = err2.message;
@@ -1799,7 +1799,7 @@ function bind() {
       if (r.status === "done") applyMe(await apiCall("/me")); // очки лиги обновились
       if (r.result === "win")
         celebrate("Баттл выигран!", "+50 очков лиги дока", "⚔️",
-          { share: `⚓ SHIPYARD: выиграл баттл по вайб-кодингу со счётом ${r.myScore}/${r.total}! ⚔️` });
+          { share: `🏔️ Taulau: выиграл баттл по вайб-кодингу со счётом ${r.myScore}/${r.total}! ⚔️` });
     } catch (e2) { toast(e2.message); }
     render();
   }));
@@ -1814,7 +1814,7 @@ function bind() {
   /* поделиться бейджем из профиля */
   view.querySelectorAll("[data-sharebadge]").forEach(b => b.addEventListener("click", () => {
     const bd = BADGES.find(x => x.id === b.dataset.sharebadge);
-    if (bd) shareAchievement(`⚓ SHIPYARD: бейдж ${bd.emoji} «${bd.name}» — ${bd.desc}!`);
+    if (bd) shareAchievement(`🏔️ Taulau: бейдж ${bd.emoji} «${bd.name}» — ${bd.desc}!`);
   }));
 
   /* задачи станций */
@@ -1831,7 +1831,7 @@ function bind() {
         if (!checked) delete S.done[id];
         save();
         // «счастливый билет» показываем поверх праздника станции, с паузой
-        if (resp?.lucky) setTimeout(() => toast("🎟️ Счастливый билет верфи — +1 спин лотереи!"), 1600);
+        if (resp?.lucky) setTimeout(() => toast("🎟️ Счастливый билет Taulau — +1 спин лотереи!"), 1600);
         const nowLvl = level().n;
         const nowTools = tools().length;
         if (checked) {
@@ -1839,14 +1839,14 @@ function bind() {
           if (doorOpen() && wasTools < 9) {
             const last = STATIONS[STATIONS.length - 1];
             celebrate("Дверь MVP открыта!", "Путь пройден — сертификат доступен", "🚪",
-              { log: last.log, share: "⚓ SHIPYARD: дверь MVP открыта! Девять станций, пять контрольных точек — мой продукт работает в рабочей среде." });
+              { log: last.log, share: "🏔️ Taulau: дверь MVP открыта! Девять станций, пять контрольных точек — мой продукт работает в рабочей среде." });
           } else if (nowTools > wasTools) {
             const st = STATIONS.find(p => stationDone(p) && p.tasks.some(x => x.id === id));
             celebrate("Станция закрыта!", `Получен инструмент: ${st ? st.toolName : "новый"} · путь дальше открыт`, "🧰",
-              st ? { log: st.log, share: `⚓ SHIPYARD: станция «${st.title}» закрыта — в руках ${st.toolName}! Поднимаюсь к двери MVP.` } : {});
+              st ? { log: st.log, share: `🏔️ Taulau: станция «${st.title}» закрыта — в руках ${st.toolName}! Поднимаюсь к двери MVP.` } : {});
           } else if (nowLvl > wasLvl) {
             celebrate(`Новый уровень: ${LEVELS[nowLvl - 1].name}!`, LEVELS[nowLvl - 1].cond, LEVELS[nowLvl - 1].emoji,
-              { share: `⚓ SHIPYARD: новый уровень — ${LEVELS[nowLvl - 1].name} ${LEVELS[nowLvl - 1].emoji}! ${LEVELS[nowLvl - 1].cond}.` });
+              { share: `🏔️ Taulau: новый уровень — ${LEVELS[nowLvl - 1].name} ${LEVELS[nowLvl - 1].emoji}! ${LEVELS[nowLvl - 1].cond}.` });
           } else if (!announceSkillUps(wasSkills)) toast(`+${t.pts} очков`);
         }
         CACHE.league = null;
@@ -2029,7 +2029,7 @@ function bind() {
     try {
       await saveAvatar(GAME.PixelAvatar.build(AV));
       celebrate("Персонаж готов!", "Он уже идёт по карте пути", "🎨",
-        { share: "⚓ SHIPYARD: собрал своего пиксельного персонажа — он поднимается по картам к двери MVP!" });
+        { share: "🏔️ Taulau: собрал своего пиксельного персонажа — он поднимается по картам к двери MVP!" });
       render();
     } catch (e2) { toast(e2.message); }
   });

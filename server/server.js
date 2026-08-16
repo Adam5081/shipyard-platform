@@ -1,5 +1,5 @@
 /* ============================================================
-   SHIPYARD backend — zero-dependency Node.js (≥ 22)
+   Taulau backend — zero-dependency Node.js (≥ 22)
    HTTP API + раздача статики фронтенда из корня репозитория.
    Запуск: node server/server.js   (PORT=8787 по умолчанию)
    ============================================================ */
@@ -124,7 +124,24 @@ const q = {
   userGates: db.prepare("SELECT gate FROM gate_approvals WHERE user_id = ?"),
   approveGate: db.prepare("INSERT OR IGNORE INTO gate_approvals (user_id, gate, approved_at) VALUES (?,?,?)"),
   revokeGate: db.prepare("DELETE FROM gate_approvals WHERE user_id = ? AND gate = ?"),
+  setPassword: db.prepare("UPDATE users SET pass_hash = ?, salt = ? WHERE id = ?"),
 };
+
+/* ---------- уведомления ментору в Telegram ----------
+   Включаются переменными окружения SHIPYARD_TG_TOKEN (токен бота от
+   @BotFather) и SHIPYARD_TG_CHAT (id чата/группы ментора). Без них — тихо
+   выключены. Отправка не блокирует ответ клиенту и не роняет запрос. */
+const TG_TOKEN = process.env.SHIPYARD_TG_TOKEN || "";
+const TG_CHAT = process.env.SHIPYARD_TG_CHAT || "";
+
+function notifyTg(text) {
+  if (!TG_TOKEN || !TG_CHAT) return;
+  fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ chat_id: TG_CHAT, text }),
+  }).catch(() => {});
+}
 
 const TARIFFS = ["Solo", "Pro", "Partner"];
 const normTariff = t => (t === "Venture" ? "Partner" : t);
@@ -139,7 +156,7 @@ const INVITE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 
 function makeInviteCode() {
   for (;;) {
-    let code = "SHP-";
+    let code = "TAU-";
     for (const b of crypto.randomBytes(6)) code += INVITE_ALPHABET[b % INVITE_ALPHABET.length];
     if (!q.inviteExists.get(code)) return code;
   }
@@ -156,7 +173,7 @@ function userSets(uid) {
   return { doneSet, secSet, legalSet };
 }
 
-// станции, соответствующие уровням верфи, — для сидов без реального прогресса
+// станции, соответствующие уровням пути, — для сидов без реального прогресса
 const LEVEL_STATION = [0, 1, 2, 4, 5, 6, 7, 8];
 
 function userStats(u) {
@@ -379,6 +396,7 @@ const routes = {
     const r = q.insertUser.run(email, hashPassword(password, salt), salt, name, project, tariff, Date.now());
     const u = q.userById.get(Number(r.lastInsertRowid));
     if (app) q.useInvite.run(Date.now(), u.id, app.id);
+    notifyTg(`✅ Регистрация в Taulau: ${name} (${email}) · тариф ${tariff}`);
     send(res, 201, { token: signToken(u.id), ...meState(u) });
   },
 
@@ -469,10 +487,18 @@ const routes = {
        Азарт по расписанию переменного подкрепления, но фарм невозможен:
        станций всего 9, билетов не больше LUCKY_MAX за поток. */
     let lucky = false;
-    if (b.done && kind === "task" && closedStations(u.id) > closedBefore
+    const closedAfter = closedStations(u.id);
+    if (b.done && kind === "task" && closedAfter > closedBefore
         && u.bonus_spins < LUCKY_MAX && crypto.randomInt(100) < LUCKY_CHANCE) {
       q.addBonusSpin.run(u.id);
       lucky = true;
+    }
+    // станция закрылась — ментор узнаёт сразу, особенно если КТ ждёт проверки
+    if (b.done && kind === "task" && closedAfter > closedBefore) {
+      const pg = pendingGate(u.id);
+      notifyTg(pg
+        ? `⏳ ${u.name}: станция ${pg.idx} закрыта — КТ-${pg.gate.slice(1)} ждёт подтверждения в админке`
+        : `🏁 ${u.name} закрыл станцию (${closedAfter}/9)`);
     }
     send(res, 200, { ok: true, lucky, ...userStats(q.userById.get(u.id)) });
   },
@@ -587,7 +613,7 @@ const routes = {
       ready,
       name: u.name, project: u.project, dock: u.dock || "",
       points: s.points, level: s.level,
-      number: `SHP-1-${String(u.id).padStart(4, "0")}`,
+      number: `TAU-1-${String(u.id).padStart(4, "0")}`,
       issuedAt: ready ? Date.now() : 0,
     });
   },
@@ -620,6 +646,7 @@ const routes = {
 
     const r = q.addApp.run(name, contact, city, idea, stage, tariff, experience, hash, Date.now());
     console.log(`[заявка #${r.lastInsertRowid}] ${name} · ${contact} · ${tariff || "тариф не выбран"}`);
+    notifyTg(`📥 Новая заявка в Taulau\n${name} · ${tariff || "тариф не выбран"}${city ? " · " + city : ""}\n«${idea.slice(0, 120)}${idea.length > 120 ? "…" : ""}»\n→ admin.html`);
     send(res, 201, { ok: true, id: Number(r.lastInsertRowid) });
   },
 
@@ -695,6 +722,20 @@ const routes = {
     }
   },
 
+  /* сброс пароля участника: SMTP нет — ментор получает временный пароль
+     и отправляет его человеку сам. Пароль показывается один раз. */
+  "POST /api/admin/reset-password": async (req, res) => {
+    if (!isAdmin(req)) return err(res, 401, "Нужен ключ администратора");
+    const b = await readBody(req);
+    const user = q.userById.get(Number(b.userId || 0));
+    if (!user || user.seed_pts > 0) return err(res, 400, "Участник не найден");
+    let pwd = "";
+    for (const byte of crypto.randomBytes(10)) pwd += INVITE_ALPHABET[byte % INVITE_ALPHABET.length];
+    const salt = crypto.randomBytes(16).toString("hex");
+    q.setPassword.run(hashPassword(pwd, salt), salt, user.id);
+    send(res, 200, { ok: true, password: pwd });
+  },
+
   /* подтверждение / отзыв КТ ментором */
   "POST /api/admin/gates": async (req, res) => {
     if (!isAdmin(req)) return err(res, 401, "Нужен ключ администратора");
@@ -707,7 +748,7 @@ const routes = {
     send(res, 200, { ok: true, gates: gateStates(user.id) });
   },
 
-  /* ---------- лотерея верфи ----------
+  /* ---------- лотерея Taulau ----------
      Спины зарабатываются прогрессом и считаются ТОЛЬКО на сервере:
      1 спин за каждые 3 закрытые станции + 1 за дверь MVP (все 9).
      Приз тоже выбирает сервер — фронт лишь показывает колесо. */
@@ -804,7 +845,7 @@ const routes = {
     send(res, 200, { ...battleView(q.battleById.get(bt.id), u.id), review });
   },
 
-  "GET /api/health": async (req, res) => send(res, 200, { ok: true, service: "shipyard" }),
+  "GET /api/health": async (req, res) => send(res, 200, { ok: true, service: "taulau" }),
 };
 
 /* ---------- баттлы: константы и представление ---------- */
@@ -843,7 +884,7 @@ const PRIZES = [
   { id: "expert_hour",  label: "+1 час индивидуально с экспертом",       w: 35 },
   { id: "review_bonus", label: "Внеочередное ревью проекта ментором",     w: 30 },
   { id: "discount10",   label: "Скидка 10% на следующий месяц",           w: 20 },
-  { id: "merch",        label: "Мерч SHIPYARD от верфи",                  w: 10 },
+  { id: "merch",        label: "Мерч Taulau",                             w: 10 },
   { id: "tariff_week",  label: "Апгрейд тарифа на неделю",                w: 5 },
 ];
 
@@ -963,5 +1004,5 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(PORT, () => {
-  console.log(`SHIPYARD backend + frontend: http://localhost:${PORT}`);
+  console.log(`Taulau backend + frontend: http://localhost:${PORT}`);
 });

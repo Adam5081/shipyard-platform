@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SHIPYARD — от идеи до продукта, который работает у клиента</title>
+<title>Taulau — от идеи до продукта, который работает у клиента</title>
 <meta name="description" content="Программа для отраслевых экспертов: вы собираете продукт сами — с Claude Code, производственным пайплайном и экспертами отрасли рядом. Контрольные точки, безопасность, вывод в рабочую среду.">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚓</text></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230071e3'/><path d='M27 34h46M50 34v32q0 13 13 13 7 0 10-6' stroke='white' stroke-width='11' fill='none' stroke-linecap='round'/></svg>">
 <link rel="stylesheet" href="assets/styles.css">
 <script src="assets/config.js"></script>
 </head>
@@ -14,7 +14,7 @@
 <!-- ===== NAV ===== -->
 <nav class="nav">
   <div class="nav-inner">
-    <a class="nav-logo" href="index.html"><span class="anchor">⚓</span>SHIPYARD</a>
+    <a class="nav-logo" href="index.html"><span class="anchor"><svg viewBox="0 0 100 100" width="24" height="24" style="vertical-align:-5px" aria-hidden="true"><rect width="100" height="100" rx="22" fill="#0071e3"/><path d="M27 34h46M50 34v32q0 13 13 13 7 0 10-6" stroke="#fff" stroke-width="11" fill="none" stroke-linecap="round"/></svg></span>TAULAU</a>
     <div class="nav-links">
       <a href="#program">Путь</a>
       <a href="#directions">Направления</a>
@@ -280,7 +280,7 @@
     <div class="proj-grid">
       <div class="proj-card reveal">
         <span class="p-tag">Платформа программы</span>
-        <h4>SHIPYARD</h4>
+        <h4>TAULAU</h4>
         <p>Карта пути с девятью станциями, контрольные точки, стена демо, чек-лист безопасности и лиги по сложности проектов. Бэкенд без внешних зависимостей — тот же принцип, что мы требуем от участников: понятный код, который можно проверить.</p>
         <div class="p-stack">Node.js · SQLite · zero-dependency</div>
       </div>
@@ -400,7 +400,7 @@
         <p style="margin-top:12px">4–6 месяцев до первой версии<br>Крупный бюджет и постоянный ФОТ<br>Продукт + зависимость от подрядчика<br>Безопасность и право — отдельные бюджеты<br>Навык остаётся у исполнителя</p>
       </div>
       <div class="card reveal" style="box-shadow:0 0 0 2px var(--accent), 0 16px 44px rgba(0,113,227,.15)">
-        <h3 style="color:var(--accent)">SHIPYARD</h3>
+        <h3 style="color:var(--accent)">TAULAU</h3>
         <p style="margin-top:12px"><b style="color:var(--ink)">Подписка вместо найма</b><br>Продукт в рабочей среде к концу потока<br>Продукт + собственная компетенция<br>Безопасность и право включены<br>Навык остаётся у вас</p>
       </div>
     </div>
@@ -588,7 +588,7 @@
 
 <footer class="footer">
   <div class="wrap">
-    <span>⚓ SHIPYARD · Build / Support / Partners / Corporate</span>
+    <span>τ TAULAU · Build / Support / Partners / Corporate</span>
     <span>Claude Code — товарный знак Anthropic; используется как инструмент реализации в программе.</span>
   </div>
 </footer>
@@ -625,7 +625,7 @@
   };
 
   const asText = d =>
-    `Заявка в SHIPYARD\n\nИмя: ${d.name}\nКонтакт: ${d.contact}\nГород: ${d.city || '—'}\n` +
+    `Заявка в Taulau\n\nИмя: ${d.name}\nКонтакт: ${d.contact}\nГород: ${d.city || '—'}\n` +
     `Стадия: ${d.stage}\nТариф: ${d.tariff || 'не выбран'}\n\nПродукт:\n${d.idea}\n\n` +
     `Опыт:\n${d.experience || '—'}\n`;
 
@@ -658,7 +658,7 @@
     });
     if (mail) {
       document.getElementById('afMail').href =
-        'mailto:' + mail + '?subject=' + encodeURIComponent('Заявка в SHIPYARD — ' + data.name) +
+        'mailto:' + mail + '?subject=' + encodeURIComponent('Заявка в Taulau — ' + data.name) +
         '&body=' + encodeURIComponent(body);
     }
     done.scrollIntoView({ behavior: 'smooth', block: 'center' });

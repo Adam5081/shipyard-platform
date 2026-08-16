@@ -69,7 +69,7 @@ db.exec(`
 
   CREATE INDEX IF NOT EXISTS idx_app_created ON applications(created_at DESC);
 
-  /* лотерея верфи: приз выбирает сервер, запись = использованный спин */
+  /* лотерея Taulau: приз выбирает сервер, запись = использованный спин */
   CREATE TABLE IF NOT EXISTS lottery (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,

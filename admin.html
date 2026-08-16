@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex">
-<title>SHIPYARD — админка</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚓</text></svg>">
+<title>Taulau — админка</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230071e3'/><path d='M27 34h46M50 34v32q0 13 13 13 7 0 10-6' stroke='white' stroke-width='11' fill='none' stroke-linecap='round'/></svg>">
 <link rel="stylesheet" href="assets/styles.css">
 <script src="assets/config.js"></script>
 <style>
@@ -54,7 +54,7 @@
 
 <div class="adm">
   <div class="adm-head">
-    <h1>⚓ Админка</h1>
+    <h1>Админка Taulau</h1>
     <span class="adm-count" id="count"></span>
   </div>
 
@@ -94,6 +94,7 @@ const STATUSES = [
 
 let KEY = sessionStorage.getItem('shipyard_admin_key') || '';
 let TAB = 'apps';
+const RESET_PW = {};   // временные пароли, выданные в этой вкладке
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
@@ -189,10 +190,13 @@ function userRow(u) {
     ? `<div class="u-sub u-flag">⚡ станции ${e.fastStations.join(', ')} закрыты быстрее 10 минут — проверьте артефакты</div>` : '';
   const pending = e ? Object.entries(e.gates).filter(([, s]) => s === 'pending') : [];
   const approved = e ? Object.entries(e.gates).filter(([, s]) => s === 'approved') : [];
-  const gates = e && (pending.length || approved.length) ? `
+  const gates = e ? `
     <div class="u-gates">
       ${pending.map(([g]) => `<button class="btn btn-primary btn-sm" data-gate="${g}" data-uid="${u.id}">Подтвердить КТ-${g.slice(1)}</button>`).join(' ')}
       ${approved.map(([g]) => `<span class="tag t-accepted" title="Отозвать — клик" data-ungate="${g}" data-uid="${u.id}" style="cursor:pointer">КТ-${g.slice(1)} ✓</span>`).join(' ')}
+      <button class="btn btn-ghost btn-sm" data-resetpw="${u.id}">Сбросить пароль</button>
+      ${RESET_PW[u.id] ? `<span class="u-sub">🔑 врем. пароль: <code>${esc(RESET_PW[u.id])}</code>
+        <button class="btn btn-ghost btn-sm" data-copy="${esc(RESET_PW[u.id])}">Скопировать</button> — отправьте участнику</span>` : ''}
     </div>` : '';
   const breakdown = e
     ? `<div class="u-sub">задачи ${e.taskPts} · КТ ${e.gatePts} · ИБ ${e.secPts} · юр ${e.legalPts} · демо ${e.demoPts} · баттлы ${e.battlePts}</div>
@@ -231,6 +235,20 @@ async function loadUsers() {
         <tbody>${users.map(userRow).join('')}</tbody>
       </table>
     </div>` : '<div class="panel"><p class="empty">Участников пока нет.</p></div>';
+
+  list.querySelectorAll('[data-resetpw]').forEach(el => el.addEventListener('click', async () => {
+    if (!confirm('Сбросить пароль участника? Старый перестанет работать сразу.')) return;
+    try {
+      const r = await call('/api/admin/reset-password', 'POST', { userId: Number(el.dataset.resetpw) });
+      RESET_PW[el.dataset.resetpw] = r.password;
+      toast('Пароль сброшен — временный показан в строке участника');
+      load();
+    } catch (e) { toast(e.message); }
+  }));
+
+  list.querySelectorAll('[data-copy]').forEach(el => el.addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(el.dataset.copy); toast('Скопировано'); } catch {}
+  }));
 
   list.querySelectorAll('[data-gate],[data-ungate]').forEach(el => el.addEventListener('click', async () => {
     const approve = el.hasAttribute('data-gate');

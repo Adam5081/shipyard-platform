@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Taulau — знак: греческая буква τ (тау) на фирменном градиенте.
+       τ отсылает и к имени, и к «тау» (гора): стебель буквы — маршрут,
+       перекладина — линия вершины. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0a84ff"/>
+      <stop offset="1" stop-color="#0058b9"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="115" fill="url(#bg)"/>
+  <!-- вершины на заднем плане -->
+  <path d="M96 386 L192 268 L256 330 L336 224 L416 386 Z"
+        fill="rgba(255,255,255,.14)"/>
+  <!-- буква τ -->
+  <path d="M140 172 H 372 M 256 172 V 340 Q 256 396 310 396 Q 340 396 354 372"
+        fill="none" stroke="#ffffff" stroke-width="54" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
