@@ -1665,3 +1665,9 @@ pre.code .h { color: #7fd4e4; font-weight: 600; }
   padding: 0; transition: transform .12s ease, border-color .12s; }
 .sw:hover { transform: scale(1.15); }
 .sw.sel { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(0,113,227,.25); transform: scale(1.1); }
+
+/* ===== жёсткий гейт КТ ===== */
+.gate-banner.pending { background: #fff4e0; border-color: #e0a33a; }
+.gate-banner.pending .g-badge { background: #e0a33a; }
+.task-blocked { opacity: .5; }
+.task-blocked label { cursor: not-allowed; }

@@ -417,6 +417,7 @@ function applyMe(d) {
   S.done = d.done || {};
   S.sec = d.sec || {};
   S.legal = d.legal || {};
+  S.gates = d.gates || {};   // K1..K5: open / pending / approved (жёсткий гейт КТ)
   S.demos = d.demos || [];
   S.github = d.github || null;
 }
@@ -469,7 +470,26 @@ function currentStationIdx() {
   return i === -1 ? STATIONS.length - 1 : i;
 }
 
-function cpPassed(p) { return p.cp ? stationDone(p) : false; }
+/* ключ гейта на сервере: «КТ-2» → «K2» */
+const gateKey = p => p.cp ? "K" + p.cp.id.replace(/\D/g, "") : null;
+
+/* КТ пройдена: задачи закрыты И (в серверном режиме) ментор подтвердил */
+function cpPassed(p) {
+  if (!p.cp || !stationDone(p)) return false;
+  if (API === null) return true;                       // демо-режим — без гейта
+  return (S.gates || {})[gateKey(p)] === "approved";
+}
+
+/* КТ ждёт ментора: задачи закрыты, подтверждения нет */
+function cpPending(p) {
+  return !!p.cp && stationDone(p) && API !== null && (S.gates || {})[gateKey(p)] !== "approved";
+}
+
+/* индекс станции с неподтверждённой КТ; всё дальше неё заблокировано */
+function pendingGateIdx() {
+  for (let i = 0; i < STATIONS.length; i++) if (cpPending(STATIONS[i])) return i;
+  return Infinity;
+}
 
 function level() {
   let lvl = LEVELS[0];
@@ -894,8 +914,13 @@ const VIEWS = {
           </div>
         </div>
         <p class="sp-story">${esc(st.story)}</p>
+        ${sel > pendingGateIdx() ? `
+          <div class="notice" style="margin-bottom:12px">
+            <b>⏳ Станция откроется после подтверждения ${esc(STATIONS[pendingGateIdx()].cp.id)}.</b>
+            Ментор сверяет артефакты предыдущей контрольной точки — как подтвердит, задачи разблокируются.
+          </div>` : ""}
         <div class="sp-tasks">
-          ${st.tasks.map(t => taskRow(t)).join("")}
+          ${st.tasks.map(t => taskRow(t, sel > pendingGateIdx())).join("")}
         </div>
         <div class="artifact-box">📦 <b>Артефакт недели:</b>&nbsp;${esc(st.artifact)}</div>
         ${done
@@ -1538,11 +1563,11 @@ const VIEWS = {
 
 /* ---------------- фрагменты ---------------- */
 
-function taskRow(t) {
+function taskRow(t, blocked = false) {
   const done = !!S.done[t.id];
   return `
-    <div class="task ${done ? "done-task" : ""}">
-      <input type="checkbox" id="${t.id}" data-task="${t.id}" ${done ? "checked" : ""}>
+    <div class="task ${done ? "done-task" : ""} ${blocked && !done ? "task-blocked" : ""}">
+      <input type="checkbox" id="${t.id}" data-task="${t.id}" ${done ? "checked" : ""} ${blocked && !done ? "disabled" : ""}>
       <label for="${t.id}">${esc(t.label)}</label>
       <span class="pts">+${t.pts}</span>
     </div>`;
@@ -1571,12 +1596,15 @@ function battleRow(b) {
 
 function cpBanner(p) {
   const passed = cpPassed(p);
+  const pending = cpPending(p);
   return `
-    <div class="gate-banner ${passed ? "passed" : ""}">
+    <div class="gate-banner ${passed ? "passed" : pending ? "pending" : ""}">
       <span class="g-badge">${p.cp.id}</span>
       <div>${passed
         ? `<b>Контрольная точка пройдена · +100 очков.</b> ${esc(p.cp.cond)}`
-        : `<b>Условие контрольной точки:</b> ${esc(p.cp.cond)}`}</div>
+        : pending
+          ? `<b>⏳ На проверке у ментора.</b> Задачи закрыты — эксперт сверяет артефакты. После подтверждения: +100 очков и путь дальше.`
+          : `<b>Условие контрольной точки:</b> ${esc(p.cp.cond)}`}</div>
     </div>`;
 }
 

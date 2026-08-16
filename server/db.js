@@ -78,6 +78,15 @@ db.exec(`
     created_at  INTEGER NOT NULL
   );
 
+  /* жёсткий гейт КТ: закрытая станция с контрольной точкой уходит «на проверку»,
+     дальше участник идёт только после подтверждения ментором */
+  CREATE TABLE IF NOT EXISTS gate_approvals (
+    user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    gate        TEXT NOT NULL,                 -- K1..K5
+    approved_at INTEGER NOT NULL,
+    PRIMARY KEY (user_id, gate)
+  );
+
   /* баттлы на знании вайб-кодинга: вопросы и подсчёт — только на сервере */
   CREATE TABLE IF NOT EXISTS battles (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,

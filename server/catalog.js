@@ -67,11 +67,13 @@ function phaseDone(phase, doneSet) {
   return Object.keys(phase.tasks).every(id => doneSet.has(id));
 }
 
-/* demoCount = число НЕДЕЛЬ с демо, а не число постов: спам на стену очков не даёт */
-function computePoints({ doneSet, secSet, legalSet, demoCount, battlePts = 0 }) {
+/* demoCount = число НЕДЕЛЬ с демо, а не число постов: спам на стену очков не даёт.
+   approvedGates — множество подтверждённых ментором КТ; null = без гейта (демо-режим). */
+function computePoints({ doneSet, secSet, legalSet, demoCount, battlePts = 0, approvedGates = null }) {
   let pts = 0;
   for (const id of doneSet) if (TASKS[id]) pts += TASKS[id];
-  for (const p of PHASE_TASKS) if (p.gate && phaseDone(p, doneSet)) pts += 100;
+  for (const p of PHASE_TASKS)
+    if (p.gate && phaseDone(p, doneSet) && (approvedGates === null || approvedGates.has(p.gate))) pts += 100;
   pts += secSet.size * 10;
   pts += legalSet.size * 15;
   pts += demoCount * 50;

@@ -45,6 +45,7 @@
   .u-table tr:last-child td { border-bottom: none; }
   .u-sub { color: var(--ink-3); font-size: 13px; margin-top: 2px; }
   .u-flag { color: #b45309; font-weight: 600; }
+  .u-gates { margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
   .u-bar { width: 90px; height: 6px; background: var(--bg-alt); border-radius: 999px; overflow: hidden; margin-top: 6px; }
   .u-bar i { display: block; height: 100%; background: var(--ink); border-radius: 999px; }
 </style>
@@ -186,6 +187,13 @@ function userRow(u) {
   const e = u.economy;
   const fast = e && e.fastStations.length
     ? `<div class="u-sub u-flag">⚡ станции ${e.fastStations.join(', ')} закрыты быстрее 10 минут — проверьте артефакты</div>` : '';
+  const pending = e ? Object.entries(e.gates).filter(([, s]) => s === 'pending') : [];
+  const approved = e ? Object.entries(e.gates).filter(([, s]) => s === 'approved') : [];
+  const gates = e && (pending.length || approved.length) ? `
+    <div class="u-gates">
+      ${pending.map(([g]) => `<button class="btn btn-primary btn-sm" data-gate="${g}" data-uid="${u.id}">Подтвердить КТ-${g.slice(1)}</button>`).join(' ')}
+      ${approved.map(([g]) => `<span class="tag t-accepted" title="Отозвать — клик" data-ungate="${g}" data-uid="${u.id}" style="cursor:pointer">КТ-${g.slice(1)} ✓</span>`).join(' ')}
+    </div>` : '';
   const breakdown = e
     ? `<div class="u-sub">задачи ${e.taskPts} · КТ ${e.gatePts} · ИБ ${e.secPts} · юр ${e.legalPts} · демо ${e.demoPts} · баттлы ${e.battlePts}</div>
        <div class="u-sub">🎰 спины ${e.spinsUsed}/${e.spinsEarned}${e.luckyTickets ? ` · 🎟️ билетов ${e.luckyTickets}` : ''}</div>` : '';
@@ -193,7 +201,7 @@ function userRow(u) {
     <tr>
       <td>
         <b>${esc(u.name)}</b>${u.seed ? ' <span class="tag t-declined">сид</span>' : ''}
-        <div class="u-sub">${esc(u.project)}</div>${fast}
+        <div class="u-sub">${esc(u.project)}</div>${fast}${gates}
       </td>
       <td>${esc(u.email)}<div class="u-sub">${esc(u.tariff)}${u.dock ? ' · док ' + esc(u.dock) : ''}</div>
         ${u.prizes && u.prizes.length ? `<div class="u-sub">🎁 ${u.prizes.map(esc).join(' · ')}</div>` : ''}</td>
@@ -210,7 +218,9 @@ function userRow(u) {
 async function loadUsers() {
   const { users } = await call('/api/admin/users');
   const real = users.filter(u => !u.seed).length;
-  countEl.textContent = `участников: ${real}` + (users.length > real ? ` · сидов: ${users.length - real}` : '');
+  const waiting = users.reduce((n, u) => n + (u.economy ? Object.values(u.economy.gates).filter(s => s === 'pending').length : 0), 0);
+  countEl.textContent = `участников: ${real}` + (users.length > real ? ` · сидов: ${users.length - real}` : '')
+    + (waiting ? ` · ⏳ КТ на проверке: ${waiting}` : '');
   list.innerHTML = users.length ? `
     <div class="u-wrap">
       <table class="u-table">
@@ -221,6 +231,17 @@ async function loadUsers() {
         <tbody>${users.map(userRow).join('')}</tbody>
       </table>
     </div>` : '<div class="panel"><p class="empty">Участников пока нет.</p></div>';
+
+  list.querySelectorAll('[data-gate],[data-ungate]').forEach(el => el.addEventListener('click', async () => {
+    const approve = el.hasAttribute('data-gate');
+    const gate = approve ? el.dataset.gate : el.dataset.ungate;
+    if (!approve && !confirm(`Отозвать подтверждение КТ-${gate.slice(1)}? Участник снова будет заблокирован.`)) return;
+    try {
+      await call('/api/admin/gates', 'POST', { userId: Number(el.dataset.uid), gate, approved: approve });
+      toast(approve ? `КТ-${gate.slice(1)} подтверждена — путь участника открыт` : `КТ-${gate.slice(1)} отозвана`);
+      load();
+    } catch (e) { toast(e.message); }
+  }));
 }
 
 /* ---------- каркас ---------- */

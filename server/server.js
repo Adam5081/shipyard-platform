@@ -121,6 +121,9 @@ const q = {
     FROM battles WHERE winner_id != 0 AND resolved_at > @since AND (challenger_id = @uid OR opponent_id = @uid)`),
   setAwards: db.prepare("UPDATE battles SET ch_award = ?, op_award = ? WHERE id = ?"),
   taskTimes: db.prepare("SELECT item_id, done_at FROM progress WHERE user_id = ? AND kind = 'task'"),
+  userGates: db.prepare("SELECT gate FROM gate_approvals WHERE user_id = ?"),
+  approveGate: db.prepare("INSERT OR IGNORE INTO gate_approvals (user_id, gate, approved_at) VALUES (?,?,?)"),
+  revokeGate: db.prepare("DELETE FROM gate_approvals WHERE user_id = ? AND gate = ?"),
 };
 
 const TARIFFS = ["Solo", "Pro", "Partner"];
@@ -165,11 +168,40 @@ function userStats(u) {
   const sets = userSets(u.id);
   const demoCount = q.demoWeeks.get(u.id).n;   // зачёт — по уникальным неделям
   return {
-    points: computePoints({ ...sets, demoCount, battlePts: u.battle_pts || 0 }),
+    points: computePoints({ ...sets, demoCount, battlePts: u.battle_pts || 0, approvedGates: approvedGates(u.id) }),
     level: computeLevel(sets.doneSet),
     station: computeStation(sets.doneSet),
     walk: computeWalk(sets.doneSet),
   };
+}
+
+/* ---------- жёсткий гейт КТ ---------- */
+
+const approvedGates = uid => new Set(q.userGates.all(uid).map(r => r.gate));
+
+/* Первая закрытая, но не подтверждённая КТ. Всё, что дальше неё, заблокировано. */
+function pendingGate(uid) {
+  const { doneSet } = userSets(uid);
+  const ok = approvedGates(uid);
+  for (let i = 0; i < PHASE_TASKS.length; i++) {
+    const p = PHASE_TASKS[i];
+    if (p.gate && Object.keys(p.tasks).every(id => doneSet.has(id)) && !ok.has(p.gate))
+      return { idx: i, gate: p.gate };
+  }
+  return null;
+}
+
+/* Все КТ участника со статусами — для кабинета и админки. */
+function gateStates(uid) {
+  const { doneSet } = userSets(uid);
+  const ok = approvedGates(uid);
+  const out = {};
+  PHASE_TASKS.forEach(p => {
+    if (!p.gate) return;
+    const done = Object.keys(p.tasks).every(id => doneSet.has(id));
+    out[p.gate] = ok.has(p.gate) ? "approved" : done ? "pending" : "open";
+  });
+  return out;
 }
 
 function publicUser(u) {
@@ -201,6 +233,7 @@ function meState(u) {
     done: toObj(doneSet),
     sec: toObj(secSet),
     legal: toObj(legalSet),
+    gates: gateStates(u.id),
     demos: q.myDemos.all(u.id).map(d => ({ id: d.id, week: d.week, text: d.text, link: d.link, ts: d.created_at })),
     github: gh,
     ...userStats(u),
@@ -396,6 +429,16 @@ const routes = {
       (kind === "sec" && SEC_IDS.includes(id)) ||
       (kind === "legal" && LEGAL_IDS.includes(id));
     if (!valid) return err(res, 400, "Неизвестный пункт");
+
+    /* жёсткий гейт: пока закрытая КТ не подтверждена ментором,
+       задачи станций дальше неё отмечать нельзя */
+    if (b.done && kind === "task") {
+      const gate = pendingGate(u.id);
+      const phaseIdx = PHASE_TASKS.findIndex(p => p.tasks[id] !== undefined);
+      if (gate && phaseIdx > gate.idx)
+        return err(res, 423, `Станция ${gate.idx} ждёт подтверждения контрольной точки ментором — путь дальше пока закрыт`);
+    }
+
     const closedBefore = closedStations(u.id);
     if (b.done) q.addProgress.run(u.id, kind, id, Date.now());
     else q.delProgress.run(u.id, kind, id);
@@ -609,6 +652,18 @@ const routes = {
     send(res, 200, { users });
   },
 
+  /* подтверждение / отзыв КТ ментором */
+  "POST /api/admin/gates": async (req, res) => {
+    if (!isAdmin(req)) return err(res, 401, "Нужен ключ администратора");
+    const b = await readBody(req);
+    const user = q.userById.get(Number(b.userId || 0));
+    const gate = String(b.gate || "");
+    if (!user || !PHASE_TASKS.some(p => p.gate === gate)) return err(res, 400, "Участник или КТ не найдены");
+    if (b.approved) q.approveGate.run(user.id, gate, Date.now());
+    else q.revokeGate.run(user.id, gate);
+    send(res, 200, { ok: true, gates: gateStates(user.id) });
+  },
+
   /* ---------- лотерея верфи ----------
      Спины зарабатываются прогрессом и считаются ТОЛЬКО на сервере:
      1 спин за каждые 3 закрытые станции + 1 за дверь MVP (все 9).
@@ -778,7 +833,6 @@ function userEconomy(u) {
   const sets = userSets(u.id);
   let taskPts = 0;
   for (const id of sets.doneSet) if (TASKS[id]) taskPts += TASKS[id];
-  const gates = PHASE_TASKS.filter(p => p.gate && Object.keys(p.tasks).every(id => sets.doneSet.has(id))).length;
   const lot = lotteryState(u.id);
 
   // станция закрыта менее чем за 10 минут от первой до последней отметки — флаг
@@ -791,12 +845,14 @@ function userEconomy(u) {
     if (Math.max(...ts) - Math.min(...ts) < 10 * 60000) fast.push(i);
   });
 
+  const gs = gateStates(u.id);
   return {
-    taskPts, gatePts: gates * 100,
+    taskPts, gatePts: Object.values(gs).filter(s => s === "approved").length * 100,
     secPts: sets.secSet.size * 10, legalPts: sets.legalSet.size * 15,
     demoPts: q.demoWeeks.get(u.id).n * 50, battlePts: u.battle_pts || 0,
     spinsEarned: lot.earned, spinsUsed: lot.used, luckyTickets: u.bonus_spins || 0,
     fastStations: fast,
+    gates: gs,   // open / pending / approved — pending требует действия ментора
   };
 }
 
