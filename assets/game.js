@@ -547,7 +547,7 @@ class StationScene {
     const sceneChanged = data.index !== undefined && data.index !== this.data.index;
     Object.assign(this.data, data);
     const p = Math.max(0, Math.min(1, this.data.progress || 0));
-    this.targetX = SSTART + p * (SFINISH - 10 - SSTART);
+    this.targetX = SSTART + p * (SFINISH - 24 - SSTART);
     // при смене сцены персонаж появляется на месте — бежит только внутри своей карты
     if (sceneChanged) this.charX = this.targetX;
   }
@@ -556,7 +556,7 @@ class StationScene {
     if (this.dead) return;
     this.t += 1 / 60;
     const d = this.targetX - this.charX;
-    if (Math.abs(d) > 0.15) this.charX += Math.sign(d) * Math.min(Math.abs(d), 0.55);
+    if (Math.abs(d) > 0.15) this.charX += Math.sign(d) * Math.min(Math.abs(d), 1.1);
     else this.charX = this.targetX;
     this.draw();
     this.raf = requestAnimationFrame(() => this.loop());
@@ -741,54 +741,66 @@ class StationScene {
     const peers = (this.data.peers || []).slice(0, 6);
     peers.forEach((p, idx) => {
       const frac = Math.max(0, Math.min(1, p.frac || 0));
-      const px = Math.round(SSTART + frac * (SFINISH - 10 - SSTART));
+      const px = Math.round(SSTART + frac * (SFINISH - 24 - SSTART));
       const bob = Math.sin(this.t * 2 + idx) * 0.6;
-      const hy = Math.round(ROAD - 8 + bob + (idx % 2) * 3);
-      ctx.globalAlpha = 0.55;
+      const hy = Math.round(ROAD - 12 + bob + (idx % 2) * 3);
+      ctx.globalAlpha = 0.5;
       const im = avatarImage(p.avatar);
-      const hx = px - 12 - (idx % 3) * 6;
+      const hx = px - 18 - (idx % 3) * 8;
       ctx.fillStyle = "#5b6470";
-      ctx.fillRect(hx + 3, hy + 9, 3, 5);
-      if (im) ctx.drawImage(im, hx, hy, 9, 9);
-      else { ctx.fillStyle = "#d2b48c"; ctx.fillRect(hx + 1, hy + 1, 7, 7); }
+      ctx.fillRect(hx + 4, hy + 13, 3, 7);
+      ctx.fillRect(hx + 8, hy + 13, 3, 7);
+      if (im) ctx.drawImage(im, hx, hy, 14, 14);
+      else { ctx.fillStyle = "#d2b48c"; ctx.fillRect(hx + 2, hy + 2, 10, 10); }
       ctx.globalAlpha = 1;
     });
   }
 
+  /* Персонаж переднего плана: крупный, примерно как боец в файтинге
+     на Сеге относительно экрана — треть высоты сцены и больше. Бюст —
+     спрайт-аватар 16×16, растянутый в 3 раза без сглаживания, ноги и
+     руки дорисовываются в 4-фазном цикле ходьбы. */
   hero() {
     const ctx = this.ctx;
     const x = Math.round(this.charX);
-    const ground = ROAD + 8;                         // персонаж идёт по дороге
+    const ground = ROAD + 10;
     const moving = Math.abs(this.targetX - this.charX) > 0.2;
-    const step = moving ? Math.floor(this.t * 8) % 2 : 0;
-    const bob = moving ? (step ? -1 : 0) : Math.round(Math.sin(this.t * 2) * 0.5);
+    const f = moving ? Math.floor(this.t * 9) % 4 : 0;   // фаза шага
+    const stride = [0, 3, 0, -3][f];                     // вынос ног
+    const bob = moving ? [0, -2, 0, -2][f] : Math.round(Math.sin(this.t * 2));
     const feet = ground + bob;
 
     const col = spriteColors(this.data.avatar) || { jacket: "rgb(63,71,86)", skin: "rgb(232,176,136)" };
     const trousers = darken(col.jacket, 0.78);
 
+    // тень на дороге
     ctx.fillStyle = "rgba(0,0,0,.18)";
-    ctx.fillRect(x - 6, ground - 1, 13, 2);
+    ctx.fillRect(x - 16, ground + 1, 33, 3);
 
+    // ноги маятником: одна вперёд, другая назад
     ctx.fillStyle = trousers;
-    if (step) { ctx.fillRect(x - 5, feet - 6, 3, 6); ctx.fillRect(x + 2, feet - 5, 3, 5); }
-    else { ctx.fillRect(x - 4, feet - 6, 3, 6); ctx.fillRect(x + 1, feet - 6, 3, 6); }
+    ctx.fillRect(x - 9 + stride, feet - 16, 6, 16);
+    ctx.fillRect(x + 3 - stride, feet - 16, 6, 16);
     ctx.fillStyle = "#1d1d1f";
-    if (step) { ctx.fillRect(x - 6, feet - 1, 4, 1); ctx.fillRect(x + 2, feet - 1, 4, 1); }
-    else { ctx.fillRect(x - 5, feet - 1, 4, 1); ctx.fillRect(x + 1, feet - 1, 4, 1); }
+    ctx.fillRect(x - 10 + stride, feet - 3, 8, 3);       // ботинки
+    ctx.fillRect(x + 2 - stride, feet - 3, 8, 3);
 
+    // руки в противофазе с ногами
+    const arm = moving ? [0, 2, 0, -2][f] : 0;
     ctx.fillStyle = col.jacket;
-    if (step) { ctx.fillRect(x - 10, feet - 16, 2, 5); ctx.fillRect(x + 8, feet - 17, 2, 5); }
-    else { ctx.fillRect(x - 10, feet - 17, 2, 5); ctx.fillRect(x + 8, feet - 16, 2, 5); }
-    ctx.fillStyle = col.skin;
-    if (step) { ctx.fillRect(x - 10, feet - 11, 2, 1); ctx.fillRect(x + 8, feet - 12, 2, 1); }
-    else { ctx.fillRect(x - 10, feet - 12, 2, 1); ctx.fillRect(x + 8, feet - 11, 2, 1); }
+    ctx.fillRect(x - 26, feet - 31 - arm, 5, 15);
+    ctx.fillRect(x + 21, feet - 31 + arm, 5, 15);
+    ctx.fillStyle = col.skin;                            // кисти
+    ctx.fillRect(x - 26, feet - 16 - arm, 5, 3);
+    ctx.fillRect(x + 21, feet - 16 + arm, 5, 3);
 
+    // бюст: голова, пиджак, галстук из аватара — 48×48 поверх ног
     const im = avatarImage(this.data.avatar);
-    if (im) ctx.drawImage(im, x - 8, feet - 22, 16, 16);
+    if (im) ctx.drawImage(im, x - 24, feet - 64, 48, 48);
     else {
-      ctx.fillStyle = col.skin; ctx.fillRect(x - 4, feet - 19, 8, 7);
-      ctx.fillStyle = col.jacket; ctx.fillRect(x - 7, feet - 11, 14, 5);
+      ctx.fillStyle = col.skin; ctx.fillRect(x - 12, feet - 58, 24, 21);
+      ctx.fillStyle = "#3d2a1d"; ctx.fillRect(x - 12, feet - 64, 24, 8);
+      ctx.fillStyle = col.jacket; ctx.fillRect(x - 21, feet - 31, 42, 15);
     }
   }
 }

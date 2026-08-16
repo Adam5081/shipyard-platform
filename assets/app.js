@@ -1095,16 +1095,15 @@ const VIEWS = {
       ${!S.dock ? `<div class="notice"><b>Док не определён.</b> Пройдите скрининг сложности — без него лига считается по общему потоку.
         <button class="btn btn-primary btn-sm" data-go="screening" style="margin-left:auto">Пройти</button></div>` : ""}
       <div class="panel">
-        <table class="table">
-          <thead><tr><th style="width:56px">Место</th><th>Участник</th><th>Проект</th><th>Уровень</th><th style="text-align:right">Очки</th></tr></thead>
+        <table class="table league-table">
+          <thead><tr><th style="width:56px">Место</th><th>Участник</th><th class="col-lvl">Уровень</th><th style="text-align:right">Очки</th></tr></thead>
           <tbody>
             ${rows.map((r, i) => {
               const lv = LEVELS[Math.max(0, Math.min(7, r.lvl - 1))];
               return `<tr class="${r.me ? "me" : ""}">
                 <td><span class="rank-medal">${medals[i] || (i + 1)}</span></td>
-                <td><div class="who"><span class="avatar sm"><img src="${esc(r.avatar || GAME.PixelAvatar.generated(r.name))}" alt=""></span><b>${esc(r.name)}</b></div></td>
-                <td style="color:var(--ink-2)">${esc(r.project)}</td>
-                <td><span class="lvl-chip">${lv.emoji} ${lv.name}</span></td>
+                <td><div class="who"><span class="avatar sm"><img src="${esc(r.avatar || GAME.PixelAvatar.generated(r.name))}" alt=""></span><div><b>${esc(r.name)}</b><small class="who-proj">${esc(r.project)}</small></div></div></td>
+                <td class="col-lvl"><span class="lvl-chip">${lv.emoji} ${lv.name}</span></td>
                 <td style="text-align:right;font-weight:700">${fmt(r.pts)}</td>
               </tr>`;
             }).join("")}
@@ -1270,23 +1269,19 @@ const VIEWS = {
         <h1>Сервисный пул</h1>
         <p>Групповой контур и ментор в Telegram — всем. Индивидуальные созвоны с экспертами — по часам тарифа: 4 часа в неделю на Solo, 8 — на Pro, без лимита на Partner.</p>
       </div>
-      <div class="panel">
-        <table class="table">
-          <thead><tr><th></th><th>Направление</th><th>Что закрывает</th><th>Формат</th><th>Станции</th><th></th></tr></thead>
-          <tbody>
-            ${SERVICE.map((e, i) => `
-              <tr>
-                <td style="font-size:20px">${e.icon}</td>
-                <td><b>${esc(e.dir)}</b></td>
-                <td style="color:var(--ink-2)">${esc(e.what)}</td>
-                <td style="color:var(--ink-2)">${esc(e.format)}</td>
-                <td style="white-space:nowrap">${esc(e.weeks)}</td>
-                <td>${e.indiv
-                  ? `<button class="btn btn-ghost btn-sm" data-book="${i}" title="Лимит тарифа: ${hours}">Слот</button>`
-                  : `<span class="status-chip done">Всегда на связи</span>`}</td>
-              </tr>`).join("")}
-          </tbody>
-        </table>
+      <div class="svc-grid">
+        ${SERVICE.map((e, i) => `
+          <div class="panel svc-card">
+            <div class="svc-head">
+              <span class="svc-ic">${e.icon}</span>
+              <b>${esc(e.dir)}</b>
+              ${e.indiv
+                ? `<button class="btn btn-primary btn-sm" data-book="${i}" title="Лимит тарифа: ${hours}">Слот · ${hours}</button>`
+                : `<span class="status-chip done">всегда на связи</span>`}
+            </div>
+            <p class="svc-what">${esc(e.what)}</p>
+            <small class="svc-meta">${esc(e.format)} · станции ${esc(e.weeks)}</small>
+          </div>`).join("")}
       </div>`;
   },
 

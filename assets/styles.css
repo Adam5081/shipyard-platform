@@ -1149,7 +1149,20 @@ pre.code .h { color: #7fd4e4; font-weight: 600; }
   image-rendering: pixelated;
 }
 .avatar.sm { width: 28px; height: 28px; }
-.who { display: flex; align-items: center; gap: 10px; }
+.who { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.who > div { min-width: 0; }
+.who-proj { display: block; color: var(--ink-2); font-size: 12.5px; font-weight: 400; margin-top: 2px; }
+
+/* сервисный пул — карточки вместо таблицы */
+.svc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+.svc-grid .panel { margin-bottom: 0; }
+.svc-card { display: flex; flex-direction: column; }
+.svc-head { display: flex; align-items: center; gap: 10px; }
+.svc-ic { font-size: 24px; flex-shrink: 0; }
+.svc-head b { font-size: 16px; flex: 1; min-width: 0; }
+.svc-head .btn, .svc-head .status-chip { flex-shrink: 0; white-space: nowrap; }
+.svc-what { color: var(--ink-2); font-size: 14px; line-height: 1.45; margin: 10px 0 8px; }
+.svc-meta { color: var(--ink-2); font-size: 12.5px; margin-top: auto; }
 
 .notice {
   display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
@@ -1500,6 +1513,15 @@ pre.code .h { color: #7fd4e4; font-weight: 600; }
   .sp-head { flex-wrap: wrap; }
   .sp-nav { margin-left: 0; }
   .table { font-size: 13px; }
+  .table td { padding: 11px 8px; }
+  .table th { padding: 8px; }
+  .league-table .col-lvl { display: none; }
+  .svc-grid { grid-template-columns: 1fr; }
+  .btn-sm { padding: 9px 14px; }
+  .side-link { padding: 12px 14px; }
+  .task label { padding: 4px 0; }
+  .kb-item { align-items: flex-start; }
+  .req { font-size: 13.5px; }
   .cert-inner { padding: 28px 18px; }
   .cert-name { font-size: 26px; }
   .cert-row { gap: 20px; }
