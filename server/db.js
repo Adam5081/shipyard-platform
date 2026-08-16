@@ -78,6 +78,16 @@ db.exec(`
     created_at  INTEGER NOT NULL
   );
 
+  /* менторы и эксперты: свой ключ доступа в админку (хранится хэш),
+     свой Telegram-чат для таргетированных уведомлений о своих участниках */
+  CREATE TABLE IF NOT EXISTS mentors (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    name       TEXT NOT NULL,
+    key_hash   TEXT NOT NULL UNIQUE,
+    tg_chat    TEXT NOT NULL DEFAULT '',
+    created_at INTEGER NOT NULL
+  );
+
   /* жёсткий гейт КТ: закрытая станция с контрольной точкой уходит «на проверку»,
      дальше участник идёт только после подтверждения ментором */
   CREATE TABLE IF NOT EXISTS gate_approvals (
@@ -115,6 +125,7 @@ const NEW_COLUMNS = [
   ["gh_at",      "INTEGER NOT NULL DEFAULT 0"],    // время последней синхронизации
   ["battle_pts",  "INTEGER NOT NULL DEFAULT 0"],   // очки лиги, заработанные в баттлах
   ["bonus_spins", "INTEGER NOT NULL DEFAULT 0"],   // «счастливые билеты» лотереи (макс. 2 за поток)
+  ["mentor_id",   "INTEGER NOT NULL DEFAULT 0"],   // ответственный ментор (0 — не назначен)
 ];
 
 const existing = new Set(db.prepare("PRAGMA table_info(users)").all().map(c => c.name));

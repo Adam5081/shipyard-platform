@@ -126,6 +126,14 @@ const q = {
   approveGate: db.prepare("INSERT OR IGNORE INTO gate_approvals (user_id, gate, approved_at) VALUES (?,?,?)"),
   revokeGate: db.prepare("DELETE FROM gate_approvals WHERE user_id = ? AND gate = ?"),
   setPassword: db.prepare("UPDATE users SET pass_hash = ?, salt = ? WHERE id = ?"),
+  mentorByHash: db.prepare("SELECT * FROM mentors WHERE key_hash = ?"),
+  mentorById: db.prepare("SELECT * FROM mentors WHERE id = ?"),
+  allMentors: db.prepare(`SELECT m.*, (SELECT COUNT(*) FROM users u WHERE u.mentor_id = m.id AND u.seed_pts = 0) AS wards
+    FROM mentors m ORDER BY m.id`),
+  insertMentor: db.prepare("INSERT INTO mentors (name, key_hash, tg_chat, created_at) VALUES (?,?,?,?)"),
+  deleteMentor: db.prepare("DELETE FROM mentors WHERE id = ?"),
+  unassignMentor: db.prepare("UPDATE users SET mentor_id = 0 WHERE mentor_id = ?"),
+  assignMentor: db.prepare("UPDATE users SET mentor_id = ? WHERE id = ?"),
 };
 
 /* ---------- уведомления ментору в Telegram ----------
@@ -135,13 +143,20 @@ const q = {
 const TG_TOKEN = process.env.SHIPYARD_TG_TOKEN || "";
 const TG_CHAT = process.env.SHIPYARD_TG_CHAT || "";
 
-function notifyTg(text) {
-  if (!TG_TOKEN || !TG_CHAT) return;
+function notifyTg(text, chat = TG_CHAT) {
+  if (!TG_TOKEN || !chat) return;
   fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ chat_id: TG_CHAT, text }),
+    body: JSON.stringify({ chat_id: chat, text }),
   }).catch(() => {});
+}
+
+/* Событие про участника — таргетированно его ментору (в личку или чат
+   группы ментора); без назначенного ментора — в общий чат админов. */
+function notifyAboutUser(u, text) {
+  const mentor = u.mentor_id ? q.mentorById.get(u.mentor_id) : null;
+  notifyTg(text, (mentor && mentor.tg_chat) || TG_CHAT);
 }
 
 const TARIFFS = ["Solo", "Pro", "Partner"];
@@ -338,6 +353,22 @@ function noteLoginFail(req, failed) {
 
 const ADMIN_KEY = process.env.SHIPYARD_ADMIN_KEY || "";
 
+/* Роли доступа в админку по одному полю ключа:
+   мастер-ключ из env → админ (всё); ключ из таблицы mentors → ментор
+   (только свои участники). Хэш ключа — HMAC на серверном секрете. */
+const mentorKeyHash = key => crypto.createHmac("sha256", SECRET).update(String(key)).digest("hex");
+
+function roleOf(req) {
+  const given = String(req.headers["x-admin-key"] || "");
+  if (!given) return null;
+  if (ADMIN_KEY) {
+    const a = Buffer.from(given), b = Buffer.from(ADMIN_KEY);
+    if (a.length === b.length && crypto.timingSafeEqual(a, b)) return { role: "admin" };
+  }
+  const m = q.mentorByHash.get(mentorKeyHash(given));
+  return m ? { role: "mentor", mentor: m } : null;
+}
+
 function isAdmin(req) {
   const given = String(req.headers["x-admin-key"] || "");
   if (!ADMIN_KEY || !given) return false;
@@ -513,10 +544,10 @@ const routes = {
       q.addBonusSpin.run(u.id);
       lucky = true;
     }
-    // станция закрылась — ментор узнаёт сразу, особенно если КТ ждёт проверки
+    // станция закрылась — узнаёт СВОЙ ментор (или общий чат, если не назначен)
     if (b.done && kind === "task" && closedAfter > closedBefore) {
       const pg = pendingGate(u.id);
-      notifyTg(pg
+      notifyAboutUser(u, pg
         ? `⏳ ${u.name}: станция ${pg.idx} закрыта — КТ-${pg.gate.slice(1)} ждёт подтверждения в админке`
         : `🏁 ${u.name} закрыл станцию (${closedAfter}/9)`);
     }
@@ -709,14 +740,15 @@ const routes = {
   /* Участники и их прогресс — для админки. Сиды помечаются, а не скрываются:
      так видно ровно то же, что видят участники в потоке. */
   "GET /api/admin/users": async (req, res) => {
-    if (!isAdmin(req)) return err(res, 401, "Нужен ключ администратора");
-    const users = memoized("admin-users", 3000, () => q.allUsers.all().map(x => {
+    const r = roleOf(req);
+    if (!r) return err(res, 401, "Нужен ключ доступа");
+    let users = memoized("admin-users", 3000, () => q.allUsers.all().map(x => {
       const s = userStats(x);
       const seed = x.seed_pts > 0;
       return {
         id: x.id, name: x.name, email: x.email, project: x.project,
         tariff: normTariff(x.tariff), dock: x.dock || "",
-        seed,
+        seed, mentorId: x.mentor_id || 0,
         points: s.points, level: s.level, station: s.station, walk: s.walk,
         demos: q.demoCount.get(x.id).n,
         createdAt: x.created_at,
@@ -725,6 +757,8 @@ const routes = {
         economy: seed ? null : userEconomy(x),
       };
     }).sort((a, b) => b.walk - a.walk || b.points - a.points));
+    // ментор видит только свою группу (сиды ему тоже ни к чему)
+    if (r.role === "mentor") users = users.filter(u => u.mentorId === r.mentor.id);
     send(res, 200, { users });
   },
 
@@ -749,13 +783,75 @@ const routes = {
     }
   },
 
-  /* сброс пароля участника: SMTP нет — ментор получает временный пароль
-     и отправляет его человеку сам. Пароль показывается один раз. */
-  "POST /api/admin/reset-password": async (req, res) => {
+  /* кто вошёл: админ или ментор — интерфейс подстраивается */
+  "GET /api/admin/whoami": async (req, res) => {
+    const r = roleOf(req);
+    if (!r) return err(res, 401, "Нужен ключ доступа");
+    send(res, 200, r.role === "admin"
+      ? { role: "admin" }
+      : { role: "mentor", name: r.mentor.name, mentorId: r.mentor.id });
+  },
+
+  /* команда: список менторов/экспертов (только админ) */
+  "GET /api/admin/mentors": async (req, res) => {
+    if (!isAdmin(req)) return err(res, 401, "Нужен ключ администратора");
+    send(res, 200, { mentors: q.allMentors.all().map(m => ({ id: m.id, name: m.name, tgChat: m.tg_chat, wards: m.wards })) });
+  },
+
+  /* создать ментора: ключ доступа генерируется и показывается один раз */
+  "POST /api/admin/mentors": async (req, res) => {
+    if (!isAdmin(req)) return err(res, 401, "Нужен ключ администратора");
+    const b = await readBody(req);
+    const name = String(b.name || "").trim().slice(0, 60);
+    if (!name) return err(res, 400, "Укажите имя ментора");
+    const tgChat = String(b.tgChat || "").trim().slice(0, 32);
+    let key = "MEN-";
+    for (const byte of crypto.randomBytes(16)) key += INVITE_ALPHABET[byte % INVITE_ALPHABET.length];
+    q.insertMentor.run(name, mentorKeyHash(key), tgChat, Date.now());
+    memo.clear();
+    send(res, 201, { ok: true, key });   // ключ отдаётся только сейчас — дальше хранится хэш
+  },
+
+  /* удалить ментора: его участники возвращаются в «не назначен» */
+  "POST /api/admin/mentors/delete": async (req, res) => {
+    if (!isAdmin(req)) return err(res, 401, "Нужен ключ администратора");
+    const b = await readBody(req);
+    const m = q.mentorById.get(Number(b.id || 0));
+    if (!m) return err(res, 404, "Ментор не найден");
+    q.unassignMentor.run(m.id);
+    q.deleteMentor.run(m.id);
+    memo.clear();
+    send(res, 200, { ok: true });
+  },
+
+  /* распределение участников по менторам (только админ) */
+  "POST /api/admin/assign": async (req, res) => {
     if (!isAdmin(req)) return err(res, 401, "Нужен ключ администратора");
     const b = await readBody(req);
     const user = q.userById.get(Number(b.userId || 0));
     if (!user || user.seed_pts > 0) return err(res, 400, "Участник не найден");
+    const mid = Number(b.mentorId || 0);
+    if (mid && !q.mentorById.get(mid)) return err(res, 404, "Ментор не найден");
+    q.assignMentor.run(mid, user.id);
+    memo.clear();
+    if (mid) {
+      const m = q.mentorById.get(mid);
+      notifyTg(`👥 ${user.name} закреплён за ментором: ${m.name}`, m.tg_chat || TG_CHAT);
+    }
+    send(res, 200, { ok: true });
+  },
+
+  /* сброс пароля участника: SMTP нет — ментор получает временный пароль
+     и отправляет его человеку сам. Пароль показывается один раз.
+     Ментор может сбрасывать пароли только своим участникам. */
+  "POST /api/admin/reset-password": async (req, res) => {
+    const r = roleOf(req);
+    if (!r) return err(res, 401, "Нужен ключ доступа");
+    const b = await readBody(req);
+    const user = q.userById.get(Number(b.userId || 0));
+    if (!user || user.seed_pts > 0) return err(res, 400, "Участник не найден");
+    if (r.role === "mentor" && user.mentor_id !== r.mentor.id)
+      return err(res, 403, "Это участник другого ментора");
     let pwd = "";
     for (const byte of crypto.randomBytes(10)) pwd += INVITE_ALPHABET[byte % INVITE_ALPHABET.length];
     const salt = crypto.randomBytes(16).toString("hex");
@@ -763,13 +859,16 @@ const routes = {
     send(res, 200, { ok: true, password: pwd });
   },
 
-  /* подтверждение / отзыв КТ ментором */
+  /* подтверждение / отзыв КТ: админ — любым, ментор — только своим */
   "POST /api/admin/gates": async (req, res) => {
-    if (!isAdmin(req)) return err(res, 401, "Нужен ключ администратора");
+    const r = roleOf(req);
+    if (!r) return err(res, 401, "Нужен ключ доступа");
     const b = await readBody(req);
     const user = q.userById.get(Number(b.userId || 0));
     const gate = String(b.gate || "");
     if (!user || !PHASE_TASKS.some(p => p.gate === gate)) return err(res, 400, "Участник или КТ не найдены");
+    if (r.role === "mentor" && user.mentor_id !== r.mentor.id)
+      return err(res, 403, "Это участник другого ментора");
     if (b.approved) q.approveGate.run(user.id, gate, Date.now());
     else q.revokeGate.run(user.id, gate);
     memo.clear();   // очки и статусы изменились — сводки пересчитаются

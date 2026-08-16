@@ -61,11 +61,12 @@
   <div class="adm-tabs" id="tabs" hidden>
     <button data-tab="apps" class="active">Заявки</button>
     <button data-tab="users">Участники</button>
+    <button data-tab="team">Команда</button>
   </div>
 
   <div class="panel" id="gate">
-    <h2>Ключ администратора</h2>
-    <p class="muted" style="margin-bottom:16px">Значение переменной окружения <code>SHIPYARD_ADMIN_KEY</code> на сервере. Хранится только в этой вкладке.</p>
+    <h2>Ключ доступа</h2>
+    <p class="muted" style="margin-bottom:16px">Админский ключ (<code>SHIPYARD_ADMIN_KEY</code>) — полный доступ. Менторский ключ (<code>MEN-…</code>, выдаёт админ во вкладке «Команда») — только свои участники. Хранится только в этой вкладке.</p>
     <div class="field"><input id="key" type="password" autocomplete="off"></div>
     <button class="btn btn-primary" id="enter">Открыть</button>
     <p class="muted" id="gateErr" style="margin-top:12px;color:#d70015"></p>
@@ -94,7 +95,10 @@ const STATUSES = [
 
 let KEY = sessionStorage.getItem('shipyard_admin_key') || '';
 let TAB = 'apps';
+let ROLE = null;       // { role: 'admin' } | { role: 'mentor', name, mentorId }
+let MENTORS = [];      // для селектов распределения (только у админа)
 const RESET_PW = {};   // временные пароли, выданные в этой вкладке
+const MENTOR_KEYS = {}; // ключи менторов, показанные в этой вкладке после создания
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
@@ -190,11 +194,19 @@ function userRow(u) {
     ? `<div class="u-sub u-flag">⚡ станции ${e.fastStations.join(', ')} закрыты быстрее 10 минут — проверьте артефакты</div>` : '';
   const pending = e ? Object.entries(e.gates).filter(([, s]) => s === 'pending') : [];
   const approved = e ? Object.entries(e.gates).filter(([, s]) => s === 'approved') : [];
+  const mentorSel = e && ROLE?.role === 'admin' ? `
+      <select data-assign="${u.id}" title="Ответственный ментор">
+        <option value="0">без ментора</option>
+        ${MENTORS.map(m => `<option value="${m.id}" ${u.mentorId === m.id ? 'selected' : ''}>${esc(m.name)}</option>`).join('')}
+      </select>` : '';
+  const mentorTag = e && ROLE?.role !== 'admin' ? '' :
+    (e && u.mentorId && !MENTORS.length ? `<span class="u-sub">ментор №${u.mentorId}</span>` : '');
   const gates = e ? `
     <div class="u-gates">
       ${pending.map(([g]) => `<button class="btn btn-primary btn-sm" data-gate="${g}" data-uid="${u.id}">Подтвердить КТ-${g.slice(1)}</button>`).join(' ')}
       ${approved.map(([g]) => `<span class="tag t-accepted" title="Отозвать — клик" data-ungate="${g}" data-uid="${u.id}" style="cursor:pointer">КТ-${g.slice(1)} ✓</span>`).join(' ')}
       <button class="btn btn-ghost btn-sm" data-resetpw="${u.id}">Сбросить пароль</button>
+      ${mentorSel}${mentorTag}
       ${RESET_PW[u.id] ? `<span class="u-sub">🔑 врем. пароль: <code>${esc(RESET_PW[u.id])}</code>
         <button class="btn btn-ghost btn-sm" data-copy="${esc(RESET_PW[u.id])}">Скопировать</button> — отправьте участнику</span>` : ''}
     </div>` : '';
@@ -221,9 +233,13 @@ function userRow(u) {
 
 async function loadUsers() {
   const { users } = await call('/api/admin/users');
+  if (ROLE?.role === 'admin' && !MENTORS.length) {
+    try { MENTORS = (await call('/api/admin/mentors')).mentors; } catch {}
+  }
   const real = users.filter(u => !u.seed).length;
   const waiting = users.reduce((n, u) => n + (u.economy ? Object.values(u.economy.gates).filter(s => s === 'pending').length : 0), 0);
-  countEl.textContent = `участников: ${real}` + (users.length > real ? ` · сидов: ${users.length - real}` : '')
+  countEl.textContent = (ROLE?.role === 'mentor' ? `мои участники: ${real}` : `участников: ${real}`)
+    + (users.length > real ? ` · сидов: ${users.length - real}` : '')
     + (waiting ? ` · ⏳ КТ на проверке: ${waiting}` : '');
   list.innerHTML = users.length ? `
     <div class="u-wrap">
@@ -260,13 +276,87 @@ async function loadUsers() {
       load();
     } catch (e) { toast(e.message); }
   }));
+
+  list.querySelectorAll('[data-assign]').forEach(el => el.addEventListener('change', async () => {
+    try {
+      await call('/api/admin/assign', 'POST', { userId: Number(el.dataset.assign), mentorId: Number(el.value) });
+      toast('Ментор назначен');
+      load();
+    } catch (e) { toast(e.message); }
+  }));
+}
+
+/* ---------- команда: менторы и эксперты (только админ) ---------- */
+
+async function loadTeam() {
+  const { mentors } = await call('/api/admin/mentors');
+  MENTORS = mentors;
+  countEl.textContent = `в команде: ${mentors.length}`;
+  list.innerHTML = `
+    <div class="app-card">
+      <b>Добавить ментора или эксперта</b>
+      <p class="muted" style="margin:6px 0 12px">Ключ доступа сгенерируется и покажется один раз — отправьте его человеку.
+        Chat ID — личный или чат его группы в Telegram (узнать: @userinfobot); туда пойдут уведомления о его участниках.</p>
+      <div class="app-row">
+        <input id="mName" type="text" placeholder="Имя (например: Ержан · DevOps)" style="flex:2 1 200px">
+        <input id="mChat" type="text" placeholder="Telegram chat ID (необязательно)">
+        <button class="btn btn-dark btn-sm" id="mAdd">Создать</button>
+      </div>
+    </div>
+    ${mentors.length ? mentors.map(m => `
+      <div class="app-card">
+        <div class="app-top"><b>${esc(m.name)}</b>
+          <span class="tag t-new">участников: ${m.wards}</span>
+          ${m.tgChat ? `<span class="tag t-accepted">TG ✓</span>` : `<span class="tag t-declined">без TG</span>`}
+        </div>
+        ${MENTOR_KEYS[m.id] ? `<div class="invite-box"><code>${esc(MENTOR_KEYS[m.id])}</code>
+          <button class="btn btn-ghost btn-sm" data-copy="${esc(MENTOR_KEYS[m.id])}">Скопировать ключ</button>
+          <span class="muted">покажется только в этой вкладке — отправьте ментору</span></div>` : ''}
+        <div class="app-row">
+          <button class="btn btn-ghost btn-sm" data-mdel="${m.id}">Удалить (участники вернутся в «не назначен»)</button>
+        </div>
+      </div>`).join('') : '<div class="panel"><p class="empty">Менторов пока нет — добавьте первого.</p></div>'}`;
+
+  document.getElementById('mAdd').addEventListener('click', async () => {
+    const name = document.getElementById('mName').value.trim();
+    if (!name) return toast('Укажите имя');
+    try {
+      const r = await call('/api/admin/mentors', 'POST', { name, tgChat: document.getElementById('mChat').value.trim() });
+      const fresh = await call('/api/admin/mentors');
+      const created = fresh.mentors[fresh.mentors.length - 1];
+      MENTOR_KEYS[created.id] = r.key;
+      toast('Ментор создан — ключ показан в карточке');
+      load();
+    } catch (e) { toast(e.message); }
+  });
+
+  list.querySelectorAll('[data-mdel]').forEach(el => el.addEventListener('click', async () => {
+    if (!confirm('Удалить ментора? Его ключ перестанет работать.')) return;
+    try { await call('/api/admin/mentors/delete', 'POST', { id: Number(el.dataset.mdel) }); MENTORS = []; toast('Удалён'); load(); }
+    catch (e) { toast(e.message); }
+  }));
+
+  list.querySelectorAll('[data-copy]').forEach(el => el.addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(el.dataset.copy); toast('Скопировано'); } catch {}
+  }));
 }
 
 /* ---------- каркас ---------- */
 
 async function load() {
   try {
-    await (TAB === 'apps' ? loadApps() : loadUsers());
+    if (!ROLE) {
+      ROLE = await call('/api/admin/whoami');
+      // ментор видит только своих участников — заявки и команда скрыты
+      if (ROLE.role === 'mentor') {
+        tabsEl.querySelector('[data-tab="apps"]').style.display = 'none';
+        tabsEl.querySelector('[data-tab="team"]').style.display = 'none';
+        TAB = 'users';
+        tabsEl.querySelectorAll('button').forEach(x => x.classList.toggle('active', x.dataset.tab === 'users'));
+        document.querySelector('.adm-head h1').textContent = `Кабинет ментора · ${ROLE.name}`;
+      }
+    }
+    await (TAB === 'apps' ? loadApps() : TAB === 'team' ? loadTeam() : loadUsers());
     gate.hidden = true;
     tabsEl.hidden = false;
   } catch (e) {
@@ -276,6 +366,7 @@ async function load() {
     countEl.textContent = '';
     gateErr.textContent = e.message;
     KEY = '';
+    ROLE = null;
     sessionStorage.removeItem('shipyard_admin_key');
   }
 }
