@@ -385,6 +385,11 @@ const darken = (css, k) => {
   return `rgb(${Math.round(m[1] * k)},${Math.round(m[2] * k)},${Math.round(m[3] * k)})`;
 };
 
+const lumOf = css => {
+  const m = /rgb\((\d+),(\d+),(\d+)\)/.exec(css);
+  return m ? 0.299 * m[1] + 0.587 * m[2] + 0.114 * m[3] : 128;
+};
+
 /* ---------------- сцены станций ----------------
    Каждый этап — отдельная карта: фон на весь кадр, время суток движется
    от рассвета (станция 0) к ночи (станция 8), персонаж идёт по дороге
@@ -914,8 +919,15 @@ class StationScene {
 
     const col = spriteColors(this.data.avatar) ||
       { jacket: "rgb(63,71,86)", skin: "rgb(232,176,136)", shirt: "rgb(241,242,245)", tie: "rgb(140,43,58)" };
-    const trousers = darken(col.jacket, 0.72);
+    const trousers = darken(col.jacket, 0.62);
     const jacketDark = darken(col.jacket, 0.8);
+    // цвета из фото бывают блёклыми и сливаются в один — гарантируем контраст:
+    // рубашка заметно отличается от пиджака, галстук — от рубашки
+    let shirt = col.shirt || "rgb(241,242,245)";
+    if (Math.abs(lumOf(shirt) - lumOf(col.jacket)) < 45)
+      shirt = lumOf(col.jacket) > 150 ? "rgb(58,63,74)" : "rgb(241,242,245)";
+    let tie = col.tie || jacketDark;
+    if (Math.abs(lumOf(tie) - lumOf(shirt)) < 40) tie = darken(col.jacket, 0.5);
 
     // тень: сжимается, когда персонаж в верхней точке шага
     ctx.fillStyle = "rgba(0,0,0,.18)";
@@ -936,9 +948,9 @@ class StationScene {
     ctx.fillStyle = col.jacket;
     ctx.fillRect(tx - 9, feet - 50, 18, 22);
     ctx.fillRect(tx - 11, feet - 50, 22, 5);             // плечи
-    ctx.fillStyle = col.shirt || "rgb(241,242,245)";
+    ctx.fillStyle = shirt;
     ctx.fillRect(tx - 3, feet - 50, 6, 8);
-    ctx.fillStyle = col.tie || jacketDark;
+    ctx.fillStyle = tie;
     ctx.fillRect(tx - 1, feet - 50, 2, 11);
     ctx.fillStyle = jacketDark;                          // лацканы и ремень
     ctx.fillRect(tx - 5, feet - 50, 1, 9);
