@@ -695,6 +695,9 @@ function refreshChrome() {
 
 let activeView = "map";
 
+/* ссылка-приглашение: app.html#reg=TAU-XXXXXX сразу открывает регистрацию с кодом */
+const REG_CODE = (decodeURIComponent(location.hash || "").match(/^#reg=([A-Za-z0-9-]{4,})$/i) || [])[1] || "";
+
 /* Социальные разделы потока: скрыты, пока в config.js SHIPYARD_FLOW_UI не true.
    Прячем и пункты меню, и прямые ссылки #flow/#league — редирект на карту. */
 const FLOW_UI = window.SHIPYARD_FLOW_UI === true;
@@ -771,12 +774,11 @@ const VIEWS = {
           </div>
           <form id="authForm">
             ${S._reg ? `
-              <div class="field"><label>Имя</label><input id="aName" required placeholder="Как к вам обращаться"></div>
-              <div class="field"><label>Проект</label><input id="aProject" placeholder="Название вашего продукта"></div>
               <div class="field"><label>Код приглашения</label>
-                <input id="aInvite" required placeholder="TAU-XXXXXX" autocomplete="off" style="text-transform:uppercase">
+                <input id="aInvite" required placeholder="TAU-XXXXXX" autocomplete="off"
+                  style="text-transform:uppercase" value="${esc(REG_CODE)}">
               </div>
-              <p class="muted" style="font-size:13px;margin:-6px 0 14px">Код приходит после одобрения заявки.
+              <p class="muted" style="font-size:13px;margin:-6px 0 14px">Имя и тариф подставятся из вашей заявки.
                 Ещё не подавали? <a href="index.html#apply">Подать заявку</a></p>` : ""}
             <div class="field"><label>E-mail</label><input id="aEmail" type="email" required placeholder="you@example.com"></div>
             <div class="field"><label>Пароль</label><input id="aPass" type="password" required minlength="6" placeholder="Минимум 6 символов"></div>
@@ -1751,8 +1753,6 @@ function bind() {
       };
       let data;
       if (S._reg) {
-        body.name = view.querySelector("#aName").value;
-        body.project = view.querySelector("#aProject").value;
         body.invite = view.querySelector("#aInvite").value.trim().toUpperCase();
         data = await apiCall("/register", "POST", body);
       } else {
@@ -2132,6 +2132,7 @@ async function saveAvatar(dataUrl) {
     catch { /* токен истёк — увидим экран входа */ }
   }
   if (API === null) save();
+  if (REG_CODE && !TOKEN) S._reg = true;   // пришли по ссылке-приглашению
   const start = decodeURIComponent(location.hash || "").replace("#", "");
   go(VIEWS[start] && start !== "auth" ? start : "map");
 })();

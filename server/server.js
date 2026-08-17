@@ -422,10 +422,9 @@ const routes = {
     const b = await readBody(req);
     const email = String(b.email || "").trim().toLowerCase();
     const password = String(b.password || "");
-    const name = String(b.name || "").trim().slice(0, 60);
+    let name = String(b.name || "").trim().slice(0, 60);
     if (!EMAIL_RE.test(email)) return err(res, 400, "Некорректный e-mail");
     if (password.length < 6) return err(res, 400, "Пароль — минимум 6 символов");
-    if (!name) return err(res, 400, "Укажите имя");
     if (q.userByEmail.get(email)) return err(res, 409, "Этот e-mail уже зарегистрирован");
 
     // тариф не выбирается при регистрации — он приходит из одобренной заявки
@@ -440,7 +439,10 @@ const routes = {
       if (!app) return err(res, 403, "Код приглашения не найден. Проверьте написание или напишите нам");
       if (app.invite_used_at) return err(res, 403, "Этот код уже использован. Если это были не вы — напишите нам");
       if (TARIFFS.includes(normTariff(app.tariff))) tariff = normTariff(app.tariff);
+      // имя не спрашиваем второй раз — оно уже есть в одобренной заявке
+      if (!name) name = String(app.name || "").trim().slice(0, 60);
     }
+    if (!name) name = "Участник";
 
     const salt = crypto.randomBytes(16).toString("hex");
     const project = String(b.project || "Мой продукт").trim().slice(0, 120) || "Мой продукт";

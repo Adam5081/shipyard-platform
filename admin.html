@@ -6,8 +6,8 @@
 <meta name="robots" content="noindex">
 <title>Taulau — админка</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230071e3'/><path d='M27 34h46M50 34v32q0 13 13 13 7 0 10-6' stroke='white' stroke-width='11' fill='none' stroke-linecap='round'/></svg>">
-<link rel="stylesheet" href="assets/styles.css?v=12">
-<script src="assets/config.js?v=12"></script>
+<link rel="stylesheet" href="assets/styles.css?v=14">
+<script src="assets/config.js?v=14"></script>
 <style>
   .adm { max-width: 1000px; margin: 0 auto; padding: 40px 24px 80px; }
   .adm-head { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin-bottom: 18px; }
@@ -142,8 +142,9 @@ function card(a) {
           <code>${esc(a.invite)}</code>
           ${a.inviteUsedAt
             ? `<span class="muted">использован ${fmtDate(a.inviteUsedAt)}</span>`
-            : `<button class="btn btn-ghost btn-sm" data-copy="${esc(a.invite)}">Скопировать код</button>
-               <span class="muted">отправьте участнику — по нему он зарегистрируется</span>`}
+            : `<button class="btn btn-primary btn-sm" data-copy="${location.origin.startsWith('http') ? location.origin : 'https://taulau.com'}/app.html#reg=${esc(a.invite)}">Скопировать ссылку-приглашение</button>
+               <button class="btn btn-ghost btn-sm" data-copy="${esc(a.invite)}">Только код</button>
+               <span class="muted">по ссылке участнику останется ввести почту и пароль</span>`}
         </div>` : ''}
       <div class="app-row">
         <select data-status>${STATUSES.map(([v, n]) =>
