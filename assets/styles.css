@@ -221,6 +221,14 @@ button { font-family: inherit; cursor: pointer; }
 .hero-cta { margin-top: 38px; display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
 
 .hero-note { margin-top: 22px; font-size: 14px; color: var(--ink-3); }
+.hero-secondary { display: inline-block; margin-top: 18px; color: var(--accent);
+  font-size: 15px; font-weight: 500; text-decoration: none; }
+.hero-secondary:hover { text-decoration: underline; }
+.hero-proof { display: flex; flex-wrap: wrap; gap: 10px 26px; justify-content: center; margin-top: 28px; }
+.hero-proof span { color: var(--ink-2); font-size: 13.5px; display: flex; align-items: center; gap: 7px; }
+.hero-proof span::before { content: "✓"; color: var(--green); font-weight: 700; }
+.nda-note { text-decoration-color: var(--accent); text-underline-offset: 3px; }
+.icon svg, .d-ic svg { color: var(--accent); display: block; }
 
 /* stat strip */
 

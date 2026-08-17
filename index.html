@@ -6,8 +6,8 @@
 <title>Taulau — от идеи до продукта, который работает у клиента</title>
 <meta name="description" content="Программа для отраслевых экспертов: вы собираете продукт сами — с Claude Code, производственным пайплайном и экспертами отрасли рядом. Контрольные точки, безопасность, вывод в рабочую среду.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230071e3'/><path d='M27 34h46M50 34v32q0 13 13 13 7 0 10-6' stroke='white' stroke-width='11' fill='none' stroke-linecap='round'/></svg>">
-<link rel="stylesheet" href="assets/styles.css?v=11">
-<script src="assets/config.js?v=11"></script>
+<link rel="stylesheet" href="assets/styles.css?v=12">
+<script src="assets/config.js?v=12"></script>
 </head>
 <body>
 
@@ -21,7 +21,7 @@
       <a href="#team">Кто мы</a>
       <a href="#pricing">Тарифы</a>
       <a href="app.html">Войти</a>
-      <a class="nav-cta" href="#apply">Подать заявку</a>
+      <a class="nav-cta" href="#apply">Занять место</a>
     </div>
   </div>
 </nav>
@@ -29,15 +29,75 @@
 <!-- ===== HERO ===== -->
 <header class="hero">
   <div class="wrap">
-    <h1 class="display reveal">От идеи<br>до продукта, который<br><span class="gradient-text">работает у клиента.</span></h1>
-    <p class="sub reveal">Для отраслевых экспертов, у которых есть идея, но нет команды разработки. Вы собираете продукт сами — с Claude Code, процессом и экспертами отрасли рядом.</p>
+    <h1 class="display reveal">Вы — эксперт отрасли.<br>За один поток вы соберёте<br><span class="gradient-text">свой работающий продукт.</span></h1>
+    <p class="sub reveal">Без найма команды разработки: вы собираете продукт сами — с Claude Code, производственным процессом и экспертами отрасли рядом. От идеи до продукта, который работает у клиента.</p>
     <div class="hero-cta reveal">
-      <a class="btn btn-primary btn-lg btn-breathe" href="#apply">Подать заявку на поток</a>
-      <a class="btn btn-ghost btn-lg" href="app.html">Посмотреть платформу</a>
+      <a class="btn btn-primary btn-lg btn-breathe" href="#apply">Занять место в потоке</a>
     </div>
-    <p class="hero-note reveal">Подписка вместо найма команды. Права на код, дизайн и данные остаются у вас: <u class="nda-note">мы подписываем NDA на ваш продукт</u> — идея и наработки защищены договором с первого дня, программа не получает ни доли, ни прав.</p>
+    <a class="hero-secondary reveal" href="#platform">Сначала посмотрите живую платформу&nbsp;↓</a>
+    <div class="hero-proof reveal">
+      <span>Кабинет работает в проде — живое демо ниже</span>
+      <span>Состав экспертов публикуется до оплаты</span>
+      <span><u class="nda-note">NDA на ваш продукт</u> — права и доли остаются у вас</span>
+    </div>
   </div>
 </header>
+
+<!-- ===== PLATFORM (simplified) ===== -->
+<section class="section section-dark" id="platform">
+  <div class="wrap">
+    <p class="eyebrow reveal" style="color:#30b0c7">Платформа</p>
+    <h2 class="headline reveal">Виден путь,<br>а не список уроков.</h2>
+    <p class="sub reveal" style="margin-top:22px;max-width:700px">Кабинет показывает одну вещь: где вы на пути к работающему продукту. Персонаж собирается из вашего фото и идёт по карте от станции к станции, забирая на каждой инструмент. В конце пути — дверь MVP.</p>
+
+    <div class="live-demo reveal">
+      <div class="ld-frame">
+        <canvas id="ldCanvas"></canvas>
+        <div class="ld-hud">
+          <span class="ld-chip ld-chip-station" id="ldStation">Станция 1 из 9 · Диагностика и окружение</span>
+        </div>
+        <div class="ld-float" id="ldFloat"></div>
+      </div>
+      <p class="ld-note">Это не видео — живой движок кабинета. Так выглядит ваш путь внутри: отметил задачу → персонаж дошёл до вехи → станция закрыта, инструмент собран.</p>
+    </div>
+
+        <div class="vibe-strip reveal" style="margin-top:40px">
+      <div>
+        <b>🎮 Вайб-чек: проверьте себя за две минуты</b>
+        <span>10 ситуаций из реальной работы с Claude Code — без регистрации. Кто вы: зритель, приёмщик или капитан вайб-кода?</span>
+      </div>
+      <a class="btn btn-primary" href="vibe-check.html">Играть</a>
+    </div>
+
+    <div style="margin-top:56px">
+    <div class="proj-grid">
+          <div class="proj-card reveal">
+            <span class="p-tag">Платформа программы</span>
+            <h4>TAULAU</h4>
+            <p>Карта пути с девятью станциями, контрольные точки и чек-лист безопасности. Бэкенд без внешних зависимостей — тот же принцип, что мы требуем от участников: понятный код, который можно проверить.</p>
+            <div class="p-stack">Node.js · SQLite · zero-dependency</div>
+          </div>
+          <div class="proj-card reveal">
+            <span class="p-tag">Заготовки программы</span>
+            <h4>Библиотека модулей</h4>
+            <p>Авторизация, база с миграциями, интеграции, инфраструктура с автодеплоем и юридический пакет — собраны и обкатаны заранее, чтобы участник не писал обвязку с нуля.</p>
+            <div class="p-stack">шаблоны · CI/CD · чек-листы</div>
+          </div>
+          <!-- Кейсы участников: добавлять сюда после защиты первого потока.
+               Только проекты, собранные внутри программы. -->
+          <div class="proj-card reveal">
+            <span class="p-tag">Скоро</span>
+            <h4>Проекты первого потока</h4>
+            <p>Здесь появятся продукты участников: что за проблема, что подтвердилось на практике, что работает в проде и на каких цифрах. Публикуем после защиты и только с согласия автора.</p>
+            <div class="p-stack">витрина выпускников</div>
+          </div>
+        </div>
+    </div>
+    <div class="center" style="padding:44px 0 0">
+      <a class="btn btn-primary btn-lg reveal" href="app.html">Открыть платформу</a>
+    </div>
+  </div>
+</section>
 
 <!-- ===== STATS: интерактивные карточки, раскрывают разделы под собой ===== -->
 <div class="stats">
@@ -190,32 +250,32 @@
     <p class="sub reveal" style="margin-top:22px;max-width:720px">Каждый эксперт — практик, который закрывает свой участок вашего проекта. Групповые сессии — всем, индивидуальные созвоны — по часам тарифа: от 4 часов в неделю. Сверх шести направлений с вами постоянно ментор потока.</p>
     <div class="dirs">
       <div class="dir-card reveal">
-        <div class="d-ic">💻</div><h4>Разработка</h4>
+        <div class="d-ic"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m8 7-5 5 5 5"/><path d="m16 7 5 5-5 5"/><path d="m13 5-2 14"/></svg></div><h4>Разработка</h4>
         <p>Архитектура, код-ревью сгенерированного кода, сложные участки сборки.</p>
         <small>станции 2–6 · созвон + разбор кода</small>
       </div>
       <div class="dir-card reveal">
-        <div class="d-ic">⚙️</div><h4>DevOps</h4>
+        <div class="d-ic"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01M17 7.5h-6M17 16.5h-6"/></svg></div><h4>DevOps</h4>
         <p>Инфраструктура, домен, автоматический деплой, мониторинг и резервные копии.</p>
         <small>станции 5–6 · шаблон + настройка вместе</small>
       </div>
       <div class="dir-card reveal">
-        <div class="d-ic">🛡️</div><h4>Кибербезопасность</h4>
+        <div class="d-ic"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 2.8v5.4c0 4.4-3 7.4-7 9.3-4-1.9-7-4.9-7-9.3V5.8Z"/><path d="m9 11.5 2 2 4-4.5"/></svg></div><h4>Кибербезопасность</h4>
         <p>Уязвимости, защита данных, разграничение доступов, ручной аудит логики.</p>
         <small>станция 5 · чек-лист + сканирование</small>
       </div>
       <div class="dir-card reveal">
-        <div class="d-ic">⚖️</div><h4>Право</h4>
+        <div class="d-ic"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v15"/><path d="M5.5 7.5h13"/><path d="M5.5 7.5 3 13a3.2 3.2 0 0 0 5 0Z"/><path d="M18.5 7.5 16 13a3.2 3.2 0 0 0 5 0Z"/><path d="M8.5 19h7"/></svg></div><h4>Право</h4>
         <p>Компания, оферта, персональные данные, товарный знак, договоры с клиентами.</p>
         <small>станции 1–7 · сессии + шаблоны</small>
       </div>
       <div class="dir-card reveal">
-        <div class="d-ic">📊</div><h4>Бизнес-аналитика</h4>
+        <div class="d-ic"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V11"/><path d="M10 20V5"/><path d="M16 20v-7"/><path d="M21 20H3"/></svg></div><h4>Бизнес-аналитика</h4>
         <p>Метрики продукта, юнит-экономика, приоритизация объёма, разбор гипотез на цифрах.</p>
         <small>станции 1–7 · разбор метрик проекта</small>
       </div>
       <div class="dir-card reveal">
-        <div class="d-ic">📣</div><h4>Маркетинг и продажи</h4>
+        <div class="d-ic"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10.5v3l3 .7L16 19V5l-9 4.8-3 .7Z"/><path d="M19 9a4.5 4.5 0 0 1 0 6"/></svg></div><h4>Маркетинг и продажи</h4>
         <p>Позиционирование, цена, первые каналы, переговоры и доведение до сделки.</p>
         <small>станции 7–8 · сессии + разборы</small>
       </div>
@@ -238,23 +298,24 @@
     <p class="sub reveal" style="margin-top:22px;max-width:740px">Тот же инструмент внутри пайплайна — с архитектурой, тестированием, проверкой безопасности и деплоем — даёт не прототип, а продукт. Мы учим второму.</p>
     <div class="grid grid-3" style="margin-top:56px">
       <div class="card reveal">
-        <div class="icon">✅</div>
+        <div class="icon"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 6h11M10 12h11M10 18h11"/><path d="m3 6 1.5 1.5L7 5M3 12l1.5 1.5L7 11M3 18l1.5 1.5L7 17"/></svg></div>
         <h3>1 · Чек-лист OWASP</h3>
         <p>Всем участникам. Типовые уязвимости, работа с секретами, разграничение доступов, защита данных.</p>
       </div>
       <div class="card reveal">
-        <div class="icon">🔍</div>
+        <div class="icon"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16.5 16.5 4.5 4.5"/><path d="M8 11h6M11 8v6"/></svg></div>
         <h3>2 · Сканирование</h3>
         <p>Всем участникам. Автоматизированная проверка зависимостей и конфигураций, отчёт с приоритетами исправлений.</p>
       </div>
       <div class="card reveal">
-        <div class="icon">🧑‍💻</div>
+        <div class="icon"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.6"/><path d="M4.5 20.5c1.2-3.8 4-5.7 7.5-5.7s6.3 1.9 7.5 5.7"/></svg></div>
         <h3>3 · Ручной аудит</h3>
         <p>Тарифы Pro и Partner. Разбор специалистом: логика доступа, бизнес-логика, повторная проверка после исправлений.</p>
       </div>
     </div>
   </div>
 </div>
+
 
 <!-- ===== TEAM ===== -->
 <section class="section section-alt" id="team">
@@ -288,68 +349,13 @@
 </section>
 
 
-<!-- ===== PLATFORM (simplified) ===== -->
-<section class="section section-dark" id="platform">
-  <div class="wrap">
-    <p class="eyebrow reveal" style="color:#30b0c7">Платформа</p>
-    <h2 class="headline reveal">Виден путь,<br>а не список уроков.</h2>
-    <p class="sub reveal" style="margin-top:22px;max-width:700px">Кабинет показывает одну вещь: где вы на пути к работающему продукту. Персонаж собирается из вашего фото и идёт по карте от станции к станции, забирая на каждой инструмент. В конце пути — дверь MVP.</p>
-
-    <div class="live-demo reveal">
-      <div class="ld-frame">
-        <canvas id="ldCanvas"></canvas>
-        <div class="ld-hud">
-          <span class="ld-chip ld-chip-station" id="ldStation">Станция 1 из 9 · Диагностика и окружение</span>
-        </div>
-        <div class="ld-float" id="ldFloat"></div>
-      </div>
-      <p class="ld-note">Это не видео — живой движок кабинета. Так выглядит ваш путь внутри: отметил задачу → персонаж дошёл до вехи → станция закрыта, инструмент собран.</p>
-    </div>
-
-        <div class="vibe-strip reveal" style="margin-top:40px">
-      <div>
-        <b>🎮 Вайб-чек: проверьте себя за две минуты</b>
-        <span>10 ситуаций из реальной работы с Claude Code — без регистрации. Кто вы: зритель, приёмщик или капитан вайб-кода?</span>
-      </div>
-      <a class="btn btn-primary" href="vibe-check.html">Играть</a>
-    </div>
-
-    <div style="margin-top:56px">
-    <div class="proj-grid">
-          <div class="proj-card reveal">
-            <span class="p-tag">Платформа программы</span>
-            <h4>TAULAU</h4>
-            <p>Карта пути с девятью станциями, контрольные точки и чек-лист безопасности. Бэкенд без внешних зависимостей — тот же принцип, что мы требуем от участников: понятный код, который можно проверить.</p>
-            <div class="p-stack">Node.js · SQLite · zero-dependency</div>
-          </div>
-          <div class="proj-card reveal">
-            <span class="p-tag">Заготовки программы</span>
-            <h4>Библиотека модулей</h4>
-            <p>Авторизация, база с миграциями, интеграции, инфраструктура с автодеплоем и юридический пакет — собраны и обкатаны заранее, чтобы участник не писал обвязку с нуля.</p>
-            <div class="p-stack">шаблоны · CI/CD · чек-листы</div>
-          </div>
-          <!-- Кейсы участников: добавлять сюда после защиты первого потока.
-               Только проекты, собранные внутри программы. -->
-          <div class="proj-card reveal">
-            <span class="p-tag">Скоро</span>
-            <h4>Проекты первого потока</h4>
-            <p>Здесь появятся продукты участников: что за проблема, что подтвердилось на практике, что работает в проде и на каких цифрах. Публикуем после защиты и только с согласия автора.</p>
-            <div class="p-stack">витрина выпускников</div>
-          </div>
-        </div>
-    </div>
-    <div class="center" style="padding:44px 0 0">
-      <a class="btn btn-primary btn-lg reveal" href="app.html">Открыть платформу</a>
-    </div>
-  </div>
-</section>
 
 <!-- ===== ECONOMICS ===== -->
 <section class="section">
   <div class="wrap-narrow center">
     <p class="eyebrow reveal">Экономика</p>
     <h2 class="headline reveal">Дешевле команды.<br>Не «дешевле курсов».</h2>
-    <p class="sub reveal" style="margin-top:22px">Техлид, два разработчика, DevOps, дизайнер, аудит безопасности и юристы на полгода — это десятки миллионов тенге и наём, который нужно содержать дальше. Мы даём ту же функцию подпиской на время потока.</p>
+    <p class="sub reveal" style="margin-top:22px">Техлид, два разработчика, DevOps, дизайнер, аудит безопасности и юристы на полгода — это десятки миллионов тенге и наём, который нужно содержать дальше. Вы получаете ту же функцию подпиской на время потока.</p>
     <div class="grid grid-2" style="margin-top:52px;text-align:left">
       <div class="card reveal">
         <h3>Наём своей команды</h3>
@@ -371,7 +377,7 @@
     <div class="pricing">
       <div class="price-card reveal">
         <h3>Solo</h3>
-        <p class="who">Процесс и эксперты рядом — собираю сам</p>
+        <p class="who">Вы собираете сами — процесс и эксперты рядом</p>
         <div class="amount">290 000 ₸<small> / месяц</small></div>
         <ul>
           <li><span class="tick">✓</span>Материалы платформы и шаблоны</li>
@@ -382,12 +388,12 @@
           <li><span class="tick">✓</span>Инфраструктура — по шаблону с экспертами</li>
           <li><span class="tick">✓</span>Участие в Demo Day</li>
         </ul>
-        <a class="btn btn-ghost" href="#apply" data-tariff="Solo">Подать заявку</a>
+        <a class="btn btn-ghost" href="#apply" data-tariff="Solo">Занять место на Solo</a>
       </div>
       <div class="price-card featured reveal">
         <span class="price-badge">Популярный выбор</span>
         <h3>Pro</h3>
-        <p class="who">Нужна команда рядом с проектом</p>
+        <p class="who">Вам нужна команда рядом с проектом</p>
         <div class="amount">590 000 ₸<small> / месяц</small></div>
         <ul>
           <li><span class="tick">✓</span>Всё из Solo</li>
@@ -397,11 +403,11 @@
           <li><span class="tick">✓</span>Настройка инфраструктуры и полный аудит экспертами</li>
           <li><span class="tick">✓</span>Участие в Demo Day</li>
         </ul>
-        <a class="btn btn-primary" href="#apply" data-tariff="Pro">Подать заявку</a>
+        <a class="btn btn-primary" href="#apply" data-tariff="Pro">Занять место на Pro</a>
       </div>
       <div class="price-card reveal">
         <h3>Partner</h3>
-        <p class="who">Нужна команда, которая заберёт разработку</p>
+        <p class="who">Вам нужна команда, которая заберёт разработку</p>
         <div class="amount">По договорённости<small> · по приглашению</small></div>
         <ul>
           <li><span class="tick">✓</span>Всё из Pro</li>
@@ -477,7 +483,7 @@
           <input id="afContact" name="contact" type="text" placeholder="you@mail.kz или @nickname" required>
         </div>
         <div class="field">
-          <label for="afCity">Город</label>
+          <label for="afCity">Город <span style="font-weight:400">— по желанию</span></label>
           <input id="afCity" name="city" type="text" placeholder="Астана">
         </div>
         <div class="field">
@@ -514,7 +520,7 @@
       <!-- ловушка для ботов: человек это поле не видит и не заполняет -->
       <input class="hp" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
 
-      <button class="btn btn-primary btn-lg" type="submit" id="afSubmit">Отправить заявку</button>
+      <button class="btn btn-primary btn-lg" type="submit" id="afSubmit">Обсудить мой продукт</button>
       <p class="apply-note" id="afNote">Права на продукт остаются у вас. Заявку читает человек, а не робот.</p>
     </form>
 
@@ -525,11 +531,10 @@
 <!-- ===== FINAL CTA ===== -->
 <section class="section section-alt center">
   <div class="wrap-narrow">
-    <h2 class="headline reveal">Мы продаём не обучение<br>и не разработку.</h2>
-    <p class="sub reveal" style="margin-top:20px">Мы продаём путь, за который идея становится продуктом в руках клиента.</p>
+    <h2 class="headline reveal">Это не обучение<br>и не разработка на заказ.</h2>
+    <p class="sub reveal" style="margin-top:20px">Это путь, за который ваша идея становится продуктом в руках вашего клиента.</p>
     <div class="hero-cta reveal">
-      <a class="btn btn-primary btn-lg" href="#apply">Подать заявку</a>
-      <a class="btn btn-dark btn-lg" href="app.html">Посмотреть платформу</a>
+      <a class="btn btn-primary btn-lg" href="#apply">Занять место в потоке</a>
     </div>
   </div>
 </section>
@@ -541,8 +546,8 @@
   </div>
 </footer>
 
-<script src="assets/game.js?v=11"></script>
-<script src="assets/demo.js?v=11"></script>
+<script src="assets/game.js?v=12"></script>
+<script src="assets/demo.js?v=12"></script>
 <script>
   const io = new IntersectionObserver(entries => {
     entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
