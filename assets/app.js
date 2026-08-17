@@ -695,8 +695,15 @@ function refreshChrome() {
 
 let activeView = "map";
 
+/* Социальные разделы потока: скрыты, пока в config.js SHIPYARD_FLOW_UI не true.
+   Прячем и пункты меню, и прямые ссылки #flow/#league — редирект на карту. */
+const FLOW_UI = window.SHIPYARD_FLOW_UI === true;
+const FLOW_VIEWS = new Set(["flow", "demos", "league", "battles"]);
+if (!FLOW_UI) { const g = document.getElementById("flowGroup"); if (g) g.remove(); }
+
 async function go(name) {
   if (API !== null && !TOKEN) name = "auth";
+  if (!FLOW_UI && FLOW_VIEWS.has(name)) name = "map";
   if (activeView !== name) S.kbDoc = null;   // переход по разделам закрывает открытый материал
   if (name !== "battles") { BATTLE.play = null; BATTLE.review = null; }
   activeView = name;
@@ -707,7 +714,7 @@ async function go(name) {
     if (API !== null && TOKEN) {
       if (name === "demos" && !CACHE.demos) CACHE.demos = (await apiCall("/demos")).demos;
       if (name === "league") CACHE.league = (await apiCall("/league")).rows;
-      if (name === "flow" || name === "map") CACHE.flow = (await apiCall("/flow")).rows;
+      if (FLOW_UI && (name === "flow" || name === "map")) CACHE.flow = (await apiCall("/flow")).rows;
       if (name === "map" && !CACHE.lottery) CACHE.lottery = await apiCall("/lottery");
       if (name === "battles" && !CACHE.battles) CACHE.battles = await apiCall("/battles");
     }
@@ -934,12 +941,12 @@ const VIEWS = {
           </div>` : ""}
       </div>
 
-      <div class="panel">
+      ${FLOW_UI ? `<div class="panel">
         <h2>Кто ещё идёт рядом</h2>
         <p class="muted" style="margin-bottom:14px">Позиции участников потока на этой же карте. Подробности — в разделе «Кто где идёт».</p>
         ${flowRows().slice(0, 5).map(r => flowRow(r)).join("")}
         <button class="btn btn-ghost btn-sm" data-go="flow" style="margin-top:12px">Весь поток</button>
-      </div>`;
+      </div>` : ""}`;
   },
 
   /* ---- скрининг сложности ---- */
@@ -1677,8 +1684,8 @@ function mountMap() {
     gatePassed: cpPassed(st),
     doorOpen: doorOpen(),
     avatar: myAvatar(),
-    // соседи, находящиеся на этой же карте, идут рядом по дороге
-    peers: flowRows().filter(r => !r.me && r.station === sel)
+    // соседи, находящиеся на этой же карте, идут рядом по дороге (пока поток скрыт — не показываем)
+    peers: !FLOW_UI ? [] : flowRows().filter(r => !r.me && r.station === sel)
       .map(r => ({ avatar: r.avatar, frac: Math.max(0, Math.min(1, (r.walk || 0) * 9 - sel)) })),
   });
   if (lastScene && lastScene.idx === sel) mapInstance.charX = lastScene.x;
