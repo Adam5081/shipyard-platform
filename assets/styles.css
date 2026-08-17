@@ -248,20 +248,24 @@ button { font-family: inherit; cursor: pointer; }
 
 .stat span { color: var(--ink-2); font-size: 15px; }
 
-/* статы-кнопки: подсветка при наведении, синяя заливка у открытой */
+/* лента программы: пять кнопок одним цветом, читаются как единый поток */
+.stats { background: rgba(0,113,227,.18); border-top: 1px solid rgba(0,113,227,.25); border-bottom: 0; }
 button.stat { border: 0; font: inherit; cursor: pointer; position: relative;
+  background: #e9f2fc;
   transition: background .22s ease, transform .12s ease; }
-button.stat b { font-size: clamp(24px, 2.9vw, 36px); overflow-wrap: anywhere; }
-button.stat:hover { background: rgba(0,113,227,.07); }
-button.stat:hover b { color: var(--accent); }
+button.stat b { font-size: clamp(19px, 2.1vw, 27px); color: var(--accent); }
+button.stat:hover { background: #d8e9fa; }
 button.stat:active { transform: scale(.985); }
-.stat-arrow { display: block; font-style: normal; color: var(--ink-3); font-size: 15px;
-  margin-top: 8px; transition: transform .25s ease, color .2s ease; }
-button.stat:hover .stat-arrow { color: var(--accent); }
+.stat-arrow { display: block; font-style: normal; color: var(--accent); font-size: 17px;
+  font-weight: 700; margin-top: 8px; transition: transform .25s ease, color .2s ease; }
 button.stat.active { background: linear-gradient(135deg, var(--accent), #30b0c7); }
 button.stat.active b, button.stat.active span { color: #fff; }
 button.stat.active span { opacity: .85; }
 button.stat.active .stat-arrow { color: #fff; transform: rotate(180deg); }
+
+/* легенда: что означает синяя лента */
+.stats-legend { text-align: center; padding: 13px 22px; font-size: 13.5px; color: var(--ink-2);
+  background: var(--bg); border-bottom: 1px solid var(--line); }
 
 /* раскрывающиеся панели под статами */
 .stat-panel { display: none; padding: 72px 22px; }

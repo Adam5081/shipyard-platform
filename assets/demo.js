@@ -1,8 +1,8 @@
 /* ============================================================
    Taulau — живая демо-сцена кабинета на лендинге.
    Настоящий движок карты (game.js): при прокрутке к секции персонаж
-   сам начинает проходить станции — идёт от вехи к вехе, выбивает
-   очки, закрывает станции и забирает инструменты. Не видео.
+   сам начинает проходить станции — идёт от вехи к вехе,
+   закрывает станции и забирает инструменты. Не видео.
    ============================================================ */
 
 (() => {
@@ -30,11 +30,10 @@ const TOTAL = 5;                      // задач на станцию в де�
 const avatar = G.PixelAvatar.generated("Основатель Демо");
 const scene = new G.StationScene(cv);
 
-const elScore = document.getElementById("ldScore");
 const elStation = document.getElementById("ldStation");
 const elFloat = document.getElementById("ldFloat");
 
-let station = 0, done = 0, score = 0, timer = null;
+let station = 0, done = 0, timer = null;
 
 function apply() {
   scene.set({
@@ -53,12 +52,7 @@ function apply() {
   if (elStation) elStation.textContent = `Станция ${station + 1} из 9 · ${STATIONS[station].title}`;
 }
 
-function setScore(v) {
-  score = v;
-  if (elScore) elScore.textContent = String(score);
-}
-
-/* всплывающие «+очки» над вехой, к которой идёт персонаж */
+/* всплывающие подсказки над вехой, к которой идёт персонаж */
 function floatPts(text, cls) {
   if (!elFloat) return;
   const d = document.createElement("span");
@@ -72,25 +66,18 @@ function floatPts(text, cls) {
 function tick() {
   if (done < TOTAL) {
     done++;
-    if (done >= TOTAL) {
-      setScore(score + 100);
-      floatPts("+100 · станция закрыта", "big");
-      if (station % 3 === 1) setTimeout(() => floatPts("⬆️ Навык: Вайб-кодинг", "skill"), 700);
-    } else {
-      setScore(score + 20);
-      floatPts("+20 очков");
-    }
+    if (done >= TOTAL) floatPts("🚩 Станция закрыта — инструмент собран", "big");
+    else floatPts("✓ Задача закрыта");
   } else {
     station = (station + 1) % 9;
     done = 0;
-    if (station === 0) setScore(0);  // цикл прошёл — начинаем путь заново
   }
   apply();
 }
 
 function start() {
   if (timer) return;
-  station = 0; done = 0; setScore(0);
+  station = 0; done = 0;
   apply();
   scene.charX = 26;                   // персонаж каждый раз проходит путь с нуля
   scene.vx = 0;
