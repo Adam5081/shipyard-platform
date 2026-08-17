@@ -248,6 +248,27 @@ button { font-family: inherit; cursor: pointer; }
 
 .stat span { color: var(--ink-2); font-size: 15px; }
 
+/* статы-кнопки: подсветка при наведении, синяя заливка у открытой */
+button.stat { border: 0; font: inherit; cursor: pointer; position: relative;
+  transition: background .22s ease, transform .12s ease; }
+button.stat b { font-size: clamp(24px, 2.9vw, 36px); overflow-wrap: anywhere; }
+button.stat:hover { background: rgba(0,113,227,.07); }
+button.stat:hover b { color: var(--accent); }
+button.stat:active { transform: scale(.985); }
+.stat-arrow { display: block; font-style: normal; color: var(--ink-3); font-size: 15px;
+  margin-top: 8px; transition: transform .25s ease, color .2s ease; }
+button.stat:hover .stat-arrow { color: var(--accent); }
+button.stat.active { background: linear-gradient(135deg, var(--accent), #30b0c7); }
+button.stat.active b, button.stat.active span { color: #fff; }
+button.stat.active span { opacity: .85; }
+button.stat.active .stat-arrow { color: #fff; transform: rotate(180deg); }
+
+/* раскрывающиеся панели под статами */
+.stat-panel { display: none; padding: 72px 22px; }
+.stat-panel.open { display: block; animation: panel-in .35s ease; }
+@keyframes panel-in { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+.stat-panel .reveal { opacity: 1; transform: none; }
+
 /* cards */
 
 .grid { display: grid; gap: 20px; }

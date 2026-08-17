@@ -6,8 +6,8 @@
 <title>Taulau — от идеи до продукта, который работает у клиента</title>
 <meta name="description" content="Программа для отраслевых экспертов: вы собираете продукт сами — с Claude Code, производственным пайплайном и экспертами отрасли рядом. Контрольные точки, безопасность, вывод в рабочую среду.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230071e3'/><path d='M27 34h46M50 34v32q0 13 13 13 7 0 10-6' stroke='white' stroke-width='11' fill='none' stroke-linecap='round'/></svg>">
-<link rel="stylesheet" href="assets/styles.css?v=9">
-<script src="assets/config.js?v=9"></script>
+<link rel="stylesheet" href="assets/styles.css?v=10">
+<script src="assets/config.js?v=10"></script>
 </head>
 <body>
 
@@ -36,65 +36,46 @@
       <a class="btn btn-primary btn-lg btn-breathe" href="#apply">Подать заявку на поток</a>
       <a class="btn btn-ghost btn-lg" href="app.html">Посмотреть платформу</a>
     </div>
-    <p class="hero-note reveal">Подписка вместо найма команды · Права на продукт остаются у вас</p>
+    <p class="hero-note reveal">Подписка вместо найма команды. Права на код, дизайн и данные остаются у вас: <u class="nda-note">мы подписываем NDA на ваш продукт</u> — идея и наработки защищены договором с первого дня, программа не получает ни доли, ни прав.</p>
+
+    <div class="vibe-strip reveal" style="margin-top:40px">
+      <div>
+        <b>🎮 Вайб-чек: проверьте себя за две минуты</b>
+        <span>10 ситуаций из реальной работы с Claude Code — без регистрации. Кто вы: зритель, приёмщик или капитан вайб-кода?</span>
+      </div>
+      <a class="btn btn-primary" href="vibe-check.html">Играть</a>
+    </div>
   </div>
 </header>
 
-<!-- ===== STATS ===== -->
+<!-- ===== STATS: интерактивные карточки, раскрывают разделы под собой ===== -->
 <div class="stats">
-  <div class="stat reveal"><b>Один поток</b><span>два месяца работы над своим продуктом</span></div>
-  <div class="stat reveal"><b>5 точек</b><span>контрольных, с проверяемым артефактом</span></div>
-  <div class="stat reveal"><b>6 направлений</b><span>экспертизы отрасли в одном контуре</span></div>
-  <div class="stat reveal"><b>Demo Day</b><span>защита проекта перед экспертами</span></div>
+  <button class="stat reveal" data-stat="s1"><b>Один поток</b><span>до двух месяцев работы над продуктом — срок зависит от сложности проекта</span><i class="stat-arrow">⌄</i></button>
+  <button class="stat reveal" data-stat="s2"><b>Путь проекта</b><span>девять станций и пять контрольных точек с проверяемым артефактом</span><i class="stat-arrow">⌄</i></button>
+  <button class="stat reveal" data-stat="s3"><b>6 направлений</b><span>экспертизы отрасли в одном контуре</span><i class="stat-arrow">⌄</i></button>
+  <button class="stat reveal" data-stat="s4"><b>Demo Day</b><span>защита проекта перед экспертами</span><i class="stat-arrow">⌄</i></button>
 </div>
 
-<!-- ===== PROBLEM ===== -->
-<section class="section">
+<!-- ===== ПАНЕЛИ СТАТОВ ===== -->
+<div class="stat-panel section-dark" data-panel="s1">
   <div class="wrap">
-    <p class="eyebrow reveal">Проблема</p>
-    <h2 class="headline reveal">Узкое место — не руки.<br>А процесс.</h2>
-    <p class="sub reveal" style="max-width:760px;margin-top:22px">То, что требовало команды из пяти человек и полугода, сегодня собирает один подготовленный человек. Но инструмент без процесса даёт прототип, который нельзя показать клиенту. Провал между «идеей в голове» и работающим продуктом закрывает не скорость рук, а процесс.</p>
-    <div class="grid grid-3" style="margin-top:56px">
-      <div class="card reveal">
-        <div class="icon">🩺</div>
-        <h3>Отраслевой эксперт</h3>
-        <p>Медицина, логистика, финансы, право. Глубоко понимает боль рынка и имеет доступ к первым клиентам — но не знает, с чего начать технически.</p>
-      </div>
-      <div class="card reveal">
-        <div class="icon">💼</div>
-        <h3>Менеджер среднего звена</h3>
-        <p>Банк, телеком, ритейл. Насмотренность, связи, бюджет на эксперимент — но нет команды и права использовать ресурс работодателя.</p>
-      </div>
-      <div class="card reveal">
-        <div class="icon">🏪</div>
-        <h3>Владелец бизнеса</h3>
-        <p>Реальные процессы, которые нужно автоматизировать. Оценки подрядчиков кажутся неподъёмными и непрозрачными.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ===== POSITIONING (dark) ===== -->
-<section class="section section-dark">
-  <div class="wrap">
-    <p class="eyebrow reveal" style="color:#30b0c7">Позиционирование</p>
-    <h2 class="headline reveal">Это не курс.<br>Это ваша команда на время потока.</h2>
-    <p class="sub reveal" style="margin-top:22px;max-width:720px">Вместо найма команды на полгода вы берёте подписку на процесс, инструменты и экспертов отрасли — и собираете продукт сами.</p>
+    <p class="eyebrow" style="color:#30b0c7">Позиционирование</p>
+    <h2 class="headline">Это не курс.<br>Это ваша команда на время потока.</h2>
+    <p class="sub" style="margin-top:22px;max-width:720px">Один поток — до двух месяцев работы над вашим продуктом, срок зависит от сложности проекта. Вместо найма команды на полгода вы берёте подписку на процесс, инструменты и экспертов отрасли — и собираете продукт сами.</p>
     <div class="compare">
-      <div class="compare-cell compare-no reveal">«Курс по AI-разработке»</div>
-      <div class="compare-cell compare-yes reveal"><b>Ваша команда</b> на время потока</div>
-      <div class="compare-cell compare-no reveal">«Вы научитесь программировать»</div>
-      <div class="compare-cell compare-yes reveal">Вы <b>выпустите продукт</b> и научитесь собирать следующий через Claude Code</div>
-      <div class="compare-cell compare-no reveal">«Модули, уроки, домашние задания»</div>
-      <div class="compare-cell compare-yes reveal"><b>Спринты, релизы, демо</b>, первые клиенты</div>
-      <div class="compare-cell compare-no reveal">«Сертификат об окончании»</div>
-      <div class="compare-cell compare-yes reveal"><b>Ссылка на работающий продукт</b> и отчёт по безопасности</div>
+      <div class="compare-cell compare-no">«Курс по AI-разработке»</div>
+      <div class="compare-cell compare-yes"><b>Ваша команда</b> на время потока</div>
+      <div class="compare-cell compare-no">«Вы научитесь программировать»</div>
+      <div class="compare-cell compare-yes">Вы <b>выпустите продукт</b> и научитесь собирать следующий через Claude Code</div>
+      <div class="compare-cell compare-no">«Модули, уроки, домашние задания»</div>
+      <div class="compare-cell compare-yes"><b>Спринты, релизы, демо</b>, первые клиенты</div>
+      <div class="compare-cell compare-no">«Сертификат об окончании»</div>
+      <div class="compare-cell compare-yes"><b>Ссылка на работающий продукт</b> и отчёт по безопасности</div>
     </div>
   </div>
-</section>
+</div>
 
-<!-- ===== PROGRAM (accordion) ===== -->
-<section class="section" id="program">
+<div class="stat-panel" data-panel="s2" id="program">
   <div class="wrap">
     <p class="eyebrow reveal">Путь проекта</p>
     <h2 class="headline reveal">Девять станций.<br>Пять контрольных точек.</h2>
@@ -205,19 +186,10 @@
       </details>
       <div class="cp-chip reveal">Контрольная точка 5 — продукт используется вне вашей команды</div>
     </div>
-
-    <div class="vibe-strip reveal">
-      <div>
-        <b>🎮 Вайб-чек: проверьте себя за две минуты</b>
-        <span>10 ситуаций из реальной работы с Claude Code — без регистрации. Кто вы: зритель, приёмщик или капитан вайб-кода?</span>
-      </div>
-      <a class="btn btn-primary" href="vibe-check.html">Играть</a>
-    </div>
   </div>
-</section>
+</div>
 
-<!-- ===== 6 DIRECTIONS ===== -->
-<section class="section section-alt" id="directions">
+<div class="stat-panel section-alt" data-panel="s3" id="directions">
   <div class="wrap">
     <p class="eyebrow reveal">Сервисный пул</p>
     <h2 class="headline reveal">Шесть направлений<br>в одном контуре.</h2>
@@ -254,22 +226,45 @@
         <small>станции 7–8 · сессии + разборы</small>
       </div>
     </div>
+  </div>
+</div>
 
-    <p class="eyebrow reveal" style="margin-top:70px">Анкета эксперта</p>
-    <h2 class="headline reveal" style="font-size:clamp(26px,3.2vw,38px)">Кого мы берём в пул.</h2>
-    <p class="sub reveal" style="margin-top:18px;max-width:720px">Эксперты проходят такой же отбор, как участники. Анкета публичная — вы заранее видите, кто будет разбирать ваш проект.</p>
-    <div class="grid grid-2" style="margin-top:34px;text-align:left">
+<div class="stat-panel section-dark" data-panel="s4">
+  <div class="wrap-narrow center">
+    <p class="eyebrow" style="color:#30b0c7">Финал</p>
+    <h2 class="headline">Demo Day.<br>Не сертификат — разбор.</h2>
+    <p class="sub" style="margin-top:22px">Защита проекта перед экспертами: 5 минут разбора и 3 минуты вопросов перед практиками вашего рынка. Оценка по четырём осям: проблема, решение, результат, план развития. Письменная обратная связь каждому — не аплодисменты, а профессиональный разбор.</p>
+  </div>
+</div>
+
+<!-- ===== PROBLEM ===== -->
+<section class="section">
+  <div class="wrap">
+    <p class="eyebrow reveal">Проблема</p>
+    <h2 class="headline reveal">Узкое место — не руки.<br>А процесс.</h2>
+    <p class="sub reveal" style="max-width:760px;margin-top:22px">То, что требовало команды из пяти человек и полугода, сегодня собирает один подготовленный человек. Но инструмент без процесса даёт прототип, который нельзя показать клиенту. Провал между «идеей в голове» и работающим продуктом закрывает не скорость рук, а процесс.</p>
+    <div class="grid grid-3" style="margin-top:56px">
       <div class="card reveal">
-        <h3>Что мы спрашиваем</h3>
-        <p style="margin-top:12px">Направление и глубина практики<br>Продукты, которые выпустил сам<br>Отрасли, в которых работал<br>Сколько проектов ведёт одновременно</p>
+        <div class="icon">🩺</div>
+        <h3>Отраслевой эксперт</h3>
+        <p>Медицина, логистика, финансы, право. Глубоко понимает боль рынка и имеет доступ к первым клиентам — но не знает, с чего начать технически.</p>
       </div>
       <div class="card reveal">
-        <h3>Что фиксируем в договоре</h3>
-        <p style="margin-top:12px">Конфиденциальность по вашему проекту<br>Отсутствие прав на ваш код и данные<br>Обратная связь письменно, а не «на созвоне»</p>
+        <div class="icon">💼</div>
+        <h3>Менеджер среднего звена</h3>
+        <p>Банк, телеком, ритейл. Насмотренность, связи, бюджет на эксперимент — но нет команды и права использовать ресурс работодателя.</p>
+      </div>
+      <div class="card reveal">
+        <div class="icon">🏪</div>
+        <h3>Владелец бизнеса</h3>
+        <p>Реальные процессы, которые нужно автоматизировать. Оценки подрядчиков кажутся неподъёмными и непрозрачными.</p>
       </div>
     </div>
   </div>
 </section>
+
+
+
 
 <!-- ===== OUR PROJECTS ===== -->
 <section class="section" id="projects">
@@ -474,14 +469,6 @@
   </div>
 </section>
 
-<!-- ===== DEMO DAY ===== -->
-<section class="section section-dark">
-  <div class="wrap-narrow center">
-    <p class="eyebrow reveal" style="color:#30b0c7">Финал</p>
-    <h2 class="headline reveal">Demo Day.<br>Не сертификат — разбор.</h2>
-    <p class="sub reveal" style="margin-top:22px">5 минут разбора и 3 минуты вопросов перед практиками вашего рынка. Оценка по четырём осям: проблема, решение, результат, план развития. Письменная обратная связь каждому — не аплодисменты, а профессиональный разбор.</p>
-  </div>
-</section>
 
 <!-- ===== FAQ ===== -->
 <section class="section" id="faq">
@@ -606,8 +593,8 @@
   </div>
 </footer>
 
-<script src="assets/game.js?v=9"></script>
-<script src="assets/demo.js?v=9"></script>
+<script src="assets/game.js?v=10"></script>
+<script src="assets/demo.js?v=10"></script>
 <script>
   const io = new IntersectionObserver(entries => {
     entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
@@ -619,6 +606,28 @@
   acc.forEach(d => d.addEventListener('toggle', () => {
     if (d.open) acc.forEach(o => { if (o !== d) o.open = false; });
   }));
+
+  /* статы-кнопки: клик подсвечивает синим и раскрывает раздел под полосой */
+  const statBtns = document.querySelectorAll('button.stat[data-stat]');
+  const statPanels = document.querySelectorAll('.stat-panel');
+  let statCur = null;
+  function openStat(key, scroll) {
+    statCur = key === statCur ? null : key;
+    statBtns.forEach(b => b.classList.toggle('active', b.dataset.stat === statCur));
+    statPanels.forEach(p => p.classList.toggle('open', p.dataset.panel === statCur));
+    if (statCur && scroll) {
+      const p = document.querySelector(`.stat-panel[data-panel="${statCur}"]`);
+      if (p) setTimeout(() => p.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+    }
+  }
+  statBtns.forEach(b => b.addEventListener('click', () => openStat(b.dataset.stat, true)));
+  /* ссылки меню «Путь» и «Направления» ведут в панели — открываем их по якорю */
+  function openByHash() {
+    const el = document.getElementById(location.hash.slice(1));
+    if (el && el.classList.contains('stat-panel')) openStat(el.dataset.panel, true);
+  }
+  window.addEventListener('hashchange', openByHash);
+  openByHash();
 
   /* ---------- форма заявки ---------- */
 
