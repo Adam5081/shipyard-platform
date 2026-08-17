@@ -390,6 +390,19 @@ const lumOf = css => {
   return m ? 0.299 * m[1] + 0.587 * m[2] + 0.114 * m[3] : 128;
 };
 
+/* сегмент конечности: рисуется от точки-сустава вниз под углом a
+   (0 — вертикально, положительный — вперёд по ходу), возвращает
+   координаты следующего сустава. На этом собраны ноги и руки персонажа. */
+function limbSeg(ctx, px, py, a, len, w, col) {
+  ctx.save();
+  ctx.translate(px, py);
+  ctx.rotate(-a);
+  ctx.fillStyle = col;
+  ctx.fillRect(-w / 2, 0, w, len);
+  ctx.restore();
+  return [px + Math.sin(a) * len, py + Math.cos(a) * len];
+}
+
 /* ---------------- сцены станций ----------------
    Каждый этап — отдельная карта: фон на весь кадр, время суток движется
    от рассвета (станция 0) к ночи (станция 8), персонаж идёт по дороге
@@ -580,7 +593,7 @@ class StationScene {
 
     // фаза шага пропорциональна пути; на каждом касании ноги — облачко пыли
     const sp = Math.abs(this.vx);
-    this.ph += sp * 0.55;
+    this.ph += sp * 0.3;
     if (sp > 0.5 && Math.floor(this.ph / Math.PI) !== this.lastStep) {
       this.lastStep = Math.floor(this.ph / Math.PI);
       for (let k = 0; k < 3; k++)
@@ -908,13 +921,11 @@ class StationScene {
     const ground = ROAD + 10;
     const sp = Math.abs(this.vx);
     const moving = sp > 0.05;
-    const swing = moving ? Math.sin(this.ph) : 0;        // маятник ног −1..1
-    const stride = Math.round(swing * 4);                // вынос ног в пикселях
-    const lift = moving ? Math.max(0, Math.sin(this.ph)) * 2 : 0;         // перенос левой
-    const lift2 = moving ? Math.max(0, -Math.sin(this.ph)) * 2 : 0;       // перенос правой
-    const bob = moving ? -Math.round(Math.abs(Math.cos(this.ph)) * 2 * Math.min(1, sp))
+    const walk = moving ? Math.min(1, sp) : 0;           // амплитуда цикла ходьбы
+    const dir = this.vx >= 0 ? 1 : -1;                   // куда идём
+    const bob = moving ? -Math.round(Math.abs(Math.cos(this.ph)) * 2 * walk)
                        : Math.round(Math.sin(this.t * 1.6));              // дыхание на месте
-    const lean = Math.round(this.vx * 2);                // наклон корпуса по ходу движения
+    const lean = Math.round(dir * 2 * walk);             // наклон корпуса по ходу движения
     const feet = ground + bob;
 
     const col = spriteColors(this.data.avatar) ||
@@ -933,15 +944,20 @@ class StationScene {
     ctx.fillStyle = "rgba(0,0,0,.18)";
     ctx.fillRect(x - 14 + bob, ground + 1, 29 + bob * 2, 3);
 
-    // ноги: бедро + голень, ступня приподнимается при переносе
-    ctx.fillStyle = trousers;
-    ctx.fillRect(x - 7 + Math.round(stride * 0.5), feet - 28, 6, 14);     // бёдра
-    ctx.fillRect(x + 1 - Math.round(stride * 0.5), feet - 28, 6, 14);
-    ctx.fillRect(x - 7 + stride, feet - 15 - Math.round(lift), 6, 15);    // голени
-    ctx.fillRect(x + 1 - stride, feet - 15 - Math.round(lift2), 6, 15);
-    ctx.fillStyle = "#1d1d1f";                                            // ботинки
-    ctx.fillRect(x - 9 + stride, feet - 3 - Math.round(lift), 9, 3);
-    ctx.fillRect(x - 1 - stride, feet - 3 - Math.round(lift2), 9, 3);
+    /* ноги как в файтинге: бедро и голень вращаются вокруг суставов.
+       Бедро качается синусом, колено сгибается на переносе ноги вперёд,
+       ступня отрывается от земли только в фазе переноса. */
+    for (let leg = 0; leg < 2; leg++) {
+      const p = this.ph + leg * Math.PI;                 // ноги в противофазе
+      const hipA = Math.sin(p) * 0.5 * walk * dir;       // мах бедра
+      const swingF = Math.max(0, Math.cos(p));           // 1 = нога переносится вперёд
+      const kneeB = walk * (0.06 + swingF * 0.6);        // сгиб колена
+      const hipX = x + (leg ? 3 : -3);
+      const [kx, ky] = limbSeg(ctx, hipX, feet - 28, hipA, 14, 6, trousers);
+      const [fx, fy] = limbSeg(ctx, kx, ky, hipA - kneeB * dir, 14, 5, trousers);
+      ctx.fillStyle = "#1d1d1f";                         // ботинок, носок по ходу движения
+      ctx.fillRect(Math.round(fx) - 4 + (dir > 0 ? 1 : -2), Math.round(fy) - 3, 8, 3);
+    }
 
     // торс: пиджак с плечами, рубашка, галстук, ремень; наклон вперёд на ходу
     const tx = x + lean;
@@ -957,16 +973,18 @@ class StationScene {
     ctx.fillRect(tx + 4, feet - 50, 1, 9);
     ctx.fillRect(tx - 9, feet - 29, 18, 2);
 
-    // руки в противофазе с ногами, локоть чуть согнут
-    const arm = moving ? Math.round(-swing * 3) : 0;
-    ctx.fillStyle = col.jacket;
-    ctx.fillRect(tx - 14, feet - 48, 4, 14);             // плечо до локтя
-    ctx.fillRect(tx + 10, feet - 48, 4, 14);
-    ctx.fillRect(tx - 14 + Math.round(arm * 0.7), feet - 35, 4, 8);       // предплечья
-    ctx.fillRect(tx + 10 - Math.round(arm * 0.7), feet - 35, 4, 8);
-    ctx.fillStyle = col.skin;                            // кисти
-    ctx.fillRect(tx - 14 + arm, feet - 28, 4, 3);
-    ctx.fillRect(tx + 10 - arm, feet - 28, 4, 3);
+    /* руки: плечо и предплечье на суставах, в противофазе со своей ногой,
+       локоть всегда подсогнут — стойка бойца, а не висящие палки */
+    for (let armI = 0; armI < 2; armI++) {
+      const p = this.ph + (armI ? Math.PI : 0) + Math.PI; // рука против своей ноги
+      const shA = Math.sin(p) * 0.35 * walk * dir;
+      const elbow = 0.3 + Math.max(0, Math.sin(p) * dir) * 0.35;   // сгиб локтя вперёд
+      const sx = tx + (armI ? 12 : -12);
+      const [ex, ey] = limbSeg(ctx, sx, feet - 47, shA, 11, 5, col.jacket);
+      const [hx, hy] = limbSeg(ctx, ex, ey, shA + elbow * dir, 9, 4, col.jacket);
+      ctx.fillStyle = col.skin;                          // кисть
+      ctx.fillRect(Math.round(hx) - 2, Math.round(hy) - 1, 4, 4);
+    }
 
     // шея и голова из аватара; голова наклоняется вместе с корпусом
     ctx.fillStyle = col.skin;
