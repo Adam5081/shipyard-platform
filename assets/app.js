@@ -1661,9 +1661,14 @@ function mountMap() {
   const frac = stationDone(st) ? 1 : st.tasks.filter(t => S.done[t.id]).length / st.tasks.length;
 
   mapInstance = new GAME.StationScene(cv);
+  // счётчик задач переживает перерисовку вьюхи — иначе искры чекпоинта не сработают
+  if (lastScene && lastScene.idx === sel && lastScene.done !== undefined)
+    mapInstance.prevDone = lastScene.done;
   mapInstance.set({
     index: sel,
     progress: frac,
+    tasksTotal: st.tasks.length,
+    tasksDone: st.tasks.filter(t => S.done[t.id]).length,
     hero: sel === cur,                 // персонаж живёт на своей текущей карте
     locked: sel > cur,
     done: stationDone(st),
@@ -1681,7 +1686,7 @@ function mountMap() {
 
 function unmountMap() {
   if (mapInstance) {
-    lastScene = { idx: mapInstance.data.index, x: mapInstance.charX };
+    lastScene = { idx: mapInstance.data.index, x: mapInstance.charX, done: mapInstance.prevDone };
     mapInstance.destroy();
     mapInstance = null;
   }
