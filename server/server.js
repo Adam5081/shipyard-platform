@@ -442,7 +442,7 @@ const routes = {
       // имя не спрашиваем второй раз — оно уже есть в одобренной заявке
       if (!name) name = String(app.name || "").trim().slice(0, 60);
     }
-    if (!name) name = "Участник";
+    if (!name || name === "—") name = "Участник";
 
     const salt = crypto.randomBytes(16).toString("hex");
     const project = String(b.project || "Мой продукт").trim().slice(0, 120) || "Мой продукт";
@@ -686,14 +686,13 @@ const routes = {
     // скрытое поле формы: живой человек его не заполняет
     if (String(b.website || "").trim()) return send(res, 201, { ok: true });
 
-    const name = String(b.name || "").trim().slice(0, 80);
+    // упрощённая заявка: обязателен только контакт (почта или телефон), остальное — по желанию
+    const name = String(b.name || "").trim().slice(0, 80) || "—";
     const contact = String(b.contact || "").trim().slice(0, 120);
     const idea = String(b.idea || "").trim().slice(0, 2000);
-    if (name.length < 2) return err(res, 400, "Укажите имя");
-    if (contact.length < 3) return err(res, 400, "Укажите почту или телеграм для связи");
+    if (contact.length < 3) return err(res, 400, "Укажите почту или телефон для связи");
     if (contact.includes("@") && !contact.startsWith("@") && !EMAIL_RE.test(contact))
       return err(res, 400, "Почта указана с ошибкой");
-    if (idea.length < 30) return err(res, 400, "Опишите продукт подробнее — хотя бы пара предложений");
 
     const hash = ipHash(req);
     if (q.appsFromIp.get(hash, Date.now() - APP_WINDOW).n >= APP_PER_IP)
@@ -705,8 +704,8 @@ const routes = {
     const experience = String(b.experience || "").trim().slice(0, 400);
 
     const r = q.addApp.run(name, contact, city, idea, stage, tariff, experience, hash, Date.now());
-    console.log(`[заявка #${r.lastInsertRowid}] ${name} · ${contact} · ${tariff || "тариф не выбран"}`);
-    notifyTg(`📥 Новая заявка в Taulau\n${name} · ${tariff || "тариф не выбран"}${city ? " · " + city : ""}\n«${idea.slice(0, 120)}${idea.length > 120 ? "…" : ""}»\n→ admin.html`);
+    console.log(`[заявка #${r.lastInsertRowid}] ${contact} · ${tariff || "тариф не выбран"}`);
+    notifyTg(`📥 Новая заявка в Taulau\n${contact} · ${tariff || "тариф не выбран"}${idea ? `\n«${idea.slice(0, 120)}${idea.length > 120 ? "…" : ""}»` : ""}\n→ admin.html`);
     send(res, 201, { ok: true, id: Number(r.lastInsertRowid) });
   },
 

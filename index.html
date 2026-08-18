@@ -474,52 +474,20 @@
   <div class="wrap-narrow">
     <p class="eyebrow reveal center" style="text-align:center">Заявка</p>
     <h2 class="headline reveal center">Расскажите, что хотите построить.</h2>
-    <p class="sub reveal center" style="margin-top:16px;text-align:center">Читаем каждую заявку и отвечаем лично. Заявка ни к чему не обязывает: сначала разговор, потом решение о потоке.</p>
+    <p class="sub reveal center" style="margin-top:16px;text-align:center">Оставьте контакт — мы напишем сами. Сначала разговор, потом решение о потоке: заявка ни к чему не обязывает.</p>
 
     <form class="apply-form reveal" id="applyForm" novalidate>
-      <div class="apply-grid">
-        <div class="field">
-          <label for="afName">Имя и фамилия</label>
-          <input id="afName" name="name" type="text" autocomplete="name" required>
-        </div>
-        <div class="field">
-          <label for="afContact">Почта или телеграм</label>
-          <input id="afContact" name="contact" type="text" placeholder="you@mail.kz или @nickname" required>
-        </div>
-        <div class="field">
-          <label for="afCity">Город <span style="font-weight:400">— по желанию</span></label>
-          <input id="afCity" name="city" type="text" placeholder="Астана">
-        </div>
-        <div class="field">
-          <label for="afStage">На какой стадии продукт</label>
-          <select id="afStage" name="stage">
-            <option value="идея">Только идея</option>
-            <option value="прототип">Есть прототип</option>
-            <option value="первые пользователи">Есть первые пользователи</option>
-            <option value="работающий продукт">Работающий продукт</option>
-          </select>
-        </div>
+      <div class="field">
+        <label for="afContact">Почта или номер телефона</label>
+        <input id="afContact" name="contact" type="text" placeholder="you@mail.kz · +7 777 123 45 67 · @nickname" required>
       </div>
 
       <div class="field">
-        <label for="afIdea">Что за продукт и чью проблему он решает</label>
-        <textarea id="afIdea" name="idea" rows="5" placeholder="Кто ваш клиент, что у него болит и как он решает это сегодня. Два–три предложения достаточно." required></textarea>
+        <label for="afIdea">Пара слов о продукте <span style="font-weight:400">— по желанию</span></label>
+        <textarea id="afIdea" name="idea" rows="3" placeholder="Что хотите построить и для кого — поможет нам подготовиться к разговору."></textarea>
       </div>
 
-      <div class="field">
-        <label for="afExp">Ваш опыт в отрасли и опыт разработки <span style="font-weight:400">— по желанию</span></label>
-        <textarea id="afExp" name="experience" rows="3" placeholder="Например: 8 лет в логистике, кода не писал никогда."></textarea>
-      </div>
-
-      <div class="field">
-        <label for="afTariff">Интересующий тариф</label>
-        <select id="afTariff" name="tariff">
-          <option value="">Пока не выбрал — нужен разговор</option>
-          <option value="Solo">Solo</option>
-          <option value="Pro">Pro</option>
-          <option value="Partner">Partner — по приглашению</option>
-        </select>
-      </div>
+      <input type="hidden" name="tariff" id="afTariff" value="">
 
       <!-- ловушка для ботов: человек это поле не видит и не заполняет -->
       <input class="hp" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
@@ -606,9 +574,8 @@
   };
 
   const asText = d =>
-    `Заявка в Taulau\n\nИмя: ${d.name}\nКонтакт: ${d.contact}\nГород: ${d.city || '—'}\n` +
-    `Стадия: ${d.stage}\nТариф: ${d.tariff || 'не выбран'}\n\nПродукт:\n${d.idea}\n\n` +
-    `Опыт:\n${d.experience || '—'}\n`;
+    `Заявка в Taulau\n\nКонтакт: ${d.contact}\nТариф: ${d.tariff || 'не выбран'}\n\n` +
+    `Продукт:\n${d.idea || '—'}\n`;
 
   function fail(message) {
     note.textContent = message;
@@ -639,7 +606,7 @@
     });
     if (mail) {
       document.getElementById('afMail').href =
-        'mailto:' + mail + '?subject=' + encodeURIComponent('Заявка в Taulau — ' + data.name) +
+        'mailto:' + mail + '?subject=' + encodeURIComponent('Заявка в Taulau — ' + data.contact) +
         '&body=' + encodeURIComponent(body);
     }
     done.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -650,19 +617,13 @@
     note.classList.remove('err');
 
     const data = {
-      name: form.name.value.trim(),
       contact: form.contact.value.trim(),
-      city: form.city.value.trim(),
-      stage: form.stage.value,
       tariff: form.tariff.value,
       idea: form.idea.value.trim(),
-      experience: form.experience.value.trim(),
       website: form.website.value,
     };
 
-    if (data.name.length < 2) return fail('Укажите, как к вам обращаться');
-    if (data.contact.length < 3) return fail('Оставьте почту или телеграм — иначе мы не сможем ответить');
-    if (data.idea.length < 30) return fail('Опишите продукт подробнее: кто клиент и что у него болит');
+    if (data.contact.length < 3) return fail('Оставьте почту или телефон — иначе мы не сможем ответить');
 
     submit.disabled = true;
     submit.textContent = 'Отправляем…';
