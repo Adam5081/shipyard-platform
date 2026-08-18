@@ -1192,7 +1192,7 @@ pre.code .h { color: #7fd4e4; font-weight: 600; }
 .svc-card { display: flex; flex-direction: column; }
 .svc-head { display: flex; align-items: center; gap: 10px; }
 .svc-ic { font-size: 24px; flex-shrink: 0; }
-.svc-head b { font-size: 16px; flex: 1; min-width: 0; }
+.svc-head b { font-size: 16px; flex: 1; min-width: 0; hyphens: auto; overflow-wrap: break-word; }
 .svc-head .btn, .svc-head .status-chip { flex-shrink: 0; white-space: nowrap; }
 .svc-what { color: var(--ink-2); font-size: 14px; line-height: 1.45; margin: 10px 0 8px; }
 .svc-meta { color: var(--ink-2); font-size: 12.5px; margin-top: auto; }

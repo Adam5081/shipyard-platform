@@ -1,0 +1,97 @@
+/* ============================================================
+   Taulau — светлая кибер-тема КАБИНЕТА.
+   Та же палитра, что у лендинга (theme-cyber.css): неон
+   #5D78FF → #00D9FF, сетка, Russo One в заголовках — но на
+   светлом фоне, чтобы с кабинетом было комфортно работать часами.
+   Подключается ТОЛЬКО в app.html: класс .cyber-lite на <body>.
+   ============================================================ */
+
+body.cyber-lite {
+  --accent: #5D78FF;
+  --accent-hover: #4158D0;
+  --bg: #ffffff;
+  --bg-alt: #eef2fc;
+  --line: rgba(93, 120, 255, .22);
+
+  font-family: 'Inter', -apple-system, 'SF Pro Text', 'Segoe UI', sans-serif;
+  /* лёгкая сетка на голубоватом фоне */
+  background:
+    linear-gradient(rgba(93, 120, 255, .05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(93, 120, 255, .05) 1px, transparent 1px),
+    linear-gradient(180deg, #f3f6ff 0%, #eaeffc 100%);
+  background-size: 56px 56px, 56px 56px, auto;
+  background-attachment: fixed;
+}
+
+/* ---------- типографика ---------- */
+body.cyber-lite .page-head h1,
+body.cyber-lite .map-head h1,
+body.cyber-lite .cert-name {
+  font-family: 'Russo One', 'Inter', sans-serif;
+  font-weight: 400;
+  letter-spacing: .01em;
+}
+body.cyber-lite .mh-label {
+  font-family: 'Russo One', 'Inter', sans-serif;
+  letter-spacing: .16em;
+  color: #2ba7c4;
+}
+
+/* ---------- сайдбар ---------- */
+body.cyber-lite .sidebar {
+  background: rgba(246, 249, 255, .92);
+  border-right: 1px solid rgba(93, 120, 255, .18);
+}
+body.cyber-lite .side-label { color: #2ba7c4; letter-spacing: .14em; }
+body.cyber-lite .side-link:hover { background: rgba(93, 120, 255, .08); }
+body.cyber-lite .side-link.active {
+  background: linear-gradient(135deg, #5D78FF, #00b2d6);
+  box-shadow: 0 4px 16px rgba(93, 120, 255, .35);
+}
+body.cyber-lite .side-user { border-top: 1px solid rgba(93, 120, 255, .18); }
+
+/* ---------- кнопки ---------- */
+body.cyber-lite .btn-primary {
+  background: linear-gradient(135deg, #5D78FF 0%, #00b2d6 100%);
+  box-shadow: 0 3px 14px rgba(93, 120, 255, .28);
+}
+body.cyber-lite .btn-primary:hover {
+  background: linear-gradient(135deg, #4158D0 0%, #009fc0 100%);
+  box-shadow: 0 6px 22px rgba(93, 120, 255, .4);
+}
+
+/* ---------- панели и карточки ---------- */
+body.cyber-lite .panel {
+  border: 1px solid rgba(93, 120, 255, .16);
+  box-shadow: 0 4px 18px rgba(93, 120, 255, .07);
+}
+body.cyber-lite .notice {
+  border: 1px solid rgba(93, 120, 255, .25);
+  box-shadow: 0 4px 18px rgba(93, 120, 255, .08);
+}
+body.cyber-lite .svc-card:hover { border-color: rgba(93, 120, 255, .45); }
+
+/* сцена карты — неоновая рамка как у демо на лендинге */
+body.cyber-lite .map-stage {
+  box-shadow: 0 0 0 1px rgba(93, 120, 255, .28), 0 14px 40px rgba(93, 120, 255, .16);
+}
+
+/* прогресс и статусы */
+body.cyber-lite .lvl-chip,
+body.cyber-lite .status-chip { border: 1px solid rgba(93, 120, 255, .2); }
+body.cyber-lite .pill { background: rgba(93, 120, 255, .14); color: #4158D0; }
+body.cyber-lite .side-link.active .pill { background: rgba(255, 255, 255, .25); color: #fff; }
+
+/* таблицы */
+body.cyber-lite .table th { color: #2ba7c4; letter-spacing: .1em; }
+body.cyber-lite .table tr.me td { background: rgba(93, 120, 255, .08); }
+
+/* формы */
+body.cyber-lite .field input:focus,
+body.cyber-lite .field textarea:focus,
+body.cyber-lite .field select:focus {
+  border-color: #5D78FF;
+  box-shadow: 0 0 0 4px rgba(93, 120, 255, .14);
+}
+
+/* праздники и лотерея наследуют акцент через var(--accent) */
