@@ -291,7 +291,7 @@ function weekBounds(ts) {
   return [start, start + 7 * 86400000];
 }
 
-const GROUP_LIMIT_MIN = { Solo: 120, Pro: 240, Partner: 0 };  // 0 = без лимита
+const GROUP_LIMIT_MIN = { Solo: 240, Pro: 360, Partner: 0 };  // единые часы тарифа: Solo 4 ч, Pro 6 ч; 0 = без лимита
 
 function publicUser(u) {
   return {

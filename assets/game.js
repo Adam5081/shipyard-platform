@@ -480,6 +480,26 @@ function fAkOrda(ctx, x, base) {
   ctx2.fillRect(x - 2, base - 28, 4, 3);
 }
 
+/* горные пики на горизонте — Taulau про восхождение, а не про город */
+function fPeak(ctx, x, base, w, hgt, color, snow) {
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(x - w / 2, base);
+  ctx.lineTo(x, base - hgt);
+  ctx.lineTo(x + w / 2, base);
+  ctx.closePath();
+  ctx.fill();
+  if (snow) {                                     // снежная шапка
+    ctx.fillStyle = "rgba(255,255,255,.75)";
+    ctx.beginPath();
+    ctx.moveTo(x - w * 0.16, base - hgt * 0.68);
+    ctx.lineTo(x, base - hgt);
+    ctx.lineTo(x + w * 0.16, base - hgt * 0.68);
+    ctx.closePath();
+    ctx.fill();
+  }
+}
+
 function fCrane(ctx, x, base, color) {
   ctx.fillStyle = color;
   ctx.fillRect(x, base - 34, 3, 34);              // мачта
@@ -496,31 +516,31 @@ function fCrane(ctx, x, base, color) {
 const SCENES = [
   { sky: ["#ffd9a0", "#ffeecb", "#f6f2e4"], sun: [36, 30], grass: "#94c065", soil: "#caa877",
     far: "#d8b48f", mid: "#e2c5a2",
-    marks: ctx => { fCrane(ctx, 70, HORIZON, "#c0a17c"); fTower(ctx, 150, HORIZON, 8, 22, "#d8b48f"); fCrane(ctx, 240, HORIZON, "#c0a17c"); fTower(ctx, 290, HORIZON, 6, 14, "#e2c5a2"); } },
+    marks: ctx => { fPeak(ctx, 70, HORIZON, 70, 26, "#d8b48f"); fPeak(ctx, 170, HORIZON, 110, 40, "#c9a37c", true); fPeak(ctx, 285, HORIZON, 80, 30, "#e2c5a2");  } },
   { sky: ["#a8d8f0", "#d6ecfa", "#eef7ea"], sun: [60, 22], grass: "#8fbf5f", soil: "#c8a878",
     far: "#b3c6d8", mid: "#c6d5e2",
-    marks: ctx => { fTower(ctx, 60, HORIZON, 7, 20, "#b3c6d8"); fKhanShatyr(ctx, 170, HORIZON, "#c6d5e2"); fTower(ctx, 270, HORIZON, 6, 16, "#b3c6d8"); } },
+    marks: ctx => { fPeak(ctx, 60, HORIZON, 80, 30, "#b3c6d8"); fPeak(ctx, 180, HORIZON, 120, 46, "#a8bfd4", true); fPeak(ctx, 290, HORIZON, 70, 26, "#c6d5e2");  } },
   { sky: ["#8fd0f5", "#cfeaf9", "#f3f7e9"], sun: [100, 16], grass: "#8fbf5f", soil: "#c2a06e",
     far: "#b3c6d8", mid: "#c6d5e2",
-    marks: ctx => { fTower(ctx, 50, HORIZON, 8, 28, "#b3c6d8"); fTower(ctx, 64, HORIZON, 6, 18, "#c6d5e2"); fTower(ctx, 200, HORIZON, 9, 34, "#b3c6d8"); fTower(ctx, 285, HORIZON, 7, 22, "#c6d5e2"); } },
+    marks: ctx => { fPeak(ctx, 55, HORIZON, 90, 34, "#b3c6d8"); fPeak(ctx, 190, HORIZON, 130, 52, "#9db4cc", true); fPeak(ctx, 295, HORIZON, 76, 30, "#c6d5e2");  } },
   { sky: ["#7cc8f5", "#c8e8fb", "#eef6ee"], sun: [150, 12], grass: "#86b957", soil: "#c2a06e",
     far: "#b3c6d8", mid: "#c6d5e2",
-    marks: ctx => { fTower(ctx, 60, HORIZON, 7, 24, "#b3c6d8"); fBaiterek(ctx, 170, HORIZON, "#c6d5e2"); fTower(ctx, 280, HORIZON, 8, 26, "#b3c6d8"); } },
+    marks: ctx => { fPeak(ctx, 65, HORIZON, 84, 32, "#b3c6d8"); fPeak(ctx, 200, HORIZON, 140, 58, "#9db4cc", true); fPeak(ctx, 300, HORIZON, 80, 34, "#b3c6d8");  } },
   { sky: ["#6ec0f2", "#bfe4fa", "#e9f4f0"], sun: [190, 10], grass: "#86b957", soil: "#bd9c6a",
     far: "#a8bfd4", mid: "#bccfe0",
-    marks: ctx => { fTower(ctx, 55, HORIZON, 6, 20, "#a8bfd4"); fNurAlem(ctx, 175, HORIZON, "#a8cade"); fTower(ctx, 290, HORIZON, 7, 24, "#bccfe0"); } },
+    marks: ctx => { fPeak(ctx, 60, HORIZON, 80, 30, "#a8bfd4"); fPeak(ctx, 205, HORIZON, 150, 62, "#93aac2", true); fPeak(ctx, 300, HORIZON, 84, 36, "#a8bfd4");  } },
   { sky: ["#79c0ee", "#cfe6f6", "#f2ecd9"], sun: [230, 14], grass: "#7fb355", soil: "#bd9c6a",
     far: "#a8bfd4", mid: "#bccfe0",
-    marks: ctx => { fTower(ctx, 45, HORIZON, 9, 36, "#a8bfd4"); fTower(ctx, 62, HORIZON, 6, 24, "#bccfe0"); fTower(ctx, 190, HORIZON, 8, 30, "#a8bfd4"); fTower(ctx, 285, HORIZON, 10, 40, "#93aac2"); } },
+    marks: ctx => { fPeak(ctx, 55, HORIZON, 86, 34, "#a8bfd4"); fPeak(ctx, 215, HORIZON, 158, 68, "#93aac2", true); fPeak(ctx, 305, HORIZON, 90, 40, "#93aac2");  } },
   { sky: ["#f6b26b", "#f9d9b0", "#f3e6d5"], sun: [260, 26], grass: "#79a84e", soil: "#b08f60",
     far: "#b08f8a", mid: "#c4a89b",
-    marks: ctx => { fTower(ctx, 55, HORIZON, 7, 26, "#b08f8a"); fAkOrda(ctx, 175, HORIZON); fTower(ctx, 285, HORIZON, 6, 20, "#c4a89b"); } },
+    marks: ctx => { fPeak(ctx, 60, HORIZON, 80, 32, "#b08f8a"); fPeak(ctx, 220, HORIZON, 166, 72, "#a08078", true); fPeak(ctx, 305, HORIZON, 92, 42, "#c4a89b");  } },
   { sky: ["#7d85b5", "#b4b9d6", "#e0e0ea"], sun: null, stars: true, grass: "#5f7f4a", soil: "#8f7a58",
     far: "#5a6584", mid: "#6d7897",
-    marks: ctx => { fTower(ctx, 60, HORIZON, 9, 38, "#5a6584", "rgba(255,220,120,.75)"); fTower(ctx, 150, HORIZON, 7, 28, "#6d7897", "rgba(255,220,120,.6)"); fTower(ctx, 260, HORIZON, 10, 44, "#5a6584", "rgba(255,220,120,.75)"); } },
+    marks: ctx => { fPeak(ctx, 55, HORIZON, 84, 34, "#5a6584"); fPeak(ctx, 225, HORIZON, 172, 76, "#4a557a", true); fPeak(ctx, 305, HORIZON, 96, 44, "#6d7897");  } },
   { sky: ["#22304f", "#3d4d78", "#7c88ac"], sun: null, stars: true, moon: [280, 22], grass: "#4d6b40", soil: "#6f6048",
     far: "#3a4763", mid: "#4a577a",
-    marks: ctx => { fTower(ctx, 50, HORIZON, 8, 30, "#3a4763", "rgba(255,220,120,.85)"); fKhanShatyr(ctx, 120, HORIZON, "#4a577a"); fBaiterek(ctx, 200, HORIZON, "#4a577a"); fTower(ctx, 260, HORIZON, 7, 24, "#3a4763", "rgba(255,220,120,.85)"); } },
+    marks: ctx => { fPeak(ctx, 50, HORIZON, 80, 32, "#3a4763"); fPeak(ctx, 230, HORIZON, 180, 82, "#33405e", true); fPeak(ctx, 305, HORIZON, 100, 46, "#4a577a");  } },
 ];
 
 /* детерминированная «случайность» для звёзд и деревьев */
@@ -959,8 +979,16 @@ class StationScene {
       ctx.fillRect(Math.round(fx) - 4 + (dir > 0 ? 1 : -2), Math.round(fy) - 3, 8, 3);
     }
 
-    // торс: пиджак с плечами, рубашка, галстук, ремень; наклон вперёд на ходу
+    // торс: куртка с плечами, слои, ремень; наклон вперёд на ходу
     const tx = x + lean;
+
+    // рюкзак восхождения за спиной (слева от направления движения)
+    ctx.fillStyle = darken(col.jacket, 0.55);
+    ctx.fillRect(tx - 17, feet - 47, 7, 17);
+    ctx.fillStyle = darken(col.jacket, 0.42);          // клапан рюкзака
+    ctx.fillRect(tx - 17, feet - 47, 7, 4);
+    ctx.fillStyle = "#c9a35f";                          // скрутка-коврик сверху
+    ctx.fillRect(tx - 18, feet - 50, 9, 3);
     ctx.fillStyle = col.jacket;
     ctx.fillRect(tx - 9, feet - 50, 18, 22);
     ctx.fillRect(tx - 11, feet - 50, 22, 5);             // плечи
