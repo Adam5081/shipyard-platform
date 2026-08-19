@@ -130,12 +130,12 @@ body.cyber .hero::before {
   background: radial-gradient(closest-side, rgba(94, 106, 210, .17), rgba(94, 106, 210, .06) 55%, transparent 78%);
   pointer-events: none;
 }
-/* ступенчатое появление hero-контента */
-body.cyber .hero .wrap > .reveal { transition-duration: .7s; }
-body.cyber .hero .wrap > *:nth-child(2) { transition-delay: .08s; }
-body.cyber .hero .wrap > *:nth-child(3) { transition-delay: .16s; }
-body.cyber .hero .wrap > *:nth-child(4) { transition-delay: .24s; }
-body.cyber .hero .wrap > *:nth-child(5) { transition-delay: .32s; }
+/* ступенчатое, но быстрое появление hero-контента: текст виден почти сразу */
+body.cyber .hero .wrap > .reveal { transition-duration: .45s; }
+body.cyber .hero .wrap > *:nth-child(2) { transition-delay: .05s; }
+body.cyber .hero .wrap > *:nth-child(3) { transition-delay: .1s; }
+body.cyber .hero .wrap > *:nth-child(4) { transition-delay: .15s; }
+body.cyber .hero .wrap > *:nth-child(5) { transition-delay: .2s; }
 body.cyber .hero-proof { margin-top: 34px; }
 body.cyber .hero-proof span { color: var(--ink-3); font-size: 13px; }
 body.cyber .hero-proof span::before { color: #8a8f98; }
@@ -168,6 +168,34 @@ body.cyber .how-head { padding-bottom: 24px; }
 
 /* появление контента: мягче и медленнее, как у Linear */
 body.cyber .reveal { transition-duration: .6s; transition-timing-function: cubic-bezier(.16, 1, .3, 1); }
+
+/* навигация по якорям: мгновенный переход (Linear-стиль) вместо долгой прокрутки */
+html:has(body.cyber) { scroll-behavior: auto; }
+/* заголовки секций не прячутся под навом и лентой при переходе из меню */
+body.cyber section[id], body.cyber .stat-panel[id] { scroll-margin-top: 84px; }
+
+/* sticky-лента живёт только внутри своей зоны и отлипает после неё */
+.how-zone { position: relative; }
+
+/* бейдж Solo — нейтральный, не спорит с «Популярным выбором» Pro */
+body.cyber .price-badge.badge-solo { background: #2a2f3a; color: rgba(255, 255, 255, .8); }
+
+/* персонаж в живом демо: лёгкая виньетка-подсветка, чтобы не терялся на тёмном */
+body.cyber .ld-frame::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse 60% 55% at 50% 62%, transparent 55%, rgba(0, 0, 0, .28) 100%);
+}
+body.cyber .ld-frame { position: relative; }
+
+/* вариация в середине страницы: «Экономика» на чуть более светлой подложке */
+body.cyber #economics {
+  background: #101216;
+  border-top: 1px solid rgba(255, 255, 255, .06);
+  border-bottom: 1px solid rgba(255, 255, 255, .06);
+}
 
 /* ---------- карточки: поверхность + волосяная рамка ---------- */
 body.cyber .card,
