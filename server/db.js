@@ -97,6 +97,15 @@ db.exec(`
     PRIMARY KEY (user_id, gate)
   );
 
+  /* аналитика лендинга: только счётчики событий, никаких личных данных */
+  CREATE TABLE IF NOT EXISTS metrics (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    event      TEXT NOT NULL,                    -- page / view / click
+    label      TEXT NOT NULL,
+    created_at INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_metrics_time ON metrics (created_at);
+
   /* баттлы на знании вайб-кодинга: вопросы и подсчёт — только на сервере */
   CREATE TABLE IF NOT EXISTS battles (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,

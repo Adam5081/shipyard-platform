@@ -336,6 +336,7 @@ function ipHash(req) {
    Держим в памяти: при рестарте счётчики обнуляются, для пилота достаточно. */
 const LOGIN_TRIES = 10, LOGIN_WINDOW = 10 * 60000;
 const loginFails = new Map();
+const metricsRate = new Map();     // ipHash -> {n, t}: лимит событий аналитики в минуту
 
 function loginBlocked(req) {
   const rec = loginFails.get(ipHash(req));
@@ -686,13 +687,21 @@ const routes = {
     // скрытое поле формы: живой человек его не заполняет
     if (String(b.website || "").trim()) return send(res, 201, { ok: true });
 
-    // упрощённая заявка: обязателен только контакт (почта или телефон), остальное — по желанию
+    // заявка: телефон + почта (форма шлёт их отдельно), остальное — по желанию
     const name = String(b.name || "").trim().slice(0, 80) || "—";
-    const contact = String(b.contact || "").trim().slice(0, 120);
+    const phone = String(b.phone || "").trim().slice(0, 40);
+    const emailF = String(b.email || "").trim().slice(0, 80);
+    let contact = String(b.contact || "").trim().slice(0, 120);
     const idea = String(b.idea || "").trim().slice(0, 2000);
-    if (contact.length < 3) return err(res, 400, "Укажите почту или телефон для связи");
-    if (contact.includes("@") && !contact.startsWith("@") && !EMAIL_RE.test(contact))
-      return err(res, 400, "Почта указана с ошибкой");
+    if (phone || emailF) {
+      if (phone.replace(/\D/g, "").length < 6) return err(res, 400, "Укажите номер телефона");
+      if (!EMAIL_RE.test(emailF)) return err(res, 400, "Почта указана с ошибкой");
+      contact = `${phone} · ${emailF}`.slice(0, 120);
+    } else {
+      if (contact.length < 3) return err(res, 400, "Укажите почту или телефон для связи");
+      if (contact.includes("@") && !contact.startsWith("@") && !EMAIL_RE.test(contact))
+        return err(res, 400, "Почта указана с ошибкой");
+    }
 
     const hash = ipHash(req);
     if (q.appsFromIp.get(hash, Date.now() - APP_WINDOW).n >= APP_PER_IP)
@@ -707,6 +716,42 @@ const routes = {
     console.log(`[заявка #${r.lastInsertRowid}] ${contact} · ${tariff || "тариф не выбран"}`);
     notifyTg(`📥 Новая заявка в Taulau\n${contact} · ${tariff || "тариф не выбран"}${idea ? `\n«${idea.slice(0, 120)}${idea.length > 120 ? "…" : ""}»` : ""}\n→ admin.html`);
     send(res, 201, { ok: true, id: Number(r.lastInsertRowid) });
+  },
+
+  /* аналитика лендинга: батч событий, без личных данных; лимит на IP */
+  "POST /api/metrics": async (req, res) => {
+    const b = await readBody(req, 16 * 1024).catch(() => null);
+    const events = Array.isArray(b?.events) ? b.events.slice(0, 50) : [];
+    if (events.length) {
+      const hash = ipHash(req);
+      const key = "m:" + hash;
+      const now = Date.now();
+      const rec = metricsRate.get(key) || { n: 0, t: now };
+      if (now - rec.t > 60_000) { rec.n = 0; rec.t = now; }
+      const allowed = Math.max(0, 300 - rec.n);
+      rec.n += events.length;
+      metricsRate.set(key, rec);
+      const ins = db.prepare("INSERT INTO metrics (event, label, created_at) VALUES (?, ?, ?)");
+      for (const ev of events.slice(0, allowed)) {
+        const e = String(ev?.e || "").slice(0, 12);
+        const l = String(ev?.l || "").slice(0, 90);
+        if (["page", "view", "click"].includes(e) && l) ins.run(e, l, now);
+      }
+    }
+    res.writeHead(204);
+    res.end();
+  },
+
+  "GET /api/admin/metrics": async (req, res) => {
+    if (!isAdmin(req)) return err(res, 401, "Нужен ключ администратора");
+    const since = Date.now() - 30 * 86400000;
+    const rows = db.prepare(
+      "SELECT event, label, COUNT(*) AS n FROM metrics WHERE created_at >= ? GROUP BY event, label ORDER BY n DESC"
+    ).all(since);
+    const pages = rows.filter(r => r.event === "page");
+    const views = rows.filter(r => r.event === "view");
+    const clicks = rows.filter(r => r.event === "click").slice(0, 40);
+    send(res, 200, { days: 30, pages, views, clicks });
   },
 
   "GET /api/applications": async (req, res) => {

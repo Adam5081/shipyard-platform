@@ -15,3 +15,5 @@
 window.SHIPYARD_REMOTE_API = "https://api.taulau.com";
 window.SHIPYARD_CONTACT = "";
 window.SHIPYARD_FLOW_UI = false;
+window.SHIPYARD_LOTTERY_UI = false;  // лотерея — этап 2 геймификации
+window.SHIPYARD_POINTS_UI = false;   // баллы на станциях — пока не считаем

@@ -6,12 +6,12 @@
 <title>Taulau — от идеи до продукта, который работает у клиента</title>
 <meta name="description" content="Программа для отраслевых экспертов: вы собираете продукт сами — с Claude Code, производственным пайплайном и экспертами отрасли рядом. Контрольные точки, безопасность, вывод в рабочую среду.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230071e3'/><path d='M27 34h46M50 34v32q0 13 13 13 7 0 10-6' stroke='white' stroke-width='11' fill='none' stroke-linecap='round'/></svg>">
-<link rel="stylesheet" href="assets/styles.css?v=15">
-<link rel="stylesheet" href="assets/theme-cyber.css?v=15">
+<link rel="stylesheet" href="assets/styles.css?v=16">
+<link rel="stylesheet" href="assets/theme-cyber.css?v=16">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Russo+One&display=swap" rel="stylesheet">
-<script src="assets/config.js?v=15"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="assets/config.js?v=16"></script>
 </head>
 <body class="cyber">
 
@@ -20,9 +20,10 @@
   <div class="nav-inner">
     <a class="nav-logo" href="index.html"><span class="anchor"><svg viewBox="0 0 100 100" width="24" height="24" style="vertical-align:-5px" aria-hidden="true"><rect width="100" height="100" rx="22" fill="#0071e3"/><path d="M27 34h46M50 34v32q0 13 13 13 7 0 10-6" stroke="#fff" stroke-width="11" fill="none" stroke-linecap="round"/></svg></span>TAULAU</a>
     <div class="nav-links">
-      <a href="#program">Путь</a>
-      <a href="#directions">Направления</a>
       <a href="#team">Кто мы</a>
+      <a href="#platform">Платформа</a>
+      <a href="#how">Как это работает</a>
+      <a href="#economics">Экономика</a>
       <a href="#pricing">Тарифы</a>
       <a href="app.html">Войти</a>
       <a class="nav-cta" href="#apply">Занять место</a>
@@ -31,7 +32,56 @@
 </nav>
 
 <!-- ===== HERO ===== -->
-<header class="hero">
+<header class="hero" data-metric="hero">
+  <div class="hero-mountain" id="heroMountain" aria-hidden="true">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 600" width="100%" height="100%" preserveAspectRatio="xMidYMax slice">
+    <defs>
+      <linearGradient id="mountainGrad" x1="0%" y1="100%" x2="0%" y2="0%">
+        <stop offset="0%" stop-color="#512F88" stop-opacity="0.05"/>
+        <stop offset="70%" stop-color="#8B5CF6" stop-opacity="0.3"/>
+        <stop offset="100%" stop-color="#38BDF8" stop-opacity="0.8"/>
+      </linearGradient>
+      <linearGradient id="pathGlow" x1="0%" y1="100%" x2="50%" y2="0%">
+        <stop offset="0%" stop-color="#512F88" stop-opacity="0"/>
+        <stop offset="50%" stop-color="#8B5CF6" stop-opacity="1"/>
+        <stop offset="100%" stop-color="#38BDF8" stop-opacity="1"/>
+      </linearGradient>
+      <filter id="neonGlow" x="-20%" y="-20%" width="140%" height="140%">
+        <feGaussianBlur stdDeviation="8" result="blur"/>
+        <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+      <style>
+        #ascentPath { stroke-dasharray: 30 15; animation: strokeMove 3s linear infinite; }
+        .peak-node { animation: peakPulse 2s ease-in-out infinite alternate; transform-origin: 500px 120px; }
+        @keyframes strokeMove { to { stroke-dashoffset: -90; } }
+        @keyframes peakPulse {
+          0% { r: 6px; opacity: 0.8; }
+          100% { r: 10px; opacity: 1; filter: drop-shadow(0 0 12px #38BDF8); }
+        }
+      </style>
+    </defs>
+    <circle cx="500" cy="250" r="220" fill="#512F88" opacity="0.25" filter="url(#neonGlow)"/>
+    <g stroke="rgba(255,255,255,0.08)" stroke-width="1" fill="none">
+      <polygon points="150,550 500,120 850,550" fill="url(#mountainGrad)"/>
+      <line x1="500" y1="120" x2="500" y2="550" stroke="rgba(255,255,255,0.15)"/>
+      <line x1="500" y1="120" x2="350" y2="550"/>
+      <line x1="500" y1="120" x2="650" y2="550"/>
+      <line x1="220" y1="460" x2="780" y2="460"/>
+      <line x1="290" y1="370" x2="710" y2="370"/>
+      <line x1="360" y1="280" x2="640" y2="280"/>
+      <line x1="430" y1="190" x2="570" y2="190"/>
+    </g>
+    <path id="ascentPath" d="M 200,530 Q 380,480 340,370 T 500,120"
+          fill="none" stroke="url(#pathGlow)" stroke-width="3.5"
+          filter="url(#neonGlow)" stroke-linecap="round"/>
+    <g fill="#38BDF8" filter="url(#neonGlow)">
+      <circle cx="200" cy="530" r="4"/>
+      <circle cx="340" cy="370" r="4"/>
+      <circle cx="450" cy="230" r="4"/>
+      <circle cx="500" cy="120" r="7" fill="#FFFFFF" class="peak-node"/>
+    </g>
+  </svg>
+  </div>
   <div class="wrap">
     <h1 class="display reveal">Вы — эксперт отрасли.<br>За один поток вы соберёте<br><span class="gradient-text">свой работающий продукт.</span></h1>
     <p class="sub reveal">Без найма команды разработки: вы собираете продукт сами — с Claude Code, производственным процессом и экспертами отрасли рядом. От идеи до продукта, который работает у клиента.</p>
@@ -41,18 +91,48 @@
     <a class="hero-secondary reveal" href="#platform">Сначала посмотрите живую платформу&nbsp;↓</a>
     <div class="hero-proof reveal">
       <span>Кабинет работает в проде — живое демо ниже</span>
-      <span>Состав экспертов публикуется до оплаты</span>
-      <span><u class="nda-note">NDA на ваш продукт</u> — права и доли остаются у вас</span>
+      <span><a class="nda-note" href="nda.html" target="_blank" rel="noopener">NDA на ваш продукт</a> — права остаются у вас</span>
     </div>
   </div>
 </header>
 
+<!-- ===== TEAM ===== -->
+<section class="section section-alt" id="team" data-metric="team">
+  <div class="wrap">
+    <p class="eyebrow reveal">Кто мы</p>
+    <h2 class="headline reveal">Практики, а не лекторы.</h2>
+    <p class="sub reveal" style="margin-top:22px;max-width:740px">Мы сами выпускаем продукты этим пайплайном и закрываем в них те же участки, что будем закрывать в вашем проекте.</p>
+    <div class="team">
+      <div class="card team-card reveal">
+        <div class="t-role">Продюсер программы</div>
+        <h4>Ведёт поток</h4>
+        <p>Отбор участников, диагностика идей, темп потока и контрольные точки. Отвечает за то, чтобы проект дошёл до рабочей среды, а не до середины.</p>
+      </div>
+      <div class="card team-card reveal">
+        <div class="t-role">Технический контур</div>
+        <h4>Архитектура и сборка</h4>
+        <p>Ревью сгенерированного кода, заготовки авторизации и базы, инфраструктура и автодеплой, разбор сложных участков.</p>
+      </div>
+      <div class="card team-card reveal">
+        <div class="t-role">Безопасность и право</div>
+        <h4>Допуск к клиенту</h4>
+        <p>Чек-лист OWASP, сканирование, ручной аудит, юридический пакет: компания, оферта, персональные данные, товарный знак.</p>
+      </div>
+      <div class="card team-card reveal">
+        <div class="t-role">Рынок</div>
+        <h4>Аналитика и продажи</h4>
+        <p>Метрики и юнит-экономика, приоритизация объёма, позиционирование и доведение первых сделок до подписи.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- ===== PLATFORM (simplified) ===== -->
-<section class="section section-dark" id="platform">
+<section class="section section-dark" id="platform" data-metric="platform">
   <div class="wrap">
     <p class="eyebrow reveal" style="color:#30b0c7">Платформа</p>
     <h2 class="headline reveal">Виден путь,<br>а не список уроков.</h2>
-    <p class="sub reveal" style="margin-top:22px;max-width:700px">Кабинет показывает одну вещь: где вы на пути к работающему продукту. Персонаж собирается из вашего фото и идёт по карте от станции к станции, забирая на каждой инструмент. В конце пути — дверь MVP.</p>
+    <p class="sub reveal" style="margin-top:22px;max-width:700px">Кабинет показывает одну вещь: где вы на пути к работающему продукту. Персонаж, созданный из вашего фото, идёт по карте от станции к станции, забирая на каждой инструменты, чтобы ваш продукт приносил ценность. В конце пути — дверь MVP.</p>
 
     <div class="live-demo reveal">
       <div class="ld-frame">
@@ -103,7 +183,14 @@
   </div>
 </section>
 
-<!-- ===== STATS: интерактивные карточки, раскрывают разделы под собой ===== -->
+<!-- ===== КАК ЭТО РАБОТАЕТ: лента-«бенто», раскрывают разделы под собой ===== -->
+<section class="section how-head" id="how" data-metric="how">
+  <div class="wrap center" style="text-align:center">
+    <p class="eyebrow reveal">Как это работает</p>
+    <h2 class="headline reveal">Программа в пяти блоках.</h2>
+    <p class="sub reveal" style="margin-top:14px">Нажмите на блок — подробности развернутся под лентой.</p>
+  </div>
+</section>
 <div class="stats">
   <button class="stat reveal" data-stat="s1"><b>Один поток</b><span>до двух месяцев работы над продуктом — срок зависит от сложности проекта</span><i class="stat-arrow">⌄</i></button>
   <button class="stat reveal" data-stat="s2"><b>Путь проекта</b><span>девять станций и пять контрольных точек с проверяемым артефактом</span><i class="stat-arrow">⌄</i></button>
@@ -112,12 +199,9 @@
   <button class="stat reveal" data-stat="s5"><b>Безопасность</b><span>чек-лист OWASP, сканирование и ручной аудит</span><i class="stat-arrow">⌄</i></button>
 </div>
 
-<div class="stats-legend reveal">Синяя лента — это программа целиком: нажмите на любой блок, чтобы развернуть подробности&nbsp;⌄</div>
-
 <!-- ===== ПАНЕЛИ СТАТОВ ===== -->
 <div class="stat-panel section-dark" data-panel="s1">
   <div class="wrap">
-    <p class="eyebrow" style="color:#30b0c7">Позиционирование</p>
     <h2 class="headline">Это не курс.<br>Это ваша команда на время потока.</h2>
     <p class="sub" style="margin-top:22px;max-width:720px">Один поток — до двух месяцев работы над вашим продуктом, срок зависит от сложности проекта. Вместо найма команды на полгода вы берёте подписку на процесс, инструменты и экспертов отрасли — и собираете продукт сами.</p>
     <div class="compare">
@@ -251,7 +335,7 @@
   <div class="wrap">
     <p class="eyebrow reveal">Сервисный пул</p>
     <h2 class="headline reveal">Шесть направлений<br>в одном контуре.</h2>
-    <p class="sub reveal" style="margin-top:22px;max-width:720px">Каждый эксперт — практик, который закрывает свой участок вашего проекта. Групповые сессии — всем, индивидуальные созвоны — по часам тарифа: от 4 часов в неделю. Сверх шести направлений с вами постоянно ментор потока.</p>
+    <p class="sub reveal" style="margin-top:22px;max-width:720px">Каждый эксперт — практик, который закрывает свой участок вашего проекта. Все созвоны групповые — по часам тарифа: Solo — 4 часа, Pro — 6 часов в неделю. Сверх шести направлений с вами постоянно ментор потока.</p>
     <div class="dirs">
       <div class="dir-card reveal">
         <div class="d-ic"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m8 7-5 5 5 5"/><path d="m16 7 5 5-5 5"/><path d="m13 5-2 14"/></svg></div><h4>Разработка</h4>
@@ -291,7 +375,7 @@
   <div class="wrap-narrow center">
     <p class="eyebrow" style="color:#30b0c7">Финал</p>
     <h2 class="headline">Demo Day.<br>Не сертификат — разбор.</h2>
-    <p class="sub" style="margin-top:22px">Защита проекта перед экспертами: 5 минут разбора и 3 минуты вопросов перед практиками вашего рынка. Оценка по четырём осям: проблема, решение, результат, план развития. Письменная обратная связь каждому — не аплодисменты, а профессиональный разбор.</p>
+    <p class="sub" style="margin-top:22px">Защита проекта перед практиками вашего рынка: разбор, сессия вопросов и обратная связь каждому. Оценка по четырём осям: проблема, решение, результат, план развития. Не аплодисменты, а профессиональный разбор.</p>
   </div>
 </div>
 
@@ -321,41 +405,11 @@
 </div>
 
 
-<!-- ===== TEAM ===== -->
-<section class="section section-alt" id="team">
-  <div class="wrap">
-    <p class="eyebrow reveal">Кто мы</p>
-    <h2 class="headline reveal">Практики, а не лекторы.</h2>
-    <p class="sub reveal" style="margin-top:22px;max-width:740px">Мы сами выпускаем продукты этим пайплайном и закрываем в них те же участки, что будем закрывать в вашем проекте. Состав потока публикуется до старта — ещё до оплаты.</p>
-    <div class="team">
-      <div class="card team-card reveal">
-        <div class="t-role">Продюсер программы</div>
-        <h4>Ведёт поток</h4>
-        <p>Отбор участников, диагностика идей, темп потока и контрольные точки. Отвечает за то, чтобы проект дошёл до рабочей среды, а не до середины.</p>
-      </div>
-      <div class="card team-card reveal">
-        <div class="t-role">Технический контур</div>
-        <h4>Архитектура и сборка</h4>
-        <p>Ревью сгенерированного кода, заготовки авторизации и базы, инфраструктура и автодеплой, разбор сложных участков.</p>
-      </div>
-      <div class="card team-card reveal">
-        <div class="t-role">Безопасность и право</div>
-        <h4>Допуск к клиенту</h4>
-        <p>Чек-лист OWASP, сканирование, ручной аудит, юридический пакет: компания, оферта, персональные данные, товарный знак.</p>
-      </div>
-      <div class="card team-card reveal">
-        <div class="t-role">Рынок</div>
-        <h4>Аналитика и продажи</h4>
-        <p>Метрики и юнит-экономика, приоритизация объёма, позиционирование и доведение первых сделок до подписи.</p>
-      </div>
-    </div>
-  </div>
-</section>
 
 
 
 <!-- ===== ECONOMICS ===== -->
-<section class="section">
+<section class="section" id="economics" data-metric="economics">
   <div class="wrap-narrow center">
     <p class="eyebrow reveal">Экономика</p>
     <h2 class="headline reveal">Дешевле команды.<br>Не «дешевле курсов».</h2>
@@ -374,7 +428,7 @@
 </section>
 
 <!-- ===== PRICING ===== -->
-<section class="section section-alt" id="pricing">
+<section class="section section-alt" id="pricing" data-metric="pricing">
   <div class="wrap">
     <p class="eyebrow reveal center" style="text-align:center">Тарифы</p>
     <h2 class="headline reveal center">Одна программа.<br>Три уровня доступа к экспертам.</h2>
@@ -384,13 +438,13 @@
         <p class="who">Вы собираете сами — процесс и эксперты рядом</p>
         <div class="amount">290 000 ₸<small> / месяц</small></div>
         <ul>
-          <li><span class="tick">✓</span>Материалы платформы и шаблоны</li>
-          <li><span class="tick">✓</span>4 часа в неделю индивидуальных созвонов с экспертами</li>
-          <li><span class="tick">✓</span>Ментор в Telegram</li>
-          <li><span class="tick">✓</span>Чек-лист OWASP + автоматическое сканирование</li>
-          <li><span class="tick">✓</span>Юридические шаблоны</li>
-          <li><span class="tick">✓</span>Инфраструктура — по шаблону с экспертами</li>
-          <li><span class="tick">✓</span>Участие в Demo Day</li>
+          <li><span class="tick">•</span>Материалы платформы и шаблоны</li>
+          <li><span class="tick">•</span>4 часа групповых созвонов с экспертами в неделю</li>
+          <li><span class="tick">•</span>Ментор в Telegram</li>
+          <li><span class="tick">•</span>Чек-лист OWASP + автоматическое сканирование</li>
+          <li><span class="tick">•</span>Юридические шаблоны</li>
+          <li><span class="tick">•</span>Инфраструктура — по шаблону с экспертами</li>
+          <li><span class="tick">•</span>Участие в Demo Day</li>
         </ul>
         <a class="btn btn-ghost" href="#apply" data-tariff="Solo">Занять место на Solo</a>
       </div>
@@ -400,12 +454,12 @@
         <p class="who">Вам нужна команда рядом с проектом</p>
         <div class="amount">590 000 ₸<small> / месяц</small></div>
         <ul>
-          <li><span class="tick">✓</span>Всё из Solo</li>
-          <li><span class="tick">✓</span>8 часов в неделю индивидуальных созвонов с экспертами</li>
-          <li><span class="tick">✓</span>Ручной аудит безопасности специалистом</li>
-          <li><span class="tick">✓</span>Юридические консультации</li>
-          <li><span class="tick">✓</span>Настройка инфраструктуры и полный аудит экспертами</li>
-          <li><span class="tick">✓</span>Участие в Demo Day</li>
+          <li><span class="tick">•</span>Всё из Solo</li>
+          <li><span class="tick">•</span>6 часов групповых созвонов с экспертами в неделю</li>
+          <li><span class="tick">•</span>Ручной аудит безопасности специалистом</li>
+          <li><span class="tick">•</span>Юридические консультации</li>
+          <li><span class="tick">•</span>Настройка инфраструктуры и полный аудит экспертами</li>
+          <li><span class="tick">•</span>Участие в Demo Day</li>
         </ul>
         <a class="btn btn-primary" href="#apply" data-tariff="Pro">Занять место на Pro</a>
       </div>
@@ -414,11 +468,11 @@
         <p class="who">Вам нужна команда, которая заберёт разработку</p>
         <div class="amount">По договорённости<small> · по приглашению</small></div>
         <ul>
-          <li><span class="tick">✓</span>Всё из Pro</li>
-          <li><span class="tick">✓</span>Эксперты без лимита в рамках проекта</li>
-          <li><span class="tick">✓</span>Аудит + повторная проверка</li>
-          <li><span class="tick">✓</span>Полное юридическое сопровождение</li>
-          <li><span class="tick">✓</span>Инфраструктура под ключ</li>
+          <li><span class="tick">•</span>Всё из Pro</li>
+          <li><span class="tick">•</span>Эксперты без лимита в рамках проекта</li>
+          <li><span class="tick">•</span>Аудит + повторная проверка</li>
+          <li><span class="tick">•</span>Полное юридическое сопровождение</li>
+          <li><span class="tick">•</span>Инфраструктура под ключ</li>
         </ul>
         <a class="btn btn-ghost" href="#apply" data-tariff="Partner">Запросить приглашение</a>
       </div>
@@ -429,7 +483,7 @@
 
 
 <!-- ===== FAQ ===== -->
-<section class="section" id="faq">
+<section class="section" id="faq" data-metric="faq">
   <div class="wrap-narrow">
     <h2 class="headline reveal center">Вопросы и ответы</h2>
     <div class="faq">
@@ -439,7 +493,7 @@
       </details>
       <details class="reveal">
         <summary>Сколько времени это займёт в неделю?</summary>
-        <div class="faq-body">12–15 часов в неделю. Это условие отбора: без такого темпа продукт не доходит до рабочей среды. Обвязку — авторизацию, базу, интеграции — вы не пишете с нуля, она подключается из готовых заготовок программы.</div>
+        <div class="faq-body">Всё зависит от сложности проекта. В среднем уходит 10–19 часов в неделю.</div>
       </details>
       <details class="reveal">
         <summary>Кому принадлежит продукт?</summary>
@@ -451,11 +505,11 @@
       </details>
       <details class="reveal">
         <summary>Что если я не успею за поток?</summary>
-        <div class="faq-body">Если продукт не вышел в прод при пройденных контрольных точках — по вашему выбору частичный возврат или бесплатный перевод в следующий поток.</div>
+        <div class="faq-body">Вы можете продолжить работу с нами — мы обязательно разберём ваш кейс отдельно, — либо продолжить самостоятельно. Выбор всегда за вами.</div>
       </details>
       <details class="reveal">
         <summary>Кто оценивает проект на защите?</summary>
-        <div class="faq-body">Практики вашего рынка, в том числе внешний член жюри, не связанный с программой.</div>
+        <div class="faq-body">Эксперты нашей компании. При необходимости привлечём внешнего члена жюри, не связанного с программой, чтобы быть максимально объективными.</div>
       </details>
       <details class="reveal">
         <summary>Что будет после программы?</summary>
@@ -470,21 +524,32 @@
 </section>
 
 <!-- ===== APPLY ===== -->
-<section class="section" id="apply">
+<section class="section" id="apply" data-metric="apply">
   <div class="wrap-narrow">
     <p class="eyebrow reveal center" style="text-align:center">Заявка</p>
     <h2 class="headline reveal center">Расскажите, что хотите построить.</h2>
     <p class="sub reveal center" style="margin-top:16px;text-align:center">Оставьте контакт — мы напишем сами. Сначала разговор, потом решение о потоке: заявка ни к чему не обязывает.</p>
 
     <form class="apply-form reveal" id="applyForm" novalidate>
-      <div class="field">
-        <label for="afContact">Почта или номер телефона</label>
-        <input id="afContact" name="contact" type="text" placeholder="you@mail.kz · +7 777 123 45 67 · @nickname" required>
+      <div class="apply-grid">
+        <div class="field">
+          <label for="afPhone">Номер телефона</label>
+          <input id="afPhone" name="phone" type="tel" placeholder="+7 777 123 45 67" required>
+        </div>
+        <div class="field">
+          <label for="afEmail">Почта</label>
+          <input id="afEmail" name="email" type="email" placeholder="you@mail.kz" required>
+        </div>
       </div>
 
       <div class="field">
         <label for="afIdea">Пара слов о продукте <span style="font-weight:400">— по желанию</span></label>
         <textarea id="afIdea" name="idea" rows="3" placeholder="Что хотите построить и для кого — поможет нам подготовиться к разговору."></textarea>
+      </div>
+
+      <div class="field">
+        <label for="afWish">Пожелания <span style="font-weight:400">— по желанию</span></label>
+        <textarea id="afWish" name="wish" rows="2" placeholder="Удобное время для разговора, вопросы, что важно учесть."></textarea>
       </div>
 
       <input type="hidden" name="tariff" id="afTariff" value="">
@@ -518,8 +583,9 @@
   </div>
 </footer>
 
-<script src="assets/game.js?v=15"></script>
-<script src="assets/demo.js?v=15"></script>
+<script src="assets/game.js?v=16"></script>
+<script src="assets/demo.js?v=16"></script>
+<script src="assets/metrics.js?v=16" defer></script>
 <script>
   const io = new IntersectionObserver(entries => {
     entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
@@ -537,12 +603,15 @@
   const statPanels = document.querySelectorAll('.stat-panel');
   let statCur = null;
   function openStat(key, scroll) {
+    const wasOpen = statCur !== null;
     statCur = key === statCur ? null : key;
     statBtns.forEach(b => b.classList.toggle('active', b.dataset.stat === statCur));
     statPanels.forEach(p => p.classList.toggle('open', p.dataset.panel === statCur));
-    if (statCur && scroll) {
-      const p = document.querySelector(`.stat-panel[data-panel="${statCur}"]`);
-      if (p) setTimeout(() => p.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+    // лента прилипает и сжимается, пока открыта панель — переключение без скролла наверх
+    document.querySelector('.stats').classList.toggle('stuck', statCur !== null);
+    if (statCur && scroll && !wasOpen) {
+      const s = document.querySelector('.stats');
+      setTimeout(() => s.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
     }
   }
   statBtns.forEach(b => b.addEventListener('click', () => openStat(b.dataset.stat, true)));
@@ -553,6 +622,19 @@
   }
   window.addEventListener('hashchange', openByHash);
   openByHash();
+
+  /* лёгкий 3D-параллакс горы за hero (только десктоп с мышью) */
+  const mt = document.getElementById('heroMountain');
+  const heroEl = document.querySelector('.hero');
+  if (mt && heroEl && matchMedia('(pointer:fine) and (min-width:768px)').matches) {
+    heroEl.addEventListener('mousemove', e => {
+      const r = heroEl.getBoundingClientRect();
+      const x = (e.clientX - r.left) / r.width - .5;
+      const y = (e.clientY - r.top) / r.height - .5;
+      mt.style.transform = `perspective(1000px) rotateX(${(y * -4).toFixed(2)}deg) rotateY(${(x * 5).toFixed(2)}deg)`;
+    });
+    heroEl.addEventListener('mouseleave', () => { mt.style.transform = ''; });
+  }
 
   /* ---------- форма заявки ---------- */
 
@@ -574,8 +656,8 @@
   };
 
   const asText = d =>
-    `Заявка в Taulau\n\nКонтакт: ${d.contact}\nТариф: ${d.tariff || 'не выбран'}\n\n` +
-    `Продукт:\n${d.idea || '—'}\n`;
+    `Заявка в Taulau\n\nТелефон: ${d.phone}\nПочта: ${d.email}\nТариф: ${d.tariff || 'не выбран'}\n\n` +
+    `Продукт:\n${d.idea || '—'}\n\nПожелания:\n${d.experience || '—'}\n`;
 
   function fail(message) {
     note.textContent = message;
@@ -616,14 +698,19 @@
     e.preventDefault();
     note.classList.remove('err');
 
+    const phone = form.phone.value.trim();
+    const email = form.email.value.trim();
     const data = {
-      contact: form.contact.value.trim(),
+      contact: (phone + ' · ' + email).trim(),
+      phone, email,
       tariff: form.tariff.value,
       idea: form.idea.value.trim(),
+      experience: form.wish.value.trim(),
       website: form.website.value,
     };
 
-    if (data.contact.length < 3) return fail('Оставьте почту или телефон — иначе мы не сможем ответить');
+    if (phone.length < 6) return fail('Укажите номер телефона');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return fail('Укажите почту — на неё придёт ответ');
 
     submit.disabled = true;
     submit.textContent = 'Отправляем…';

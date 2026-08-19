@@ -701,6 +701,9 @@ const REG_CODE = (decodeURIComponent(location.hash || "").match(/^#reg=([A-Za-z0
 /* Социальные разделы потока: скрыты, пока в config.js SHIPYARD_FLOW_UI не true.
    Прячем и пункты меню, и прямые ссылки #flow/#league — редирект на карту. */
 const FLOW_UI = window.SHIPYARD_FLOW_UI === true;
+/* лотерея и баллы скрыты до второго этапа геймификации (код не удаляем) */
+const LOTTERY_UI = window.SHIPYARD_LOTTERY_UI === true;
+const POINTS_UI = window.SHIPYARD_POINTS_UI === true;
 const FLOW_VIEWS = new Set(["flow", "demos", "league", "battles"]);
 if (!FLOW_UI) { const g = document.getElementById("flowGroup"); if (g) g.remove(); }
 
@@ -718,7 +721,7 @@ async function go(name) {
       if (name === "demos" && !CACHE.demos) CACHE.demos = (await apiCall("/demos")).demos;
       if (name === "league") CACHE.league = (await apiCall("/league")).rows;
       if (FLOW_UI && (name === "flow" || name === "map")) CACHE.flow = (await apiCall("/flow")).rows;
-      if (name === "map" && !CACHE.lottery) CACHE.lottery = await apiCall("/lottery");
+      if (LOTTERY_UI && name === "map" && !CACHE.lottery) CACHE.lottery = await apiCall("/lottery");
       if (name === "battles" && !CACHE.battles) CACHE.battles = await apiCall("/battles");
     }
   } catch (e) { toast(e.message); }
@@ -837,7 +840,7 @@ const VIEWS = {
         </div>
         <div class="mh-stats">
           <div><b>${lvl.emoji} ${lvl.name}</b><span>уровень ${lvl.n} из 8</span></div>
-          <div><b>${fmt(points())}</b><span>очков</span></div>
+          ${POINTS_UI ? `<div><b>${fmt(points())}</b><span>очков</span></div>` : ""}
           <div><b>${got.length}/9</b><span>инструментов</span></div>
           <div><b>${daysLeft} дн.</b><span>до защиты</span></div>
         </div>
@@ -879,7 +882,7 @@ const VIEWS = {
         </div>
       </div>
 
-      ${API !== null && CACHE.lottery ? `
+      ${API !== null && LOTTERY_UI && CACHE.lottery ? `
         <div class="lottery-strip">
           <div class="ls-main">
             <b>🎡 Лотерея Taulau</b>
@@ -1172,7 +1175,7 @@ const VIEWS = {
               <div class="task ${S.sec[i.id] ? "done-task" : ""}">
                 <input type="checkbox" id="${i.id}" data-sec="${i.id}" ${S.sec[i.id] ? "checked" : ""}>
                 <label for="${i.id}">${esc(i.label)}</label>
-                <span class="pts">+10</span>
+                ${POINTS_UI ? `<span class="pts">+10</span>` : ""}
               </div>`).join("")}
           </div>
         </div>`).join("")}`;
@@ -1183,7 +1186,7 @@ const VIEWS = {
     return `
       <div class="page-head">
         <h1>Юридический трек</h1>
-        <p>Идёт параллельно программе. Приём денег — только после публичной оферты на станции 6. Регистрация компании и товарный знак могут продолжиться после программы — это фиксируется в договоре.</p>
+        <p>Идёт параллельно программе. Приём денег — только после публичной оферты на станции 6, по желанию клиента. Регистрация компании и товарный знак могут продолжиться после программы — это фиксируется в договоре.</p>
       </div>
       <div class="panel">
         ${LEGAL.map(l => {
@@ -1378,7 +1381,7 @@ const VIEWS = {
     return `
       <div class="page-head">
         <h1>Demo Day</h1>
-        <p>5 минут разбора, 3 минуты вопросов. В зале — отраслевые эксперты, практики и заказчики из вашей индустрии. Оценка по осям: проблема, решение, результат, план развития. Письменная обратная связь каждому.</p>
+        <p>Разбор, сессия вопросов и обратная связь каждому. В зале — эксперты и, при необходимости, внешние люди из вашей индустрии. Оценка по осям: проблема, решение, результат, план развития.</p>
       </div>
       <div class="dd-count">
         <div class="dd-unit"><b>${days}</b><span>дней</span></div>
@@ -1423,7 +1426,7 @@ const VIEWS = {
           <div class="cert-project">${esc(S.project)}</div>
           <div class="cert-row">
             <div><b>${S.dock ? esc(DOCKS[S.dock].name) : "—"}</b><span>док</span></div>
-            <div><b>${fmt(points())}</b><span>очков</span></div>
+            ${POINTS_UI ? `<div><b>${fmt(points())}</b><span>очков</span></div>` : ""}
             <div><b>${lvl.emoji} ${lvl.name}</b><span>уровень</span></div>
             <div><b>${tools().length}/9</b><span>станций</span></div>
           </div>
@@ -1435,7 +1438,6 @@ const VIEWS = {
         <h2>Что даёт сертификат</h2>
         ${["Публичная витрина проекта в каталоге выпускников",
            "Приоритет в отборе на партнёрский трек и сопровождение",
-           "Участие в розыгрыше призов дока по итогам потока",
            "Вход в закрытое сообщество выпускников"]
           .map(t => `<div class="req ok"><div class="r-ic">✓</div>${t}</div>`).join("")}
       </div>`;
@@ -1573,7 +1575,7 @@ function taskRow(t, blocked = false) {
     <div class="task ${done ? "done-task" : ""} ${blocked && !done ? "task-blocked" : ""}">
       <input type="checkbox" id="${t.id}" data-task="${t.id}" ${done ? "checked" : ""} ${blocked && !done ? "disabled" : ""}>
       <label for="${t.id}">${esc(t.label)}</label>
-      <span class="pts">+${t.pts}</span>
+      ${POINTS_UI ? `<span class="pts">+${t.pts}</span>` : ""}
     </div>`;
 }
 
@@ -1854,13 +1856,13 @@ function bind() {
           } else if (nowLvl > wasLvl) {
             celebrate(`Новый уровень: ${LEVELS[nowLvl - 1].name}!`, LEVELS[nowLvl - 1].cond, LEVELS[nowLvl - 1].emoji,
               { share: `🏔️ Taulau: новый уровень — ${LEVELS[nowLvl - 1].name} ${LEVELS[nowLvl - 1].emoji}! ${LEVELS[nowLvl - 1].cond}.` });
-          } else if (!announceSkillUps(wasSkills)) toast(`+${t.pts} очков`);
+          } else if (!announceSkillUps(wasSkills)) toast(POINTS_UI ? `+${t.pts} очков` : "Задача закрыта ✓");
         }
         CACHE.league = null;
         CACHE.lottery = null; // закрытая станция могла добавить спин
         patchMyFlow();
         render();
-        if (API !== null && activeView === "map")
+        if (LOTTERY_UI && API !== null && activeView === "map")
           apiCall("/lottery").then(l => { CACHE.lottery = l; if (activeView === "map") render(); }).catch(() => {});
       } catch (err2) { toast(err2.message); cb.checked = !checked; }
     }));
