@@ -320,6 +320,30 @@ body.cyber .footer {
 @media (max-width: 768px) {
   .hero-mountain { transform: none !important; }
 }
+
+/* ---------- мобильная полировка ---------- */
+@media (max-width: 640px) {
+  body.cyber .display { font-size: clamp(26px, 7.4vw, 30px); line-height: 1.12; }
+  body.cyber .display br { display: none; }   /* переносы решает экран, а не разметка */
+  body.cyber .headline { font-size: clamp(22px, 6vw, 26px); }
+  body.cyber .sub { font-size: 15.5px; }
+  body.cyber .hero { padding: 96px 18px 40px; }
+  body.cyber .hero .sub { margin-top: 18px; }
+  body.cyber .hero-cta { margin-top: 26px; }
+  body.cyber .section { padding: 44px 18px; }
+  body.cyber .btn-lg { padding: 13px 22px; font-size: 15.5px; }
+  /* гора — только лёгкий фон, не спорит с текстом */
+  .hero-mountain { opacity: .3; height: 64%; }
+  @keyframes mt-in {
+    from { opacity: 0; transform: translateY(28px); }
+    to { opacity: .3; transform: none; }
+  }
+  body.cyber .hero-proof { gap: 8px 18px; margin-top: 24px; }
+  /* липкая лента на телефоне съедает пол-экрана — отключаем прилипание */
+  body.cyber .stats { position: static; }
+  body.cyber button.stat { padding: 22px 14px; }
+  body.cyber .stat-panel { padding: 34px 18px 40px; }
+}
 @media (prefers-reduced-motion: reduce) {
   .hero-mountain { animation: none; }
   .hero-mountain #ascentPath, .hero-mountain .peak-node { animation: none !important; }
