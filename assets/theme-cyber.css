@@ -327,7 +327,7 @@ body.cyber .footer {
   body.cyber .display br { display: none; }   /* переносы решает экран, а не разметка */
   body.cyber .headline { font-size: clamp(22px, 6vw, 26px); }
   body.cyber .sub { font-size: 15.5px; }
-  body.cyber .hero { padding: 96px 18px 40px; }
+  body.cyber .hero { padding: 58px 18px 40px; }
   body.cyber .hero .sub { margin-top: 18px; }
   body.cyber .hero-cta { margin-top: 26px; }
   body.cyber .section { padding: 44px 18px; }
@@ -337,7 +337,7 @@ body.cyber .footer {
   .hero-mountain {
     opacity: .58;
     left: -30%; right: -30%;
-    top: 24%; bottom: auto;
+    top: 30%; bottom: auto;
     height: 104vw;
   }
   @keyframes mt-in {
