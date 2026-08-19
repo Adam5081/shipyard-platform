@@ -332,8 +332,14 @@ body.cyber .footer {
   body.cyber .hero-cta { margin-top: 26px; }
   body.cyber .section { padding: 44px 18px; }
   body.cyber .btn-lg { padding: 13px 22px; font-size: 15.5px; }
-  /* гора видима и на телефоне; текст поверх остаётся читаемым */
-  .hero-mountain { opacity: .58; height: 78%; }
+  /* гора на телефоне: meet масштабирует по ширине, поэтому делаем контейнер
+     шире экрана и сажаем в центр hero — пирамида крупная, а не полоска внизу */
+  .hero-mountain {
+    opacity: .58;
+    left: -30%; right: -30%;
+    top: 24%; bottom: auto;
+    height: 104vw;
+  }
   @keyframes mt-in {
     from { opacity: 0; transform: translateY(28px); }
     to { opacity: .58; transform: none; }
