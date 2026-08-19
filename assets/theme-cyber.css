@@ -76,12 +76,26 @@ body.cyber .nav {
 body.cyber .nav-logo { color: #f7f8f8; }
 body.cyber .nav-links a { color: var(--ink-2); font-size: 14px; }
 body.cyber .nav-links a:hover { color: #fff; }
+/* CTA в наве — акцентная, светится фирменным цветом */
 body.cyber .nav-cta {
-  background: rgba(255, 255, 255, .08);
-  border: 1px solid rgba(255, 255, 255, .1);
-  color: #f7f8f8;
+  background: #5E6AD2;
+  border: 1px solid rgba(255, 255, 255, .12);
+  color: #fff;
+  box-shadow: 0 0 16px rgba(94, 106, 210, .45);
 }
-body.cyber .nav-cta:hover { background: rgba(255, 255, 255, .14); }
+body.cyber .nav-cta:hover { background: #6E79DD; box-shadow: 0 0 24px rgba(94, 106, 210, .65); }
+
+/* scrollspy: подчёркивание пункта текущей секции */
+body.cyber .nav-links a { position: relative; }
+body.cyber .nav-links a.spy-active { color: #fff; }
+body.cyber .nav-links a.spy-active::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: -8px;
+  height: 2px;
+  background: #5E6AD2;
+  border-radius: 2px;
+}
 
 /* ---------- hero: декор позади и едва заметен ---------- */
 body.cyber .hero {
@@ -130,8 +144,20 @@ body.cyber .hero-secondary:hover { color: #fff; text-decoration: none; }
 body.cyber .nda-note { color: inherit; text-decoration: underline; text-decoration-color: rgba(255,255,255,.3); text-underline-offset: 3px; }
 body.cyber a.nda-note:hover { color: #fff; }
 
-/* ---------- секции ---------- */
-body.cyber .section { background: transparent; position: relative; }
+/* ---------- секции: плотнее по вертикали, тексты на всю ширину, выключка влево ---------- */
+body.cyber .section { background: transparent; position: relative; padding: 64px 22px; }
+body.cyber .hero { padding-bottom: 56px; }
+body.cyber .section .sub { max-width: none !important; }
+body.cyber .live-demo { margin-top: 36px; }
+
+/* NDA-чекбокс в форме заявки */
+body.cyber .nda-accept {
+  display: flex; gap: 10px; align-items: flex-start;
+  margin: 4px 0 16px; cursor: pointer;
+  color: var(--ink-2); font-size: 14px; line-height: 1.5;
+}
+body.cyber .nda-accept input { margin-top: 3px; accent-color: #5E6AD2; }
+body.cyber .nda-accept a { color: #9aa5e8; }
 body.cyber .section-alt { background: #0d0e11; }
 body.cyber .section-dark {
   background: #0B0C0E;
@@ -193,9 +219,10 @@ body.cyber button.stat span { color: var(--ink-3); font-size: 13.5px; }
 body.cyber button.stat:hover { background: #14161a; }
 body.cyber .stat-arrow { color: var(--ink-3); font-style: normal; font-weight: 300; font-size: 18px; transition: transform .3s ease, color .2s ease; }
 body.cyber button.stat:hover .stat-arrow { color: #fff; }
+/* активная вкладка сливается с панелью: общий фон + индиго-линия сверху донизу */
 body.cyber button.stat.active {
-  background: #16181d;
-  box-shadow: inset 0 -2px 0 #5E6AD2;
+  background: #12141a;
+  box-shadow: inset 0 2px 0 #5E6AD2;
 }
 body.cyber button.stat.active b { color: #fff; }
 body.cyber button.stat.active .stat-arrow { transform: rotate(45deg); color: #9aa5e8; }
@@ -208,11 +235,25 @@ body.cyber .stats.stuck .stat-arrow { margin-top: 3px; font-size: 13px; }
 body.cyber .stat-panel,
 body.cyber .stat-panel.section-alt,
 body.cyber .stat-panel.section-dark {
-  background: #0e0f12;
+  background: #12141a;
   border-bottom: 1px solid rgba(255, 255, 255, .07);
   position: relative;
+  padding: 48px 22px 56px;
+}
+/* линия-связка: тот же индиго, что на активной вкладке */
+body.cyber .stat-panel::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 2px;
+  background: #5E6AD2;
+  opacity: .55;
 }
 body.cyber .stat-panel .reveal { opacity: 1; transform: none; }
+/* вложенность: суб-блок мельче основного, текст на всю ширину */
+body.cyber .stat-panel .headline { font-size: clamp(21px, 2.2vw, 29px); }
+body.cyber .stat-panel .sub { font-size: 15px; max-width: none !important; }
+body.cyber .stat-panel .acc-title b { font-size: 15.5px; }
+body.cyber .stat-panel .acc-body { font-size: 14.5px; }
 
 /* аккордеон станций */
 body.cyber .acc-item[open] > summary { background: rgba(255, 255, 255, .04); }

@@ -799,6 +799,12 @@ const VIEWS = {
                 Ещё не подавали? <a href="index.html#apply">Подать заявку</a></p>` : ""}
             <div class="field"><label>E-mail</label><input id="aEmail" type="email" required placeholder="you@example.com"></div>
             <div class="field"><label>Пароль</label><input id="aPass" type="password" required minlength="6" placeholder="Минимум 6 символов"></div>
+            ${S._reg ? `
+              <label style="display:flex;gap:9px;align-items:flex-start;margin:2px 0 14px;cursor:pointer;font-size:13.5px;color:var(--ink-2);line-height:1.45">
+                <input type="checkbox" id="aNda" required style="margin-top:2px">
+                <span>Продолжая, вы полностью соглашаетесь с условиями
+                  <a href="nda.html" target="_blank" rel="noopener">Соглашения о конфиденциальности (NDA)</a></span>
+              </label>` : ""}
             <div id="authErr" style="color:var(--red);font-size:14px;margin-bottom:12px;display:none"></div>
             <button class="btn btn-primary" type="submit" style="width:100%">${S._reg ? "Создать аккаунт" : "Войти"}</button>
           </form>
