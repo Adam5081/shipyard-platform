@@ -6,8 +6,8 @@
 <meta name="robots" content="noindex">
 <title>Taulau — админка</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230071e3'/><path d='M27 34h46M50 34v32q0 13 13 13 7 0 10-6' stroke='white' stroke-width='11' fill='none' stroke-linecap='round'/></svg>">
-<link rel="stylesheet" href="assets/styles.css?v=16">
-<script src="assets/config.js?v=16"></script>
+<link rel="stylesheet" href="assets/styles.css?v=17">
+<script src="assets/config.js?v=17"></script>
 <style>
   .adm { max-width: 1000px; margin: 0 auto; padding: 40px 24px 80px; }
   .adm-head { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin-bottom: 18px; }
@@ -62,6 +62,7 @@
     <button data-tab="apps" class="active">Заявки</button>
     <button data-tab="users">Участники</button>
     <button data-tab="team">Команда</button>
+    <button data-tab="cal">Календарь</button>
     <button data-tab="metrics">Лендинг</button>
   </div>
 
@@ -203,7 +204,15 @@ function userRow(u) {
       </select>` : '';
   const mentorTag = e && ROLE?.role !== 'admin' ? '' :
     (e && u.mentorId && !MENTORS.length ? `<span class="u-sub">ментор №${u.mentorId}</span>` : '');
+  const srPending = (u.stationReady || []).filter(s => !s.approvedAt);
+  const srOpen = (u.stationReady || []).filter(s => s.approvedAt).map(s => s.station);
+  const stations = e ? `
+    ${srPending.map(s => `
+      <div class="u-sub" style="margin-top:6px">📬 <b>Сдана станция ${s.station}</b>${s.link ? ` · <a href="${esc(s.link)}" target="_blank" rel="noopener">вложение</a>` : ''}${s.note ? ` · ${esc(s.note)}` : ''}
+        <button class="btn btn-primary btn-sm" data-stok="${s.station}" data-uid="${u.id}">Проверено — открыть станцию ${s.station + 1}</button></div>`).join('')}
+    ${srOpen.length ? `<div class="u-sub">🟢 открыты станции: ${srOpen.map(s => s + 1).join(', ')}${u.contractAt ? ' · договор ✓' : ''}</div>` : (u.contractAt ? '<div class="u-sub">договор ✓</div>' : '<div class="u-sub u-flag">договор не принят</div>')}` : '';
   const gates = e ? `
+    ${stations}
     <div class="u-gates">
       ${pending.map(([g]) => `<button class="btn btn-primary btn-sm" data-gate="${g}" data-uid="${u.id}">Подтвердить КТ-${g.slice(1)}</button>`).join(' ')}
       ${approved.map(([g]) => `<span class="tag t-accepted" title="Отозвать — клик" data-ungate="${g}" data-uid="${u.id}" style="cursor:pointer">КТ-${g.slice(1)} ✓</span>`).join(' ')}
@@ -242,7 +251,9 @@ async function loadUsers() {
   const waiting = users.reduce((n, u) => n + (u.economy ? Object.values(u.economy.gates).filter(s => s === 'pending').length : 0), 0);
   countEl.textContent = (ROLE?.role === 'mentor' ? `мои участники: ${real}` : `участников: ${real}`)
     + (users.length > real ? ` · сидов: ${users.length - real}` : '')
-    + (waiting ? ` · ⏳ КТ на проверке: ${waiting}` : '');
+    + (waiting ? ` · ⏳ КТ на проверке: ${waiting}` : '')
+    + (() => { const n = users.reduce((s, u) => s + (u.stationReady || []).filter(x => !x.approvedAt).length, 0);
+        return n ? ` · 📬 станций на проверке: ${n}` : ''; })();
   list.innerHTML = users.length ? `
     <div class="u-wrap">
       <table class="u-table">
@@ -266,6 +277,14 @@ async function loadUsers() {
 
   list.querySelectorAll('[data-copy]').forEach(el => el.addEventListener('click', async () => {
     try { await navigator.clipboard.writeText(el.dataset.copy); toast('Скопировано'); } catch {}
+  }));
+
+  list.querySelectorAll('[data-stok]').forEach(el => el.addEventListener('click', async () => {
+    try {
+      await call('/api/admin/station', 'POST', { userId: Number(el.dataset.uid), station: Number(el.dataset.stok), approved: true });
+      toast('Станция проверена — путь участнику открыт');
+      load();
+    } catch (e) { toast(e.message); }
   }));
 
   list.querySelectorAll('[data-gate],[data-ungate]').forEach(el => el.addEventListener('click', async () => {
@@ -343,6 +362,92 @@ async function loadTeam() {
   }));
 }
 
+/* ---------- календарь сессий и Demo Day ---------- */
+
+async function loadCal() {
+  const d = await call('/api/admin/sessions');
+  countEl.textContent = `сессий в расписании: ${d.list.length}`;
+  const fmtD = ts => new Date(ts).toLocaleString('ru-RU', { weekday: 'short', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
+  const rows = d.list.map(s => `
+    <tr><td><b>${esc(s.title)}</b><div class="u-sub">${s.type === 'live' ? '🎥 лайв' : '👥 созвон'}${s.dir ? ' · ' + esc(s.dir) : ''}</div></td>
+      <td>${fmtD(s.startsAt)}<div class="u-sub">${s.duration} мин</div></td>
+      <td>${s.bookings.length}/${s.capacity}${s.bookings.length ? `<div class="u-sub">${s.bookings.map(esc).join(', ')}</div>` : ''}</td>
+      <td>${s.meetUrl ? `<a href="${esc(s.meetUrl)}" target="_blank" rel="noopener">Meet</a>` : '—'}</td>
+      <td><button class="btn btn-ghost btn-sm" data-delsession="${s.id}">Удалить</button></td></tr>`).join('');
+  const dd = d.demodayDate ? new Date(d.demodayDate) : null;
+  const regs = d.demodayRegs.map(r => `
+    <div class="app-card" style="padding:14px 18px">
+      <b>${esc(r.name)}</b> · ${esc(r.project)} ·
+      ${r.link ? `<a href="${esc(r.link)}" target="_blank" rel="noopener">материалы</a>` : 'без ссылки'}
+      ${r.note ? `<div class="u-sub">${esc(r.note)}</div>` : ''}
+      ${r.approvedAt
+        ? '<span class="tag t-accepted">одобрено</span>'
+        : `<button class="btn btn-primary btn-sm" data-ddok="${r.userId}">Одобрить</button>`}
+    </div>`).join('');
+  list.innerHTML = `
+    <div class="app-card">
+      <h3 style="margin-bottom:12px">Новая сессия</h3>
+      <div class="app-row" style="margin-bottom:10px">
+        <input id="csTitle" type="text" placeholder="Название (например: Live: контекст для Claude)" style="flex:2 1 260px">
+        <input id="csDir" type="text" placeholder="Направление" style="flex:1 1 140px">
+        <select id="csType"><option value="group">Созвон (лимит часов)</option><option value="live">Лайв (для всех)</option></select>
+      </div>
+      <div class="app-row" style="margin-bottom:10px">
+        <input id="csDate" type="datetime-local" style="flex:1 1 200px">
+        <input id="csDur" type="number" value="60" min="15" max="240" step="15" title="Минуты" style="width:90px">
+        <input id="csCap" type="number" value="4" min="1" max="50" title="Мест" style="width:70px">
+        <input id="csUrl" type="text" placeholder="Ссылка на Google Meet" style="flex:2 1 240px">
+      </div>
+      <button class="btn btn-primary btn-sm" id="csAdd">Добавить в календарь</button>
+    </div>
+    <div class="u-wrap" style="margin-bottom:16px">
+      <table class="u-table"><thead><tr><th>Сессия</th><th>Когда</th><th>Записаны</th><th>Ссылка</th><th></th></tr></thead>
+      <tbody>${rows || '<tr><td colspan="5" class="empty">Расписание пусто — добавьте первую сессию.</td></tr>'}</tbody></table>
+    </div>
+    <div class="app-card">
+      <h3 style="margin-bottom:8px">Demo Day</h3>
+      <p class="u-sub" style="margin-bottom:10px">Раз в месяц, фиксированная дата. Сейчас: <b>${dd ? fmtD(dd.getTime()) : 'не назначена'}</b></p>
+      <div class="app-row" style="margin-bottom:14px">
+        <input id="ddDate" type="datetime-local" style="flex:0 1 220px">
+        <button class="btn btn-primary btn-sm" id="ddSet">Назначить дату</button>
+      </div>
+      <h3 style="margin-bottom:8px">Записи на защиту</h3>
+      ${regs || '<p class="empty" style="padding:8px 0">Записей пока нет. Запись доступна только дошедшим до MVP.</p>'}
+    </div>`;
+
+  document.getElementById('csAdd').addEventListener('click', async () => {
+    const dt = document.getElementById('csDate').value;
+    try {
+      await call('/api/admin/sessions', 'POST', {
+        title: document.getElementById('csTitle').value,
+        dir: document.getElementById('csDir').value,
+        type: document.getElementById('csType').value,
+        startsAt: dt ? new Date(dt).getTime() : 0,
+        duration: Number(document.getElementById('csDur').value),
+        capacity: Number(document.getElementById('csCap').value),
+        meetUrl: document.getElementById('csUrl').value,
+      });
+      toast('Сессия добавлена'); load();
+    } catch (e) { toast(e.message); }
+  });
+  list.querySelectorAll('[data-delsession]').forEach(el => el.addEventListener('click', async () => {
+    if (!confirm('Удалить сессию? Записавшиеся её больше не увидят.')) return;
+    try { await call('/api/admin/sessions/delete', 'POST', { id: Number(el.dataset.delsession) }); load(); }
+    catch (e) { toast(e.message); }
+  }));
+  const ddSet = document.getElementById('ddSet');
+  if (ddSet) ddSet.addEventListener('click', async () => {
+    const v = document.getElementById('ddDate').value;
+    if (!v) return toast('Выберите дату');
+    try { await call('/api/admin/demoday-date', 'POST', { date: new Date(v).getTime() }); toast('Дата Demo Day назначена'); load(); }
+    catch (e) { toast(e.message); }
+  });
+  list.querySelectorAll('[data-ddok]').forEach(el => el.addEventListener('click', async () => {
+    try { await call('/api/admin/demoday-approve', 'POST', { userId: Number(el.dataset.ddok), approved: true }); toast('Запись одобрена'); load(); }
+    catch (e) { toast(e.message); }
+  }));
+}
+
 /* ---------- аналитика лендинга ---------- */
 
 async function loadMetrics() {
@@ -387,7 +492,7 @@ async function load() {
         document.querySelector('.adm-head h1').textContent = `Кабинет ментора · ${ROLE.name}`;
       }
     }
-    await (TAB === 'apps' ? loadApps() : TAB === 'team' ? loadTeam() : TAB === 'metrics' ? loadMetrics() : loadUsers());
+    await (TAB === 'apps' ? loadApps() : TAB === 'team' ? loadTeam() : TAB === 'metrics' ? loadMetrics() : TAB === 'cal' ? loadCal() : loadUsers());
     gate.hidden = true;
     tabsEl.hidden = false;
   } catch (e) {

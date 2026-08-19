@@ -97,6 +97,51 @@ db.exec(`
     PRIMARY KEY (user_id, gate)
   );
 
+  /* сдача станций: участник заявляет готовность, ментор открывает путь дальше */
+  CREATE TABLE IF NOT EXISTS station_ready (
+    user_id      INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    station      INTEGER NOT NULL,               -- 0..8
+    link         TEXT NOT NULL DEFAULT '',       -- вложение: ссылка на репо/док/деплой
+    note         TEXT NOT NULL DEFAULT '',
+    requested_at INTEGER NOT NULL,
+    approved_at  INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (user_id, station)
+  );
+
+  /* календарь: лайв-сессии и групповые созвоны с экспертами */
+  CREATE TABLE IF NOT EXISTS sessions (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    title        TEXT NOT NULL,
+    dir          TEXT NOT NULL DEFAULT '',       -- направление (Разработка, DevOps, …)
+    type         TEXT NOT NULL DEFAULT 'group',  -- live (для всех) | group (лимит часов тарифа)
+    starts_at    INTEGER NOT NULL,
+    duration_min INTEGER NOT NULL DEFAULT 60,
+    meet_url     TEXT NOT NULL DEFAULT '',       -- ссылку видят только записанные
+    capacity     INTEGER NOT NULL DEFAULT 4,
+    created_at   INTEGER NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS bookings (
+    session_id INTEGER NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at INTEGER NOT NULL,
+    PRIMARY KEY (session_id, user_id)
+  );
+
+  /* запись на Demo Day: только дошедшие до MVP, одобряет ментор */
+  CREATE TABLE IF NOT EXISTS demoday_regs (
+    user_id      INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    link         TEXT NOT NULL DEFAULT '',
+    note         TEXT NOT NULL DEFAULT '',
+    requested_at INTEGER NOT NULL,
+    approved_at  INTEGER NOT NULL DEFAULT 0
+  );
+
+  /* настройки программы (дата Demo Day и т.п.) */
+  CREATE TABLE IF NOT EXISTS settings (
+    key   TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+  );
+
   /* аналитика лендинга: только счётчики событий, никаких личных данных */
   CREATE TABLE IF NOT EXISTS metrics (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -135,6 +180,7 @@ const NEW_COLUMNS = [
   ["battle_pts",  "INTEGER NOT NULL DEFAULT 0"],   // очки лиги, заработанные в баттлах
   ["bonus_spins", "INTEGER NOT NULL DEFAULT 0"],   // «счастливые билеты» лотереи (макс. 2 за поток)
   ["mentor_id",   "INTEGER NOT NULL DEFAULT 0"],   // ответственный ментор (0 — не назначен)
+  ["contract_accepted_at", "INTEGER NOT NULL DEFAULT 0"],  // акцепт упрощённого договора (нулевой этап)
 ];
 
 const existing = new Set(db.prepare("PRAGMA table_info(users)").all().map(c => c.name));

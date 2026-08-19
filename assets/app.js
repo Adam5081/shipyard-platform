@@ -418,8 +418,18 @@ function applyMe(d) {
   S.sec = d.sec || {};
   S.legal = d.legal || {};
   S.gates = d.gates || {};   // K1..K5: open / pending / approved (жёсткий гейт КТ)
+  S.ready = d.ready || {};   // сдача станций: {idx: "submitted"|"approved"}
+  S.contractAt = d.contractAt || 0;
+  S.demoday = d.demoday || null;   // { date, eligible, status, link }
   S.demos = d.demos || [];
   S.github = d.github || null;
+}
+
+/* первая станция, ещё не открытая ментором; работать можно только на ней */
+function openStationIdx() {
+  if (API === null) return Infinity;   // демо-режим — без гейта
+  for (let i = 0; i < STATIONS.length; i++) if (S.ready[i] !== "approved") return i;
+  return Infinity;
 }
 
 function logout(rerender = true) {
@@ -531,7 +541,8 @@ const doorOpen = () => STATIONS.every(stationDone);
 function earnedBadges() { return BADGES.filter(b => b.test(S)); }
 
 function demoDayDate() {
-  // защита — станция 7: конец седьмой недели потока
+  // фиксированная дата ближайшего Demo Day (задаёт админ); иначе — расчёт от старта
+  if (S.demoday && S.demoday.date) return new Date(S.demoday.date);
   const d = new Date(S.startDate);
   d.setDate(d.getDate() + 49);
   return d;
@@ -709,6 +720,8 @@ if (!FLOW_UI) { const g = document.getElementById("flowGroup"); if (g) g.remove(
 
 async function go(name) {
   if (API !== null && !TOKEN) name = "auth";
+  // нулевой этап: без акцепта договора кабинет не открывается
+  if (API !== null && TOKEN && S.contractAt === 0 && name !== "auth") name = "contract";
   if (!FLOW_UI && FLOW_VIEWS.has(name)) name = "map";
   if (activeView !== name) S.kbDoc = null;   // переход по разделам закрывает открытый материал
   if (name !== "battles") { BATTLE.play = null; BATTLE.review = null; }
@@ -722,6 +735,7 @@ async function go(name) {
       if (name === "league") CACHE.league = (await apiCall("/league")).rows;
       if (FLOW_UI && (name === "flow" || name === "map")) CACHE.flow = (await apiCall("/flow")).rows;
       if (LOTTERY_UI && name === "map" && !CACHE.lottery) CACHE.lottery = await apiCall("/lottery");
+      if (name === "experts") CACHE.sessions = await apiCall("/sessions");
       if (name === "battles" && !CACHE.battles) CACHE.battles = await apiCall("/battles");
     }
   } catch (e) { toast(e.message); }
@@ -790,6 +804,28 @@ const VIEWS = {
           </form>
         </div>
         <p class="muted" style="text-align:center;font-size:13px">Пилотный поток №1 · права на ваш продукт всегда остаются у вас</p>
+      </div>`;
+  },
+
+  /* ---- договор (нулевой этап): акцепт галочкой ---- */
+  contract() {
+    return `
+      <div style="max-width:640px;margin:6vh auto 0">
+        <div class="panel">
+          <h1 style="font-size:26px;font-weight:700;letter-spacing:-.02em;margin-bottom:8px">Договор с программой</h1>
+          <p class="muted" style="margin-bottom:18px">Упрощённый акцепт, чтобы начать работу. Полный договор подписывается отдельно — этот текст фиксирует главное:</p>
+          ${["Права на код, дизайн, данные и все наработки принадлежат вам — программа прав на продукт не получает.",
+             "Мы подписываем NDA: информация о вашем продукте не разглашается и используется только для сопровождения проекта.",
+             "Программа даёт процесс, платформу и часы экспертов по тарифу; результат зависит от вашей работы по станциям.",
+             "Публикация вашего кейса — только с вашего отдельного письменного согласия.",
+             "Оплата и финансовые условия фиксируются в основном договоре — вне платформы."]
+            .map(t => `<div class="req ok"><div class="r-ic">✓</div>${t}</div>`).join("")}
+          <label style="display:flex;gap:10px;align-items:flex-start;margin:18px 0;cursor:pointer">
+            <input type="checkbox" id="contractOk" style="margin-top:3px">
+            <span>Я прочитал и согласен с условиями. Понимаю, что полный договор будет подписан отдельно.</span>
+          </label>
+          <button class="btn btn-primary" id="contractBtn" style="width:100%" disabled>Согласен — начать путь</button>
+        </div>
       </div>`;
   },
 
@@ -926,14 +962,15 @@ const VIEWS = {
           </div>
         </div>
         <p class="sp-story">${esc(st.story)}</p>
-        ${sel > pendingGateIdx() ? `
+        ${sel > openStationIdx() ? `
           <div class="notice" style="margin-bottom:12px">
-            <b>⏳ Станция откроется после подтверждения ${esc(STATIONS[pendingGateIdx()].cp.id)}.</b>
-            Ментор сверяет артефакты предыдущей контрольной точки — как подтвердит, задачи разблокируются.
+            <b>🔒 Станция откроется после проверки станции ${openStationIdx()}.</b>
+            Сдайте её кнопкой «Готов» — ментор проверит и откроет путь дальше.
           </div>` : ""}
         <div class="sp-tasks">
-          ${st.tasks.map(t => taskRow(t, sel > pendingGateIdx())).join("")}
+          ${st.tasks.map(t => taskRow(t, sel > openStationIdx())).join("")}
         </div>
+        ${submitBlock(sel, st, done)}
         <div class="artifact-box">📦 <b>Артефакт недели:</b>&nbsp;${esc(st.artifact)}</div>
         ${done
           ? `<div class="log-box"><b>📖 Судовой журнал · глава ${sel + 1} из 9</b><p>${esc(st.log)}</p></div>`
@@ -1279,8 +1316,9 @@ const VIEWS = {
     return `
       <div class="page-head">
         <h1>Сервисный пул</h1>
-        <p>Групповой контур и ментор в Telegram — всем. Индивидуальные созвоны с экспертами — по часам тарифа: 4 часа в неделю на Solo, 8 — на Pro, без лимита на Partner.</p>
+        <p>Групповой контур и ментор в Telegram — всем. Все созвоны с экспертами групповые и идут через календарь: Solo — 4 часа в неделю, Pro — 6, Partner — без лимита.</p>
       </div>
+      ${API !== null && CACHE.sessions ? sessionsBlock() : ""}
       <div class="svc-grid">
         ${SERVICE.map((e, i) => `
           <div class="panel svc-card">
@@ -1288,7 +1326,7 @@ const VIEWS = {
               <span class="svc-ic">${e.icon}</span>
               <b>${esc(e.dir)}</b>
               ${e.indiv
-                ? `<button class="btn btn-primary btn-sm" data-book="${i}" title="Лимит тарифа: ${hours}">Слот · ${hours}</button>`
+                ? `<span class="status-chip wait">через календарь ↑</span>`
                 : `<span class="status-chip done">всегда на связи</span>`}
             </div>
             <p class="svc-what">${esc(e.what)}</p>
@@ -1386,8 +1424,26 @@ const VIEWS = {
       <div class="dd-count">
         <div class="dd-unit"><b>${days}</b><span>дней</span></div>
         <div class="dd-unit"><b>${hours}</b><span>часов</span></div>
-        <div class="dd-unit"><b>${dd.toLocaleDateString("ru-RU", { day: "numeric", month: "long" })}</b><span>дата защиты</span></div>
+        <div class="dd-unit"><b>${dd.toLocaleDateString("ru-RU", { day: "numeric", month: "long" })}</b><span>${S.demoday && S.demoday.date ? "ближайший Demo Day" : "дата защиты"}</span></div>
       </div>
+
+      ${API !== null && S.demoday ? `
+        <div class="panel">
+          <h2>Запись на Demo Day</h2>
+          ${S.demoday.status === "approved" ? `
+            <div class="req ok"><div class="r-ic">✓</div>Вы записаны и одобрены ментором. Ссылка: ${esc(S.demoday.link)}</div>` :
+          S.demoday.status === "submitted" ? `
+            <div class="notice"><b>⏳ Заявка на проверке у ментора.</b> Ссылка: ${esc(S.demoday.link)}</div>` :
+          S.demoday.eligible ? `
+            <p class="muted" style="margin-bottom:12px">Demo Day проходит раз в месяц. Приложите презентацию или ссылку на рабочий продукт — ментор проверит и подтвердит запись.</p>
+            <div class="field"><label>Ссылка на презентацию или продукт</label>
+              <input id="ddLink" placeholder="https://…"></div>
+            <div class="field"><label>Комментарий — по желанию</label>
+              <input id="ddNote" placeholder="Что важно знать перед защитой"></div>
+            <button class="btn btn-primary" data-dd-register>Записаться на Demo Day</button>` : `
+            <button class="btn btn-primary" disabled>Записаться на Demo Day</button>
+            <p class="muted" style="margin-top:10px">Вы ещё не дошли до MVP — записаться нельзя. Запись откроется, когда все девять станций закрыты и дверь MVP открыта.</p>`}
+        </div>` : ""}
       <div class="panel-row cols-2">
         <div class="panel">
           <h2>Готовность к сцене · ${okCount}/${reqs.length}</h2>
@@ -1568,6 +1624,56 @@ const VIEWS = {
 };
 
 /* ---------------- фрагменты ---------------- */
+
+/* календарь сессий: лайвы для всех, созвоны — по часам тарифа */
+function sessionsBlock() {
+  const S9 = CACHE.sessions;
+  const fmtD = ts => new Date(ts).toLocaleString("ru-RU", { weekday: "short", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
+  const rows = (S9.list || []).map(s => `
+    <div class="task" style="align-items:center">
+      <div style="flex:1;min-width:0">
+        <b>${s.type === "live" ? "🎥" : "👥"} ${esc(s.title)}</b>
+        <small style="display:block;color:var(--ink-3)">${fmtD(s.startsAt)} · ${s.duration} мин${s.dir ? " · " + esc(s.dir) : ""} ·
+          ${s.type === "live" ? "лайв-сессия, для всех" : `созвон · записано ${s.booked}/${s.capacity}`}</small>
+        ${s.my && s.meetUrl ? `<small style="display:block"><a href="${esc(s.meetUrl)}" target="_blank" rel="noopener">Ссылка на Google Meet →</a></small>` : ""}
+      </div>
+      ${s.my
+        ? `<button class="btn btn-ghost btn-sm" data-unbook="${s.id}">Отписаться</button>`
+        : s.booked >= s.capacity
+          ? `<span class="status-chip wait">мест нет</span>`
+          : `<button class="btn btn-primary btn-sm" data-book-session="${s.id}">Записаться</button>`}
+    </div>`).join("");
+  const used = Math.round((S9.usedMin || 0) / 6) / 10;
+  const limit = S9.limitMin ? S9.limitMin / 60 : null;
+  return `
+    <div class="panel">
+      <h2>Календарь сессий</h2>
+      <p class="muted" style="margin-bottom:6px">Лайв-сессии открыты всем. Групповые созвоны с экспертами — по часам тарифа${limit ? `: использовано <b>${used} из ${limit} ч</b> на этой неделе` : " — на вашем тарифе без лимита"}.</p>
+      ${rows || `<p class="muted" style="padding:12px 0">Ближайших сессий пока нет — расписание появится здесь.</p>`}
+    </div>`;
+}
+
+/* сдача станции: чек-лист закрыт -> кнопка «Готов» -> ментор открывает дальше */
+function submitBlock(sel, st, done) {
+  if (API === null || !done || sel !== openStationIdx()) return "";
+  const state = S.ready[sel];
+  if (state === "submitted") return `
+    <div class="notice" style="margin-top:14px">
+      <b>⏳ Станция на проверке у ментора.</b> Как проверит — следующая станция откроется автоматически.
+    </div>`;
+  if (state === "approved") return "";
+  const nextLabel = sel >= 8 ? "Сдать финал на проверку" : `Готов к станции ${sel + 1}`;
+  return `
+    <div class="panel" style="margin-top:14px;background:var(--bg-alt);box-shadow:none">
+      <b>Все задачи закрыты — сдайте станцию ментору.</b>
+      <p class="muted" style="margin:6px 0 12px">Вложения не обязательны, но помогают проверить быстрее.</p>
+      <div class="field"><label>Ссылка на артефакт — по желанию</label>
+        <input id="srLink" placeholder="Репозиторий, документ, деплой"></div>
+      <div class="field"><label>Комментарий — по желанию</label>
+        <input id="srNote" placeholder="Что посмотреть в первую очередь"></div>
+      <button class="btn btn-primary" data-submit-station="${sel}">${nextLabel}</button>
+    </div>`;
+}
 
 function taskRow(t, blocked = false) {
   const done = !!S.done[t.id];
@@ -1770,6 +1876,68 @@ function bind() {
       errEl.textContent = err2.message;
       errEl.style.display = "block";
     }
+  });
+
+  /* договор нулевого этапа */
+  const cOk = view.querySelector("#contractOk");
+  const cBtn = view.querySelector("#contractBtn");
+  if (cOk && cBtn) {
+    cOk.addEventListener("change", () => { cBtn.disabled = !cOk.checked; });
+    cBtn.addEventListener("click", async () => {
+      try {
+        const r = await apiCall("/contract/accept", "POST", {});
+        S.contractAt = r.contractAt || Date.now();
+        toast("Договор принят — добро пожаловать на станцию 0!");
+        go("map");
+      } catch (e2) { toast(e2.message); }
+    });
+  }
+
+  /* сдача станции ментору */
+  const srBtn = view.querySelector("[data-submit-station]");
+  if (srBtn) srBtn.addEventListener("click", async () => {
+    try {
+      const r = await apiCall("/station/submit", "POST", {
+        station: Number(srBtn.dataset.submitStation),
+        link: view.querySelector("#srLink")?.value || "",
+        note: view.querySelector("#srNote")?.value || "",
+      });
+      S.ready = r.ready || S.ready;
+      toast("Станция отправлена на проверку ментору");
+      render();
+    } catch (e2) { toast(e2.message); }
+  });
+
+  /* календарь: запись и отмена */
+  view.querySelectorAll("[data-book-session]").forEach(b => b.addEventListener("click", async () => {
+    try {
+      await apiCall("/sessions/book", "POST", { id: Number(b.dataset.bookSession) });
+      CACHE.sessions = await apiCall("/sessions");
+      toast("Вы записаны — ссылка на Meet появилась в карточке");
+      render();
+    } catch (e2) { toast(e2.message); }
+  }));
+  view.querySelectorAll("[data-unbook]").forEach(b => b.addEventListener("click", async () => {
+    try {
+      await apiCall("/sessions/unbook", "POST", { id: Number(b.dataset.unbook) });
+      CACHE.sessions = await apiCall("/sessions");
+      render();
+    } catch (e2) { toast(e2.message); }
+  }));
+
+  /* запись на Demo Day */
+  const ddBtn = view.querySelector("[data-dd-register]");
+  if (ddBtn) ddBtn.addEventListener("click", async () => {
+    try {
+      await apiCall("/demoday/register", "POST", {
+        link: view.querySelector("#ddLink")?.value || "",
+        note: view.querySelector("#ddNote")?.value || "",
+      });
+      S.demoday.status = "submitted";
+      S.demoday.link = view.querySelector("#ddLink")?.value || "";
+      toast("Заявка на Demo Day отправлена ментору");
+      render();
+    } catch (e2) { toast(e2.message); }
   });
 
   /* лотерея */

@@ -73,6 +73,32 @@ const q = {
   progress: db.prepare("SELECT kind, item_id FROM progress WHERE user_id = ?"),
   addProgress: db.prepare("INSERT OR IGNORE INTO progress (user_id, kind, item_id, done_at) VALUES (?,?,?,?)"),
   delProgress: db.prepare("DELETE FROM progress WHERE user_id = ? AND kind = ? AND item_id = ?"),
+  // сдача станций, календарь, Demo Day, настройки
+  myReady: db.prepare("SELECT * FROM station_ready WHERE user_id = ?"),
+  submitStation: db.prepare("INSERT OR REPLACE INTO station_ready (user_id, station, link, note, requested_at, approved_at) VALUES (?,?,?,?,?,0)"),
+  approveStation: db.prepare("UPDATE station_ready SET approved_at = ? WHERE user_id = ? AND station = ?"),
+  openStationDirect: db.prepare("INSERT OR IGNORE INTO station_ready (user_id, station, link, note, requested_at, approved_at) VALUES (?,?,'','',?,?)"),
+  revokeStation: db.prepare("UPDATE station_ready SET approved_at = 0 WHERE user_id = ? AND station = ?"),
+  acceptContract: db.prepare("UPDATE users SET contract_accepted_at = ? WHERE id = ?"),
+  sessionsUpcoming: db.prepare("SELECT * FROM sessions WHERE starts_at > ? ORDER BY starts_at LIMIT 60"),
+  sessionById: db.prepare("SELECT * FROM sessions WHERE id = ?"),
+  insertSession: db.prepare("INSERT INTO sessions (title, dir, type, starts_at, duration_min, meet_url, capacity, created_at) VALUES (?,?,?,?,?,?,?,?)"),
+  deleteSession: db.prepare("DELETE FROM sessions WHERE id = ?"),
+  sessionBookings: db.prepare("SELECT b.user_id, u.name FROM bookings b JOIN users u ON u.id = b.user_id WHERE b.session_id = ?"),
+  bookingCount: db.prepare("SELECT COUNT(*) AS n FROM bookings WHERE session_id = ?"),
+  myBookings: db.prepare("SELECT session_id FROM bookings WHERE user_id = ?"),
+  addBooking: db.prepare("INSERT OR IGNORE INTO bookings (session_id, user_id, created_at) VALUES (?,?,?)"),
+  delBooking: db.prepare("DELETE FROM bookings WHERE session_id = ? AND user_id = ?"),
+  myGroupMinutes: db.prepare(`
+    SELECT COALESCE(SUM(s.duration_min), 0) AS m FROM bookings b
+    JOIN sessions s ON s.id = b.session_id
+    WHERE b.user_id = ? AND s.type = 'group' AND s.starts_at >= ? AND s.starts_at < ?`),
+  ddReg: db.prepare("SELECT * FROM demoday_regs WHERE user_id = ?"),
+  ddRegister: db.prepare("INSERT OR REPLACE INTO demoday_regs (user_id, link, note, requested_at, approved_at) VALUES (?,?,?,?,0)"),
+  ddApprove: db.prepare("UPDATE demoday_regs SET approved_at = ? WHERE user_id = ?"),
+  ddAll: db.prepare("SELECT r.*, u.name, u.project FROM demoday_regs r JOIN users u ON u.id = r.user_id ORDER BY r.requested_at"),
+  getSetting: db.prepare("SELECT value FROM settings WHERE key = ?"),
+  setSetting: db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)"),
   myDemos: db.prepare("SELECT * FROM demos WHERE user_id = ? ORDER BY created_at DESC"),
   allDemos: db.prepare(`
     SELECT d.*, u.name, u.project, u.avatar, u.is_public,
@@ -237,6 +263,34 @@ function gateStates(uid) {
   return out;
 }
 
+/* статусы сдачи станций участника: {idx: "submitted"|"approved"} */
+function readyStates(uid) {
+  const out = {};
+  q.myReady.all(uid).forEach(r => { out[r.station] = r.approved_at ? "approved" : "submitted"; });
+  return out;
+}
+
+/* станция открыта для работы, когда предыдущая проверена ментором */
+function stationOpen(uid, idx) {
+  if (idx <= 0) return true;
+  const r = q.myReady.all(uid).find(x => x.station === idx - 1);
+  return !!(r && r.approved_at);
+}
+
+const demodayDate = () => Number((q.getSetting.get("demoday") || {}).value || 0);
+
+/* границы календарной недели (пн 00:00) для лимита часов созвонов */
+function weekBounds(ts) {
+  const d = new Date(ts);
+  const day = (d.getDay() + 6) % 7;
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() - day);
+  const start = d.getTime();
+  return [start, start + 7 * 86400000];
+}
+
+const GROUP_LIMIT_MIN = { Solo: 120, Pro: 240, Partner: 0 };  // 0 = без лимита
+
 function publicUser(u) {
   return {
     id: u.id, name: u.name, avatar: u.avatar || "",
@@ -267,6 +321,17 @@ function meState(u) {
     sec: toObj(secSet),
     legal: toObj(legalSet),
     gates: gateStates(u.id),
+    ready: readyStates(u.id),
+    contractAt: u.contract_accepted_at || 0,
+    demoday: (() => {
+      const r = q.ddReg.get(u.id);
+      return {
+        date: demodayDate(),
+        eligible: closedStations(u.id) === PHASE_TASKS.length,
+        status: r ? (r.approved_at ? "approved" : "submitted") : "none",
+        link: r ? r.link : "",
+      };
+    })(),
     demos: q.myDemos.all(u.id).map(d => ({ id: d.id, week: d.week, text: d.text, link: d.link, ts: d.created_at })),
     github: gh,
     ...userStats(u),
@@ -524,13 +589,12 @@ const routes = {
       (kind === "legal" && LEGAL_IDS.includes(id));
     if (!valid) return err(res, 400, "Неизвестный пункт");
 
-    /* жёсткий гейт: пока закрытая КТ не подтверждена ментором,
-       задачи станций дальше неё отмечать нельзя */
+    /* жёсткий гейт: каждая следующая станция открывается только после того,
+       как участник сдал предыдущую кнопкой «Готов» и ментор её проверил */
     if (b.done && kind === "task") {
-      const gate = pendingGate(u.id);
       const phaseIdx = PHASE_TASKS.findIndex(p => p.tasks[id] !== undefined);
-      if (gate && phaseIdx > gate.idx)
-        return err(res, 423, `Станция ${gate.idx} ждёт подтверждения контрольной точки ментором — путь дальше пока закрыт`);
+      if (phaseIdx > 0 && !stationOpen(u.id, phaseIdx))
+        return err(res, 423, `Сначала сдайте станцию ${phaseIdx - 1} на проверку — ментор откроет путь дальше`);
     }
 
     const closedBefore = closedStations(u.id);
@@ -801,6 +865,12 @@ const routes = {
         lastAt: q.lastDone.get(x.id).t || 0,
         prizes: q.userPrizes.all(x.id).map(r => r.prize_label),
         economy: seed ? null : userEconomy(x),
+        // сдача станций: заявки участника с вложениями (ссылка + комментарий)
+        stationReady: seed ? [] : q.myReady.all(x.id).map(sr => ({
+          station: sr.station, link: sr.link, note: sr.note,
+          requestedAt: sr.requested_at, approvedAt: sr.approved_at,
+        })),
+        contractAt: x.contract_accepted_at || 0,
       };
     }).sort((a, b) => b.walk - a.walk || b.points - a.points));
     // ментор видит только свою группу (сиды ему тоже ни к чему)
@@ -919,6 +989,191 @@ const routes = {
     else q.revokeGate.run(user.id, gate);
     memo.clear();   // очки и статусы изменились — сводки пересчитаются
     send(res, 200, { ok: true, gates: gateStates(user.id) });
+  },
+
+  /* ---------- договор (нулевой этап): акцепт галочкой ---------- */
+  "POST /api/contract/accept": async (req, res) => {
+    const u = auth(req);
+    if (!u) return err(res, 401, "Нужен вход");
+    if (!u.contract_accepted_at) q.acceptContract.run(Date.now(), u.id);
+    send(res, 200, { ok: true, contractAt: q.userById.get(u.id).contract_accepted_at });
+  },
+
+  /* ---------- сдача станции: «Готов к станции N» ---------- */
+  "POST /api/station/submit": async (req, res) => {
+    const u = auth(req);
+    if (!u) return err(res, 401, "Нужен вход");
+    const b = await readBody(req);
+    const st = Number(b.station);
+    if (!Number.isInteger(st) || st < 0 || st >= PHASE_TASKS.length)
+      return err(res, 400, "Нет такой станции");
+    if (!stationOpen(u.id, st)) return err(res, 403, "Эта станция ещё не открыта");
+    const { doneSet } = userSets(u.id);
+    if (!Object.keys(PHASE_TASKS[st].tasks).every(id => doneSet.has(id)))
+      return err(res, 400, "Сначала закройте все задачи станции");
+    const cur = q.myReady.all(u.id).find(x => x.station === st);
+    if (cur && cur.approved_at) return err(res, 409, "Станция уже проверена");
+    const link = String(b.link || "").trim().slice(0, 300);
+    const note = String(b.note || "").trim().slice(0, 500);
+    q.submitStation.run(u.id, st, link, note, Date.now());
+    memo.clear();
+    notifyAboutUser(u, `📬 ${u.name} сдал станцию ${st} на проверку${link ? `\n${link}` : ""}\n→ admin.html`);
+    send(res, 200, { ok: true, ready: readyStates(u.id) });
+  },
+
+  /* ментор проверяет и открывает следующую станцию */
+  "POST /api/admin/station": async (req, res) => {
+    const r = roleOf(req);
+    if (!r) return err(res, 401, "Нужен ключ доступа");
+    const b = await readBody(req);
+    const user = q.userById.get(Number(b.userId));
+    const st = Number(b.station);
+    if (!user || !Number.isInteger(st) || st < 0 || st >= PHASE_TASKS.length)
+      return err(res, 400, "Участник или станция не найдены");
+    if (r.role === "mentor" && user.mentor_id !== r.mentor.id)
+      return err(res, 403, "Это участник другого ментора");
+    if (b.approved) {
+      const cur = q.myReady.all(user.id).find(x => x.station === st);
+      if (cur) q.approveStation.run(Date.now(), user.id, st);
+      else q.openStationDirect.run(user.id, st, Date.now(), Date.now());
+      // у станции есть КТ — подтверждение станции закрывает и её
+      const gate = PHASE_TASKS[st] && PHASE_TASKS[st].gate;
+      if (gate) q.approveGate.run(user.id, gate, Date.now());
+    } else {
+      q.revokeStation.run(user.id, st);
+      const gate = PHASE_TASKS[st] && PHASE_TASKS[st].gate;
+      if (gate) q.revokeGate.run(user.id, gate);
+    }
+    memo.clear();
+    send(res, 200, { ok: true, ready: readyStates(user.id) });
+  },
+
+  /* ---------- календарь сессий ---------- */
+  "GET /api/sessions": async (req, res) => {
+    const u = auth(req);
+    if (!u) return err(res, 401, "Нужен вход");
+    const now = Date.now();
+    const mine = new Set(q.myBookings.all(u.id).map(r => r.session_id));
+    const list = q.sessionsUpcoming.all(now - 2 * 3600000).map(s => ({
+      id: s.id, title: s.title, dir: s.dir, type: s.type,
+      startsAt: s.starts_at, duration: s.duration_min, capacity: s.capacity,
+      booked: q.bookingCount.get(s.id).n,
+      my: mine.has(s.id),
+      meetUrl: mine.has(s.id) ? s.meet_url : "",
+    }));
+    const [ws, we] = weekBounds(now);
+    const limit = GROUP_LIMIT_MIN[normTariff(u.tariff)] ?? 120;
+    send(res, 200, {
+      list,
+      usedMin: q.myGroupMinutes.get(u.id, ws, we).m,
+      limitMin: limit,   // 0 = без лимита (Partner)
+    });
+  },
+
+  "POST /api/sessions/book": async (req, res) => {
+    const u = auth(req);
+    if (!u) return err(res, 401, "Нужен вход");
+    const b = await readBody(req);
+    const s = q.sessionById.get(Number(b.id));
+    if (!s || s.starts_at < Date.now()) return err(res, 404, "Сессия не найдена или уже прошла");
+    if (q.bookingCount.get(s.id).n >= s.capacity) return err(res, 409, "Мест больше нет");
+    if (s.type === "group") {
+      const limit = GROUP_LIMIT_MIN[normTariff(u.tariff)] ?? 120;
+      if (limit > 0) {
+        const [ws, we] = weekBounds(s.starts_at);
+        const used = q.myGroupMinutes.get(u.id, ws, we).m;
+        if (used + s.duration_min > limit)
+          return err(res, 403, `Лимит тарифа: ${limit / 60} ч созвонов в неделю. Использовано ${Math.round(used / 6) / 10} ч`);
+      }
+    }
+    q.addBooking.run(s.id, u.id, Date.now());
+    send(res, 200, { ok: true, meetUrl: s.meet_url });
+  },
+
+  "POST /api/sessions/unbook": async (req, res) => {
+    const u = auth(req);
+    if (!u) return err(res, 401, "Нужен вход");
+    const b = await readBody(req);
+    q.delBooking.run(Number(b.id), u.id);
+    send(res, 200, { ok: true });
+  },
+
+  /* админ/ментор: управление календарём и Demo Day */
+  "GET /api/admin/sessions": async (req, res) => {
+    const r = roleOf(req);
+    if (!r) return err(res, 401, "Нужен ключ доступа");
+    const list = q.sessionsUpcoming.all(Date.now() - 7 * 86400000).map(s => ({
+      id: s.id, title: s.title, dir: s.dir, type: s.type,
+      startsAt: s.starts_at, duration: s.duration_min, capacity: s.capacity, meetUrl: s.meet_url,
+      bookings: q.sessionBookings.all(s.id).map(x => x.name),
+    }));
+    send(res, 200, {
+      list,
+      demodayDate: demodayDate(),
+      demodayRegs: q.ddAll.all().map(x => ({
+        userId: x.user_id, name: x.name, project: x.project, link: x.link, note: x.note,
+        requestedAt: x.requested_at, approvedAt: x.approved_at,
+      })),
+    });
+  },
+
+  "POST /api/admin/sessions": async (req, res) => {
+    const r = roleOf(req);
+    if (!r) return err(res, 401, "Нужен ключ доступа");
+    const b = await readBody(req);
+    const title = String(b.title || "").trim().slice(0, 120);
+    const startsAt = Number(b.startsAt);
+    if (!title || !Number.isFinite(startsAt) || startsAt < Date.now() - 3600000)
+      return err(res, 400, "Нужны название и будущая дата");
+    const type = b.type === "live" ? "live" : "group";
+    const dur = Math.max(15, Math.min(240, Number(b.duration) || 60));
+    const cap = Math.max(1, Math.min(50, Number(b.capacity) || (type === "live" ? 50 : 4)));
+    const ins = q.insertSession.run(title, String(b.dir || "").slice(0, 60), type, startsAt, dur,
+      String(b.meetUrl || "").trim().slice(0, 300), cap, Date.now());
+    send(res, 201, { ok: true, id: Number(ins.lastInsertRowid) });
+  },
+
+  "POST /api/admin/sessions/delete": async (req, res) => {
+    const r = roleOf(req);
+    if (!r) return err(res, 401, "Нужен ключ доступа");
+    const b = await readBody(req);
+    q.deleteSession.run(Number(b.id));
+    send(res, 200, { ok: true });
+  },
+
+  "POST /api/admin/demoday-date": async (req, res) => {
+    if (!isAdmin(req)) return err(res, 401, "Нужен ключ администратора");
+    const b = await readBody(req);
+    const date = Number(b.date);
+    if (!Number.isFinite(date) || date < Date.now()) return err(res, 400, "Нужна будущая дата");
+    q.setSetting.run("demoday", String(date));
+    send(res, 200, { ok: true, date });
+  },
+
+  "POST /api/admin/demoday-approve": async (req, res) => {
+    const r = roleOf(req);
+    if (!r) return err(res, 401, "Нужен ключ доступа");
+    const b = await readBody(req);
+    const user = q.userById.get(Number(b.userId));
+    if (!user || !q.ddReg.get(user.id)) return err(res, 400, "Запись не найдена");
+    if (r.role === "mentor" && user.mentor_id !== r.mentor.id)
+      return err(res, 403, "Это участник другого ментора");
+    q.ddApprove.run(b.approved ? Date.now() : 0, user.id);
+    send(res, 200, { ok: true });
+  },
+
+  /* участник записывается на Demo Day (только дошедшие до MVP) */
+  "POST /api/demoday/register": async (req, res) => {
+    const u = auth(req);
+    if (!u) return err(res, 401, "Нужен вход");
+    if (closedStations(u.id) !== PHASE_TASKS.length)
+      return err(res, 403, "Вы ещё не дошли до MVP — записаться нельзя");
+    const b = await readBody(req);
+    const link = String(b.link || "").trim().slice(0, 300);
+    if (!link) return err(res, 400, "Приложите ссылку на презентацию или рабочий продукт");
+    q.ddRegister.run(u.id, link, String(b.note || "").trim().slice(0, 500), Date.now());
+    notifyAboutUser(u, `🎤 ${u.name} записался на Demo Day\n${link}\nОдобрить: admin.html → Календарь`);
+    send(res, 200, { ok: true });
   },
 
   /* ---------- лотерея Taulau ----------
