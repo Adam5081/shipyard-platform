@@ -6,12 +6,12 @@
 <title>Taulau — от идеи до продукта, который работает у клиента</title>
 <meta name="description" content="Программа для отраслевых экспертов: вы собираете продукт сами — с Claude Code, производственным пайплайном и экспертами отрасли рядом. Контрольные точки, безопасность, вывод в рабочую среду.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230071e3'/><path d='M27 34h46M50 34v32q0 13 13 13 7 0 10-6' stroke='white' stroke-width='11' fill='none' stroke-linecap='round'/></svg>">
-<link rel="stylesheet" href="assets/styles.css?v=21">
-<link rel="stylesheet" href="assets/theme-cyber.css?v=21">
+<link rel="stylesheet" href="assets/styles.css?v=22">
+<link rel="stylesheet" href="assets/theme-cyber.css?v=22">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="assets/config.js?v=21"></script>
+<script src="assets/config.js?v=22"></script>
 </head>
 <body class="cyber">
 
@@ -34,7 +34,7 @@
 <!-- ===== HERO ===== -->
 <header class="hero" data-metric="hero">
   <div class="hero-mountain" id="heroMountain" aria-hidden="true">
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 70 1000 530" width="100%" height="100%" preserveAspectRatio="xMidYMax meet">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 15 1000 585" width="100%" height="100%" preserveAspectRatio="xMidYMax meet">
     <defs>
       <linearGradient id="mountainGrad" x1="0%" y1="100%" x2="0%" y2="0%">
         <stop offset="0%" stop-color="#512F88" stop-opacity="0.05"/>
@@ -46,38 +46,79 @@
         <stop offset="50%" stop-color="#8B5CF6" stop-opacity="1"/>
         <stop offset="100%" stop-color="#38BDF8" stop-opacity="1"/>
       </linearGradient>
-      <filter id="neonGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <filter id="neonGlow" x="-30%" y="-30%" width="160%" height="160%">
         <feGaussianBlur stdDeviation="6" result="blur"/>
         <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
       </filter>
       <style>
-        #ascentPath { stroke-dasharray: 30 15; animation: strokeMove 3s linear infinite; }
-        .peak-node { animation: peakPulse 2s ease-in-out infinite alternate; transform-origin: 500px 120px; }
-        @keyframes strokeMove { to { stroke-dashoffset: -90; } }
+        /* линия восхождения растёт от подножия к пику при открытии страницы */
+        #ascentBase {
+          stroke-dasharray: 1;
+          stroke-dashoffset: 1;
+          animation: pathDraw 2.3s cubic-bezier(.4, 0, .2, 1) .45s forwards;
+        }
+        /* бегущий пунктир проявляется, когда линия дорисована */
+        #ascentDash {
+          stroke-dasharray: 30 15;
+          opacity: 0;
+          animation: dashIn .8s ease .1s forwards, strokeMove 3s linear infinite;
+          animation-delay: 2.9s, 2.9s;
+        }
+        /* узлы-станции зажигаются по мере прохождения линии */
+        .node-1 { animation: nodeIn .45s ease .7s both; }
+        .node-2 { animation: nodeIn .45s ease 1.5s both; }
+        .node-3 { animation: nodeIn .45s ease 2.2s both; }
+        /* пик: вспышка при касании линии, затем постоянный пульс */
+        .peak-node {
+          transform-origin: 500px 60px;
+          animation: peakIgnite 1s cubic-bezier(.34, 1.56, .64, 1) 2.65s both,
+                     peakPulse 2s ease-in-out 3.9s infinite alternate;
+        }
+        @keyframes pathDraw { to { stroke-dashoffset: 0; } }
+        @keyframes dashIn { to { opacity: .55; } }
+        @keyframes nodeIn {
+          from { opacity: 0; r: 0.5px; }
+          to { opacity: 1; r: 3.5px; }
+        }
+        @keyframes peakIgnite {
+          0% { opacity: 0; r: 1px; }
+          45% { opacity: 1; r: 13px; filter: drop-shadow(0 0 26px #38BDF8) drop-shadow(0 0 60px rgba(139,92,246,.9)); }
+          100% { opacity: 1; r: 6px; filter: drop-shadow(0 0 10px rgba(56,189,248,.7)); }
+        }
         @keyframes peakPulse {
-          0% { r: 5px; opacity: 0.75; }
-          100% { r: 8.5px; opacity: 1; filter: drop-shadow(0 0 10px rgba(56,189,248,.7)); }
+          0% { r: 6px; opacity: .85; }
+          100% { r: 8.5px; opacity: 1; filter: drop-shadow(0 0 12px rgba(56,189,248,.8)); }
+        }
+        @keyframes strokeMove { to { stroke-dashoffset: -90; } }
+        @media (prefers-reduced-motion: reduce) {
+          #ascentBase { animation: none; stroke-dashoffset: 0; }
+          #ascentDash { animation: none; opacity: .55; }
+          .node-1, .node-2, .node-3, .peak-node { animation: none; opacity: 1; }
         }
       </style>
     </defs>
     <g stroke="rgba(255,255,255,0.14)" stroke-width="1" fill="none">
-      <polygon points="150,550 500,120 850,550" fill="url(#mountainGrad)"/>
-      <line x1="500" y1="120" x2="500" y2="550" stroke="rgba(255,255,255,0.22)"/>
-      <line x1="500" y1="120" x2="350" y2="550"/>
-      <line x1="500" y1="120" x2="650" y2="550"/>
-      <line x1="220" y1="460" x2="780" y2="460"/>
-      <line x1="290" y1="370" x2="710" y2="370"/>
-      <line x1="360" y1="280" x2="640" y2="280"/>
-      <line x1="430" y1="190" x2="570" y2="190"/>
+      <polygon points="150,550 500,60 850,550" fill="url(#mountainGrad)"/>
+      <line x1="500" y1="60" x2="500" y2="550" stroke="rgba(255,255,255,0.22)"/>
+      <line x1="500" y1="60" x2="350" y2="550"/>
+      <line x1="500" y1="60" x2="650" y2="550"/>
+      <line x1="214" y1="460" x2="786" y2="460"/>
+      <line x1="279" y1="370" x2="721" y2="370"/>
+      <line x1="343" y1="280" x2="657" y2="280"/>
+      <line x1="407" y1="190" x2="593" y2="190"/>
+      <line x1="457" y1="120" x2="543" y2="120"/>
     </g>
-    <path id="ascentPath" d="M 200,530 Q 380,480 340,370 T 500,120"
+    <path id="ascentBase" d="M 200,530 Q 380,480 340,370 T 500,60" pathLength="1"
           fill="none" stroke="url(#pathGlow)" stroke-width="2.6"
           filter="url(#neonGlow)" stroke-linecap="round"/>
+    <path id="ascentDash" d="M 200,530 Q 380,480 340,370 T 500,60"
+          fill="none" stroke="rgba(255,255,255,.8)" stroke-width="1.2"
+          stroke-linecap="round"/>
     <g fill="#38BDF8" filter="url(#neonGlow)">
-      <circle cx="200" cy="530" r="3.5"/>
-      <circle cx="340" cy="370" r="3.5"/>
-      <circle cx="450" cy="230" r="3.5"/>
-      <circle cx="500" cy="120" r="6" fill="#FFFFFF" class="peak-node"/>
+      <circle class="node-1" cx="200" cy="530" r="3.5"/>
+      <circle class="node-2" cx="340" cy="370" r="3.5"/>
+      <circle class="node-3" cx="446" cy="185" r="3.5"/>
+      <circle cx="500" cy="60" r="6" fill="#FFFFFF" class="peak-node"/>
     </g>
   </svg>
   </div>
@@ -582,9 +623,9 @@
   </div>
 </footer>
 
-<script src="assets/game.js?v=21"></script>
-<script src="assets/demo.js?v=21"></script>
-<script src="assets/metrics.js?v=21" defer></script>
+<script src="assets/game.js?v=22"></script>
+<script src="assets/demo.js?v=22"></script>
+<script src="assets/metrics.js?v=22" defer></script>
 <script>
   const io = new IntersectionObserver(entries => {
     entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });

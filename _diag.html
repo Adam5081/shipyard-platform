@@ -1,0 +1,21 @@
+<!doctype html><meta charset="utf-8">
+<body style="margin:0;font:13px monospace;white-space:pre-wrap;background:#fff">
+<iframe id="f" src="index.html" style="width:1200px;height:500px;border:1px solid red"></iframe>
+<div id="out">...</div>
+<script>
+const f = document.getElementById('f');
+f.addEventListener('load', () => {
+  const doc = f.contentDocument;
+  const lines = [];
+  const probe = t => setTimeout(() => {
+    const base = doc.getElementById('ascentBase');
+    const peak = doc.querySelector('.peak-node');
+    if (base) {
+      const cs = f.contentWindow.getComputedStyle(base);
+      lines.push(`t=${t}ms dashoffset=${cs.strokeDashoffset} peakOpacity=${peak ? f.contentWindow.getComputedStyle(peak).opacity : '?'}`);
+    } else lines.push(`t=${t}ms ascentBase НЕ НАЙДЕН`);
+    document.getElementById('out').textContent = lines.join('\n');
+  }, t);
+  [500, 1500, 3000, 4200].forEach(probe);
+});
+</script>
