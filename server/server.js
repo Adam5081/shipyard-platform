@@ -156,7 +156,9 @@ const q = {
   mentorById: db.prepare("SELECT * FROM mentors WHERE id = ?"),
   allMentors: db.prepare(`SELECT m.*, (SELECT COUNT(*) FROM users u WHERE u.mentor_id = m.id AND u.seed_pts = 0) AS wards
     FROM mentors m ORDER BY m.id`),
-  insertMentor: db.prepare("INSERT INTO mentors (name, key_hash, tg_chat, created_at) VALUES (?,?,?,?)"),
+  insertMentor: db.prepare("INSERT INTO mentors (name, key_hash, tg_chat, role, created_at) VALUES (?,?,?,?,?)"),
+  deleteUser: db.prepare("DELETE FROM users WHERE id = ?"),
+  updateUserAdmin: db.prepare("UPDATE users SET name = ?, project = ?, tariff = ? WHERE id = ?"),
   deleteMentor: db.prepare("DELETE FROM mentors WHERE id = ?"),
   unassignMentor: db.prepare("UPDATE users SET mentor_id = 0 WHERE mentor_id = ?"),
   assignMentor: db.prepare("UPDATE users SET mentor_id = ? WHERE id = ?"),
@@ -866,6 +868,13 @@ const routes = {
         prizes: q.userPrizes.all(x.id).map(r => r.prize_label),
         economy: seed ? null : userEconomy(x),
         // сдача станций: заявки участника с вложениями (ссылка + комментарий)
+        stationsDone: seed ? [] : (() => {
+          const { doneSet } = userSets(x.id);
+          return PHASE_TASKS.map((p, i) => {
+            const ids = Object.keys(p.tasks);
+            return { i, done: ids.filter(id => doneSet.has(id)).length, total: ids.length };
+          });
+        })(),
         stationReady: seed ? [] : q.myReady.all(x.id).map(sr => ({
           station: sr.station, link: sr.link, note: sr.note,
           requestedAt: sr.requested_at, approvedAt: sr.approved_at,
@@ -911,7 +920,7 @@ const routes = {
   /* команда: список менторов/экспертов (только админ) */
   "GET /api/admin/mentors": async (req, res) => {
     if (!isAdmin(req)) return err(res, 401, "Нужен ключ администратора");
-    send(res, 200, { mentors: q.allMentors.all().map(m => ({ id: m.id, name: m.name, tgChat: m.tg_chat, wards: m.wards })) });
+    send(res, 200, { mentors: q.allMentors.all().map(m => ({ id: m.id, name: m.name, tgChat: m.tg_chat, role: m.role || "mentor", wards: m.wards })) });
   },
 
   /* создать ментора: ключ доступа генерируется и показывается один раз */
@@ -921,9 +930,10 @@ const routes = {
     const name = String(b.name || "").trim().slice(0, 60);
     if (!name) return err(res, 400, "Укажите имя ментора");
     const tgChat = String(b.tgChat || "").trim().slice(0, 32);
+    const role = b.role === "expert" ? "expert" : "mentor";
     let key = "MEN-";
     for (const byte of crypto.randomBytes(16)) key += INVITE_ALPHABET[byte % INVITE_ALPHABET.length];
-    q.insertMentor.run(name, mentorKeyHash(key), tgChat, Date.now());
+    q.insertMentor.run(name, mentorKeyHash(key), tgChat, role, Date.now());
     memo.clear();
     send(res, 201, { ok: true, key });   // ключ отдаётся только сейчас — дальше хранится хэш
   },
@@ -960,6 +970,73 @@ const routes = {
   /* сброс пароля участника: SMTP нет — ментор получает временный пароль
      и отправляет его человеку сам. Пароль показывается один раз.
      Ментор может сбрасывать пароли только своим участникам. */
+  /* добавить студента вручную: аккаунт с временным паролем, без заявки */
+  "POST /api/admin/create-user": async (req, res) => {
+    if (!isAdmin(req)) return err(res, 401, "Нужен ключ администратора");
+    const b = await readBody(req);
+    const name = String(b.name || "").trim().slice(0, 60);
+    const email = String(b.email || "").trim().toLowerCase();
+    if (!name) return err(res, 400, "Укажите имя участника");
+    if (!EMAIL_RE.test(email)) return err(res, 400, "Некорректный e-mail");
+    if (q.userByEmail.get(email)) return err(res, 409, "Этот e-mail уже зарегистрирован");
+    const tariff = TARIFFS.includes(normTariff(b.tariff)) ? normTariff(b.tariff) : "Solo";
+    const project = String(b.project || "Мой продукт").trim().slice(0, 120) || "Мой продукт";
+    let pwd = "";
+    for (const byte of crypto.randomBytes(10)) pwd += INVITE_ALPHABET[byte % INVITE_ALPHABET.length];
+    const salt = crypto.randomBytes(16).toString("hex");
+    const r2 = q.insertUser.run(email, await hashPasswordAsync(pwd, salt), salt, name, project, tariff, Date.now());
+    memo.clear();
+    notifyTg(`👤 Админ добавил участника: ${name} (${email}) · ${tariff}`);
+    send(res, 201, { ok: true, id: Number(r2.lastInsertRowid), password: pwd });
+  },
+
+  /* правка карточки студента: имя, проект, тариф */
+  "POST /api/admin/user-update": async (req, res) => {
+    if (!isAdmin(req)) return err(res, 401, "Нужен ключ администратора");
+    const b = await readBody(req);
+    const user = q.userById.get(Number(b.userId || 0));
+    if (!user || user.seed_pts > 0) return err(res, 400, "Участник не найден");
+    const name = String(b.name ?? user.name).trim().slice(0, 60) || user.name;
+    const project = String(b.project ?? user.project).trim().slice(0, 120) || user.project;
+    const tariff = TARIFFS.includes(normTariff(b.tariff)) ? normTariff(b.tariff) : normTariff(user.tariff);
+    q.updateUserAdmin.run(name, project, tariff, user.id);
+    memo.clear();
+    send(res, 200, { ok: true });
+  },
+
+  /* удалить студента: прогресс, брони и заявки уходят каскадом */
+  "POST /api/admin/user-delete": async (req, res) => {
+    if (!isAdmin(req)) return err(res, 401, "Нужен ключ администратора");
+    const b = await readBody(req);
+    const user = q.userById.get(Number(b.userId || 0));
+    if (!user || user.seed_pts > 0) return err(res, 400, "Участник не найден");
+    q.deleteUser.run(user.id);
+    memo.clear();
+    notifyTg(`🗑 Участник удалён из потока: ${user.name} (${user.email})`);
+    send(res, 200, { ok: true });
+  },
+
+  /* успеваемость: отметить/снять станцию целиком (все её задачи) */
+  "POST /api/admin/progress": async (req, res) => {
+    const r = roleOf(req);
+    if (!r) return err(res, 401, "Нужен ключ доступа");
+    const b = await readBody(req);
+    const user = q.userById.get(Number(b.userId || 0));
+    const st = Number(b.station);
+    if (!user || user.seed_pts > 0 || !Number.isInteger(st) || st < 0 || st >= PHASE_TASKS.length)
+      return err(res, 400, "Участник или станция не найдены");
+    if (r.role === "mentor" && user.mentor_id !== r.mentor.id)
+      return err(res, 403, "Это участник другого ментора");
+    const ids = Object.keys(PHASE_TASKS[st].tasks);
+    const now = Date.now();
+    for (const id of ids) {
+      if (b.done) q.addProgress.run(user.id, "task", id, now);
+      else q.delProgress.run(user.id, "task", id);
+    }
+    memo.clear();
+    send(res, 200, { ok: true });
+  },
+
   "POST /api/admin/reset-password": async (req, res) => {
     const r = roleOf(req);
     if (!r) return err(res, 401, "Нужен ключ доступа");

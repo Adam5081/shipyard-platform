@@ -6,8 +6,8 @@
 <meta name="robots" content="noindex">
 <title>Taulau — админка</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230071e3'/><path d='M27 34h46M50 34v32q0 13 13 13 7 0 10-6' stroke='white' stroke-width='11' fill='none' stroke-linecap='round'/></svg>">
-<link rel="stylesheet" href="assets/styles.css?v=29">
-<script src="assets/config.js?v=29"></script>
+<link rel="stylesheet" href="assets/styles.css?v=30">
+<script src="assets/config.js?v=30"></script>
 <style>
   .adm { max-width: 1000px; margin: 0 auto; padding: 40px 24px 80px; }
   .adm-head { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin-bottom: 18px; }
@@ -101,6 +101,9 @@ let ROLE = null;       // { role: 'admin' } | { role: 'mentor', name, mentorId }
 let MENTORS = [];      // для селектов распределения (только у админа)
 const RESET_PW = {};   // временные пароли, выданные в этой вкладке
 const MENTOR_KEYS = {}; // ключи менторов, показанные в этой вкладке после создания
+
+const STATION_NAMES = ['Диагностика', 'Презентация', 'Чертёж', 'Ядро', 'Обвязка',
+  'Тесты и защита', 'Продукт в сети', 'Защита проекта', 'Рабочая среда'];
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
@@ -216,6 +219,7 @@ function userRow(u) {
     <div class="u-gates">
       ${pending.map(([g]) => `<button class="btn btn-primary btn-sm" data-gate="${g}" data-uid="${u.id}">Подтвердить КТ-${g.slice(1)}</button>`).join(' ')}
       ${approved.map(([g]) => `<span class="tag t-accepted" title="Отозвать — клик" data-ungate="${g}" data-uid="${u.id}" style="cursor:pointer">КТ-${g.slice(1)} ✓</span>`).join(' ')}
+      <button class="btn btn-ghost btn-sm" data-editprog="${u.id}">Успеваемость</button>
       <button class="btn btn-ghost btn-sm" data-resetpw="${u.id}">Сбросить пароль</button>
       ${mentorSel}${mentorTag}
       ${RESET_PW[u.id] ? `<span class="u-sub">🔑 врем. пароль: <code>${esc(RESET_PW[u.id])}</code>
@@ -224,11 +228,29 @@ function userRow(u) {
   const breakdown = e
     ? `<div class="u-sub">задачи ${e.taskPts} · КТ ${e.gatePts} · ИБ ${e.secPts} · юр ${e.legalPts} · демо ${e.demoPts} · баттлы ${e.battlePts}</div>
        <div class="u-sub">🎰 спины ${e.spinsUsed}/${e.spinsEarned}${e.luckyTickets ? ` · 🎟️ билетов ${e.luckyTickets}` : ''}</div>` : '';
+  const progPanel = e ? `
+    <div class="prog-edit" id="prog-${u.id}" hidden>
+      <div class="u-sub" style="margin:8px 0 6px"><b>Станции</b> — отметка закрывает/снимает все задачи станции:</div>
+      ${(u.stationsDone || []).map(sd => `
+        <label style="display:inline-flex;gap:6px;align-items:center;margin:0 14px 8px 0;font-size:13.5px;cursor:pointer">
+          <input type="checkbox" data-prog-st="${sd.i}" data-prog-uid="${u.id}" ${sd.done === sd.total ? 'checked' : ''}>
+          ${sd.i}. ${STATION_NAMES[sd.i]} <span class="u-sub">${sd.done}/${sd.total}</span>
+        </label>`).join('')}
+      <div class="app-row" style="margin-top:8px">
+        <input data-edit-name="${u.id}" type="text" value="${esc(u.name)}" placeholder="Имя" style="flex:1 1 140px">
+        <input data-edit-project="${u.id}" type="text" value="${esc(u.project)}" placeholder="Проект" style="flex:1 1 160px">
+        <select data-edit-tariff="${u.id}">
+          ${['Solo', 'Pro', 'Partner'].map(t => `<option ${u.tariff === t ? 'selected' : ''}>${t}</option>`).join('')}
+        </select>
+        <button class="btn btn-primary btn-sm" data-edit-save="${u.id}">Сохранить</button>
+        <button class="btn btn-ghost btn-sm" data-userdel="${u.id}" style="color:#d70015">Удалить участника</button>
+      </div>
+    </div>` : '';
   return `
     <tr>
       <td>
         <b>${esc(u.name)}</b>${u.seed ? ' <span class="tag t-declined">сид</span>' : ''}
-        <div class="u-sub">${esc(u.project)}</div>${fast}${gates}
+        <div class="u-sub">${esc(u.project)}</div>${fast}${gates}${progPanel}
       </td>
       <td>${esc(u.email)}<div class="u-sub">${esc(u.tariff)}${u.dock ? ' · док ' + esc(u.dock) : ''}</div>
         ${u.prizes && u.prizes.length ? `<div class="u-sub">🎁 ${u.prizes.map(esc).join(' · ')}</div>` : ''}</td>
@@ -254,7 +276,22 @@ async function loadUsers() {
     + (waiting ? ` · ⏳ КТ на проверке: ${waiting}` : '')
     + (() => { const n = users.reduce((s, u) => s + (u.stationReady || []).filter(x => !x.approvedAt).length, 0);
         return n ? ` · 📬 станций на проверке: ${n}` : ''; })();
-  list.innerHTML = users.length ? `
+  const isAdminRole = ROLE?.role === 'admin';
+  list.innerHTML = `
+    ${isAdminRole ? `
+    <div class="app-card" id="addUserBox">
+      <div class="app-row">
+        <b style="margin-right:6px">+ Добавить участника</b>
+        <input id="nuName" type="text" placeholder="Имя и фамилия" style="flex:1 1 150px">
+        <input id="nuEmail" type="text" placeholder="email@…" style="flex:1 1 170px">
+        <input id="nuProject" type="text" placeholder="Проект (можно позже)" style="flex:1 1 150px">
+        <select id="nuTariff"><option>Solo</option><option>Pro</option><option>Partner</option></select>
+        <button class="btn btn-primary btn-sm" id="nuAdd">Создать аккаунт</button>
+        <button class="btn btn-ghost btn-sm" id="csvBtn">Выгрузить CSV</button>
+      </div>
+      <p class="u-sub" id="nuOut" style="margin-top:8px"></p>
+    </div>` : ''}
+    ${users.length ? `
     <div class="u-wrap">
       <table class="u-table">
         <thead><tr>
@@ -263,7 +300,63 @@ async function loadUsers() {
         </tr></thead>
         <tbody>${users.map(userRow).join('')}</tbody>
       </table>
-    </div>` : '<div class="panel"><p class="empty">Участников пока нет.</p></div>';
+    </div>` : '<div class="panel"><p class="empty">Участников пока нет.</p></div>'}`;
+
+  const nuAdd = document.getElementById('nuAdd');
+  if (nuAdd) nuAdd.addEventListener('click', async () => {
+    try {
+      const r = await call('/api/admin/create-user', 'POST', {
+        name: document.getElementById('nuName').value,
+        email: document.getElementById('nuEmail').value,
+        project: document.getElementById('nuProject').value,
+        tariff: document.getElementById('nuTariff').value,
+      });
+      document.getElementById('nuOut').innerHTML =
+        `🔑 Аккаунт создан. Временный пароль: <code>${esc(r.password)}</code> — отправьте участнику вместе с адресом taulau.com/app.html`;
+      toast('Участник добавлен');
+      setTimeout(load, 4000);
+    } catch (e) { toast(e.message); }
+  });
+  const csvBtn = document.getElementById('csvBtn');
+  if (csvBtn) csvBtn.addEventListener('click', () => {
+    const rows = [['Имя', 'Email', 'Проект', 'Тариф', 'Док', 'Станция', 'Очки', 'Демо', 'Регистрация'].join(';')];
+    users.filter(u => !u.seed).forEach(u => rows.push([u.name, u.email, u.project, u.tariff, u.dock,
+      u.station, u.points, u.demos, new Date(u.createdAt).toLocaleDateString('ru-RU')].join(';')));
+    const blob = new Blob(['\ufeff' + rows.join('\n')], { type: 'text/csv;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'taulau-participants.csv';
+    a.click();
+  });
+
+  list.querySelectorAll('[data-editprog]').forEach(el => el.addEventListener('click', () => {
+    const p = document.getElementById('prog-' + el.dataset.editprog);
+    if (p) p.hidden = !p.hidden;
+  }));
+  list.querySelectorAll('[data-prog-st]').forEach(el => el.addEventListener('change', async () => {
+    try {
+      await call('/api/admin/progress', 'POST', {
+        userId: Number(el.dataset.progUid), station: Number(el.dataset.progSt), done: el.checked });
+      toast(el.checked ? 'Станция отмечена закрытой' : 'Отметка станции снята');
+    } catch (e) { toast(e.message); el.checked = !el.checked; }
+  }));
+  list.querySelectorAll('[data-edit-save]').forEach(el => el.addEventListener('click', async () => {
+    const id = el.dataset.editSave;
+    try {
+      await call('/api/admin/user-update', 'POST', {
+        userId: Number(id),
+        name: list.querySelector(`[data-edit-name="${id}"]`).value,
+        project: list.querySelector(`[data-edit-project="${id}"]`).value,
+        tariff: list.querySelector(`[data-edit-tariff="${id}"]`).value,
+      });
+      toast('Сохранено'); load();
+    } catch (e) { toast(e.message); }
+  }));
+  list.querySelectorAll('[data-userdel]').forEach(el => el.addEventListener('click', async () => {
+    if (!confirm('Удалить участника НАВСЕГДА? Прогресс, брони и записи будут стёрты. Это действие необратимо.')) return;
+    try { await call('/api/admin/user-delete', 'POST', { userId: Number(el.dataset.userdel) }); toast('Участник удалён'); load(); }
+    catch (e) { toast(e.message); }
+  }));
 
   list.querySelectorAll('[data-resetpw]').forEach(el => el.addEventListener('click', async () => {
     if (!confirm('Сбросить пароль участника? Старый перестанет работать сразу.')) return;
@@ -320,6 +413,7 @@ async function loadTeam() {
         Chat ID — личный или чат его группы в Telegram (узнать: @userinfobot); туда пойдут уведомления о его участниках.</p>
       <div class="app-row">
         <input id="mName" type="text" placeholder="Имя (например: Ержан · DevOps)" style="flex:2 1 200px">
+        <select id="mRole"><option value="mentor">Ментор</option><option value="expert">Эксперт</option></select>
         <input id="mChat" type="text" placeholder="Telegram chat ID (необязательно)">
         <button class="btn btn-dark btn-sm" id="mAdd">Создать</button>
       </div>
@@ -327,6 +421,7 @@ async function loadTeam() {
     ${mentors.length ? mentors.map(m => `
       <div class="app-card">
         <div class="app-top"><b>${esc(m.name)}</b>
+          <span class="tag ${m.role === 'expert' ? 't-contacted' : 't-new'}">${m.role === 'expert' ? 'эксперт' : 'ментор'}</span>
           <span class="tag t-new">участников: ${m.wards}</span>
           ${m.tgChat ? `<span class="tag t-accepted">TG ✓</span>` : `<span class="tag t-declined">без TG</span>`}
         </div>
@@ -342,7 +437,7 @@ async function loadTeam() {
     const name = document.getElementById('mName').value.trim();
     if (!name) return toast('Укажите имя');
     try {
-      const r = await call('/api/admin/mentors', 'POST', { name, tgChat: document.getElementById('mChat').value.trim() });
+      const r = await call('/api/admin/mentors', 'POST', { name, role: document.getElementById('mRole').value, tgChat: document.getElementById('mChat').value.trim() });
       const fresh = await call('/api/admin/mentors');
       const created = fresh.mentors[fresh.mentors.length - 1];
       MENTOR_KEYS[created.id] = r.key;

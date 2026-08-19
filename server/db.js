@@ -188,6 +188,10 @@ for (const [name, decl] of NEW_COLUMNS) {
   if (!existing.has(name)) db.exec(`ALTER TABLE users ADD COLUMN ${name} ${decl}`);
 }
 
+// команда: роль в пуле — ментор или эксперт (функционально одинаковы, ярлык различает)
+const mentorCols = new Set(db.prepare("PRAGMA table_info(mentors)").all().map(c => c.name));
+if (!mentorCols.has("role")) db.exec("ALTER TABLE mentors ADD COLUMN role TEXT NOT NULL DEFAULT 'mentor'");
+
 /* Инвайты: код выдаётся заявке при статусе «взяли», регистрация — только по коду. */
 const APP_COLUMNS = [
   ["invite_code",     "TEXT NOT NULL DEFAULT ''"],    // код приглашения (пустой — не выдан)
