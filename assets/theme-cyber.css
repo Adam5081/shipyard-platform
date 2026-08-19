@@ -332,11 +332,11 @@ body.cyber .footer {
   body.cyber .hero-cta { margin-top: 26px; }
   body.cyber .section { padding: 44px 18px; }
   body.cyber .btn-lg { padding: 13px 22px; font-size: 15.5px; }
-  /* гора — только лёгкий фон, не спорит с текстом */
-  .hero-mountain { opacity: .3; height: 64%; }
+  /* гора видима и на телефоне; текст поверх остаётся читаемым */
+  .hero-mountain { opacity: .58; height: 78%; }
   @keyframes mt-in {
     from { opacity: 0; transform: translateY(28px); }
-    to { opacity: .3; transform: none; }
+    to { opacity: .58; transform: none; }
   }
   body.cyber .hero-proof { gap: 8px 18px; margin-top: 24px; }
   /* липкая лента на телефоне съедает пол-экрана — отключаем прилипание */
