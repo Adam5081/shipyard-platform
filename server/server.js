@@ -82,9 +82,11 @@ const q = {
   acceptContract: db.prepare("UPDATE users SET contract_accepted_at = ? WHERE id = ?"),
   sessionsUpcoming: db.prepare("SELECT * FROM sessions WHERE starts_at > ? ORDER BY starts_at LIMIT 60"),
   sessionById: db.prepare("SELECT * FROM sessions WHERE id = ?"),
-  insertSession: db.prepare("INSERT INTO sessions (title, dir, type, starts_at, duration_min, meet_url, capacity, created_at, host) VALUES (?,?,?,?,?,?,?,?,?)"),
+  insertSession: db.prepare("INSERT INTO sessions (title, dir, type, starts_at, duration_min, meet_url, capacity, created_at, host, host_id) VALUES (?,?,?,?,?,?,?,?,?,?)"),
   deleteSession: db.prepare("DELETE FROM sessions WHERE id = ?"),
-  sessionBookings: db.prepare("SELECT b.user_id, u.name FROM bookings b JOIN users u ON u.id = b.user_id WHERE b.session_id = ?"),
+  sessionBookings: db.prepare("SELECT b.user_id, b.attended, u.name FROM bookings b JOIN users u ON u.id = b.user_id WHERE b.session_id = ?"),
+  setAttendance: db.prepare("UPDATE bookings SET attended = ? WHERE session_id = ? AND user_id = ?"),
+  sessionsSince: db.prepare("SELECT * FROM sessions WHERE starts_at > ? ORDER BY starts_at"),
   bookingCount: db.prepare("SELECT COUNT(*) AS n FROM bookings WHERE session_id = ?"),
   myBookings: db.prepare("SELECT session_id FROM bookings WHERE user_id = ?"),
   addBooking: db.prepare("INSERT OR IGNORE INTO bookings (session_id, user_id, created_at) VALUES (?,?,?)"),
@@ -1180,9 +1182,9 @@ const routes = {
     const r = roleOf(req);
     if (!r) return err(res, 401, "Нужен ключ доступа");
     const list = q.sessionsUpcoming.all(Date.now() - 7 * 86400000).map(s => ({
-      id: s.id, title: s.title, dir: s.dir, type: s.type, host: s.host || "",
+      id: s.id, title: s.title, dir: s.dir, type: s.type, host: s.host || "", hostId: s.host_id || 0,
       startsAt: s.starts_at, duration: s.duration_min, capacity: s.capacity, meetUrl: s.meet_url,
-      bookings: q.sessionBookings.all(s.id).map(x => x.name),
+      bookings: q.sessionBookings.all(s.id).map(x => ({ userId: x.user_id, name: x.name, attended: x.attended })),
     }));
     send(res, 200, {
       list,
@@ -1205,9 +1207,42 @@ const routes = {
     const type = b.type === "live" ? "live" : "group";
     const dur = Math.max(15, Math.min(240, Number(b.duration) || 60));
     const cap = Math.max(1, Math.min(50, Number(b.capacity) || (type === "live" ? 50 : 4)));
-    const ins = q.insertSession.run(title, String(b.dir || "").slice(0, 60), type, startsAt, dur,
-      String(b.meetUrl || "").trim().slice(0, 300), cap, Date.now(), String(b.host || "").trim().slice(0, 80));
-    send(res, 201, { ok: true, id: Number(ins.lastInsertRowid) });
+    // ведущий: по id из команды (для статистики) — имя денормализуем для показа
+    const hostId = Number(b.hostId) || 0;
+    const hostRow = hostId ? q.mentorById.get(hostId) : null;
+    const host = hostRow ? hostRow.name : String(b.host || "").trim().slice(0, 80);
+    // серия: «повторять еженедельно» — одна форма создаёт до 8 недельных слотов
+    const repeat = Math.max(1, Math.min(8, Number(b.repeatWeeks) || 1));
+    const ids = [];
+    for (let k = 0; k < repeat; k++) {
+      const ins = q.insertSession.run(title, String(b.dir || "").slice(0, 60), type, startsAt + k * 7 * 86400000, dur,
+        String(b.meetUrl || "").trim().slice(0, 300), cap, Date.now(), host, hostRow ? hostId : 0);
+      ids.push(Number(ins.lastInsertRowid));
+    }
+    send(res, 201, { ok: true, id: ids[0], ids });
+  },
+
+  /* посещаемость: -1 не отмечено, 0 не пришёл, 1 был */
+  "POST /api/admin/attendance": async (req, res) => {
+    const r = roleOf(req);
+    if (!r) return err(res, 401, "Нужен ключ доступа");
+    const b = await readBody(req);
+    const att = [-1, 0, 1].includes(Number(b.attended)) ? Number(b.attended) : -1;
+    q.setAttendance.run(att, Number(b.sessionId), Number(b.userId));
+    send(res, 200, { ok: true });
+  },
+
+  /* статистика записей: сессии за период + все регистрации с посещаемостью */
+  "GET /api/admin/stats": async (req, res) => {
+    const r = roleOf(req);
+    if (!r) return err(res, 401, "Нужен ключ доступа");
+    const since = Date.now() - 90 * 86400000;
+    const sessions = q.sessionsSince.all(since).map(s => ({
+      id: s.id, title: s.title, dir: s.dir, type: s.type, host: s.host || "", hostId: s.host_id || 0,
+      startsAt: s.starts_at, duration: s.duration_min, capacity: s.capacity,
+      regs: q.sessionBookings.all(s.id).map(x => ({ userId: x.user_id, name: x.name, attended: x.attended })),
+    }));
+    send(res, 200, { sessions, since });
   },
 
   "POST /api/admin/sessions/delete": async (req, res) => {

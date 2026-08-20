@@ -6,8 +6,8 @@
 <meta name="robots" content="noindex">
 <title>Taulau — админка</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230071e3'/><path d='M27 34h46M50 34v32q0 13 13 13 7 0 10-6' stroke='white' stroke-width='11' fill='none' stroke-linecap='round'/></svg>">
-<link rel="stylesheet" href="assets/styles.css?v=38">
-<script src="assets/config.js?v=38"></script>
+<link rel="stylesheet" href="assets/styles.css?v=39">
+<script src="assets/config.js?v=39"></script>
 <style>
   .adm { max-width: 1000px; margin: 0 auto; padding: 40px 24px 80px; }
   .adm-head { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin-bottom: 18px; }
@@ -63,6 +63,7 @@
     <button data-tab="users">Участники</button>
     <button data-tab="team">Команда</button>
     <button data-tab="cal">Календарь</button>
+    <button data-tab="stats">Статистика</button>
     <button data-tab="metrics">Лендинг</button>
   </div>
 
@@ -255,7 +256,7 @@ function userRow(u) {
       <td>${esc(u.email)}<div class="u-sub">${esc(u.tariff)}${u.dock ? ' · док ' + esc(u.dock) : ''}</div>
         ${u.prizes && u.prizes.length ? `<div class="u-sub">🎁 ${u.prizes.map(esc).join(' · ')}</div>` : ''}</td>
       <td>
-        ${u.station} из 8 · ур. ${u.level}
+        станция ${u.station + 1} из 9 · ур. ${u.level}
         <div class="u-bar"><i style="width:${Math.round(u.walk * 100)}%"></i></div>
       </td>
       <td>${u.points}${breakdown}</td>
@@ -461,12 +462,18 @@ async function loadTeam() {
 
 async function loadCal() {
   const d = await call('/api/admin/sessions');
+  // ведущий выбирается из команды по id — статистика по менторам строится без свободного текста
+  if (ROLE && ROLE.role === 'admin' && !MENTORS.length) {
+    try { MENTORS = (await call('/api/admin/mentors')).mentors; } catch { MENTORS = []; }
+  }
   countEl.textContent = `сессий в расписании: ${d.list.length}`;
   const fmtD = ts => new Date(ts).toLocaleString('ru-RU', { weekday: 'short', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
+  const attLabel = a => a === 1 ? '✅' : a === 0 ? '🚫' : '☐';
   const rows = d.list.map(s => `
     <tr><td><b>${esc(s.title)}</b><div class="u-sub">${s.type === 'live' ? '🎥 лайв' : '👥 созвон'}${s.dir ? ' · ' + esc(s.dir) : ''}${s.host ? ' · ведёт ' + esc(s.host) : ''}</div></td>
       <td>${fmtD(s.startsAt)}<div class="u-sub">${s.duration} мин</div></td>
-      <td>${s.bookings.length}/${s.capacity}${s.bookings.length ? `<div class="u-sub">${s.bookings.map(esc).join(', ')}</div>` : ''}</td>
+      <td>${s.bookings.length}/${s.capacity} мест${s.bookings.length ? `<div class="u-sub">${s.bookings.map(b =>
+        `<span class="att-chip" data-att="${s.id}:${b.userId}:${b.attended}" title="Клик: был → не пришёл → сброс" style="cursor:pointer;white-space:nowrap">${attLabel(b.attended)} ${esc(b.name)}</span>`).join(' · ')}</div>` : ''}</td>
       <td>${s.meetUrl ? `<a href="${esc(s.meetUrl)}" target="_blank" rel="noopener">Meet</a>` : '—'}</td>
       <td><button class="btn btn-ghost btn-sm" data-delsession="${s.id}">Удалить</button></td></tr>`).join('');
   const dd = d.demodayDate ? new Date(d.demodayDate) : null;
@@ -485,7 +492,12 @@ async function loadCal() {
       <div class="app-row" style="margin-bottom:10px">
         <input id="csTitle" type="text" placeholder="Название (например: Live: контекст для Claude)" style="flex:2 1 260px">
         <input id="csDir" type="text" placeholder="Направление" style="flex:1 1 140px">
-        <input id="csHost" type="text" placeholder="Кто ведёт (имя)" style="flex:1 1 160px">
+        ${MENTORS.length ? `
+        <select id="csHostId" title="Кто ведёт">
+          <option value="">Кто ведёт — не выбран</option>
+          ${MENTORS.map(m => `<option value="${m.id}">${esc(m.name)}${m.role === 'expert' ? ' (эксперт)' : ''}</option>`).join('')}
+        </select>` : `
+        <input id="csHost" type="text" placeholder="Кто ведёт (имя)" style="flex:1 1 160px">`}
         <select id="csType"><option value="group">Созвон (лимит часов)</option><option value="live">Лайв (для всех)</option></select>
       </div>
       <div class="app-row" style="margin-bottom:10px">
@@ -493,6 +505,10 @@ async function loadCal() {
         <input id="csDur" type="number" value="60" min="15" max="240" step="15" title="Минуты" style="width:90px">
         <input id="csCap" type="number" value="4" min="1" max="50" title="Мест" style="width:70px">
         <input id="csUrl" type="text" placeholder="Ссылка на Google Meet" style="flex:2 1 240px">
+        <select id="csRep" title="Повторять еженедельно">
+          <option value="1">Разовая</option><option value="2">2 недели подряд</option>
+          <option value="4">4 недели подряд</option><option value="8">8 недель подряд</option>
+        </select>
       </div>
       <button class="btn btn-primary btn-sm" id="csAdd">Добавить в календарь</button>
     </div>
@@ -514,6 +530,7 @@ async function loadCal() {
   document.getElementById('csAdd').addEventListener('click', async () => {
     const dt = document.getElementById('csDate').value;
     try {
+      const hostSel = document.getElementById('csHostId');
       await call('/api/admin/sessions', 'POST', {
         title: document.getElementById('csTitle').value,
         dir: document.getElementById('csDir').value,
@@ -522,7 +539,9 @@ async function loadCal() {
         duration: Number(document.getElementById('csDur').value),
         capacity: Number(document.getElementById('csCap').value),
         meetUrl: document.getElementById('csUrl').value,
-        host: document.getElementById('csHost').value,
+        hostId: hostSel ? Number(hostSel.value) || 0 : 0,
+        host: hostSel ? '' : document.getElementById('csHost').value,
+        repeatWeeks: Number(document.getElementById('csRep').value) || 1,
       });
       toast('Сессия добавлена'); load();
     } catch (e) { toast(e.message); }
@@ -543,6 +562,65 @@ async function loadCal() {
     try { await call('/api/admin/demoday-approve', 'POST', { userId: Number(el.dataset.ddok), approved: true }); toast('Запись одобрена'); load(); }
     catch (e) { toast(e.message); }
   }));
+  // посещаемость: клик по имени записавшегося циклит был → не пришёл → сброс
+  list.querySelectorAll('[data-att]').forEach(el => el.addEventListener('click', async () => {
+    const [sid, uid, cur] = el.dataset.att.split(':').map(Number);
+    const next = cur === -1 ? 1 : cur === 1 ? 0 : -1;
+    try { await call('/api/admin/attendance', 'POST', { sessionId: sid, userId: uid, attended: next }); load(); }
+    catch (e) { toast(e.message); }
+  }));
+}
+
+/* ---------- статистика записей на сессии ---------- */
+
+async function loadStats() {
+  const d = await call('/api/admin/stats');
+  const now = Date.now();
+  const ses = d.sessions || [];
+  const allRegs = ses.flatMap(s => s.regs.map(r => ({ ...r, s })));
+  countEl.textContent = `за 90 дней · сессий: ${ses.length} · записей: ${allRegs.length}`;
+  const fmtD = ts => new Date(ts).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  const pct = (a, b) => b ? Math.round(a / b * 100) + '%' : '—';
+  // сводка по ведущим и направлениям — на базе связей сессия↔участник
+  const groupBy = key => {
+    const m = new Map();
+    for (const s of ses) {
+      const k = key(s) || '—';
+      const g = m.get(k) || { sessions: 0, regs: 0, came: 0, marked: 0 };
+      g.sessions++; g.regs += s.regs.length;
+      g.came += s.regs.filter(r => r.attended === 1).length;
+      g.marked += s.regs.filter(r => r.attended !== -1).length;
+      m.set(k, g);
+    }
+    return [...m.entries()].sort((a, b) => b[1].regs - a[1].regs);
+  };
+  const tbl = (title, entries, colName) => `
+    <div class="app-card"><h3 style="margin-bottom:12px">${title}</h3>
+      <div class="u-wrap"><table class="u-table" style="min-width:0"><thead>
+        <tr><th>${colName}</th><th>Сессий</th><th>Записей</th><th>Доходимость</th></tr></thead><tbody>
+        ${entries.map(([k, g]) => `<tr><td><b>${esc(k)}</b></td><td>${g.sessions}</td><td>${g.regs}</td>
+          <td>${pct(g.came, g.marked)}${g.marked ? `<div class="u-sub">${g.came} из ${g.marked} отмеченных</div>` : ''}</td></tr>`).join('')
+          || '<tr><td colspan="4" class="empty">Пока пусто</td></tr>'}
+      </tbody></table></div></div>`;
+  // кто куда записан — по участникам
+  const byUser = new Map();
+  for (const r of allRegs) {
+    const u = byUser.get(r.userId) || { name: r.name, items: [] };
+    u.items.push(r);
+    byUser.set(r.userId, u);
+  }
+  const userRows = [...byUser.values()].sort((a, b) => b.items.length - a.items.length).map(u => `
+    <tr><td><b>${esc(u.name)}</b></td><td>${u.items.length}</td>
+      <td>${u.items.map(r => `${r.s.startsAt > now ? '🔜' : r.attended === 1 ? '✅' : r.attended === 0 ? '🚫' : '·'} ${esc(r.s.title)} <span class="u-sub" style="display:inline">(${fmtD(r.s.startsAt)})</span>`).join('<br>')}</td></tr>`).join('');
+  list.innerHTML = `
+    ${tbl('По ведущим', groupBy(s => s.host), 'Ведущий')}
+    ${tbl('По направлениям', groupBy(s => s.dir), 'Направление')}
+    <div class="app-card"><h3 style="margin-bottom:12px">Кто куда записан</h3>
+      <div class="u-wrap"><table class="u-table" style="min-width:0"><thead>
+        <tr><th>Участник</th><th>Записей</th><th>Сессии (🔜 предстоит · ✅ был · 🚫 не пришёл)</th></tr></thead><tbody>
+        ${userRows || '<tr><td colspan="3" class="empty">Записей пока нет</td></tr>'}
+      </tbody></table></div></div>
+    <p class="u-sub">Посещаемость отмечается во вкладке «Календарь» — кликом по имени записавшегося.</p>`;
 }
 
 /* ---------- аналитика лендинга ---------- */
@@ -589,7 +667,7 @@ async function load() {
         document.querySelector('.adm-head h1').textContent = `Кабинет ментора · ${ROLE.name}`;
       }
     }
-    await (TAB === 'apps' ? loadApps() : TAB === 'team' ? loadTeam() : TAB === 'metrics' ? loadMetrics() : TAB === 'cal' ? loadCal() : loadUsers());
+    await (TAB === 'apps' ? loadApps() : TAB === 'team' ? loadTeam() : TAB === 'metrics' ? loadMetrics() : TAB === 'cal' ? loadCal() : TAB === 'stats' ? loadStats() : loadUsers());
     gate.hidden = true;
     tabsEl.hidden = false;
   } catch (e) {
@@ -607,6 +685,9 @@ async function load() {
 tabsEl.querySelectorAll('[data-tab]').forEach(b => b.addEventListener('click', () => {
   TAB = b.dataset.tab;
   tabsEl.querySelectorAll('button').forEach(x => x.classList.toggle('active', x === b));
+  // мгновенная реакция: старая вкладка не висит, пока грузится новая
+  list.innerHTML = '<p class="empty" style="padding:24px 0">Загрузка…</p>';
+  countEl.textContent = '';
   load();
 }));
 

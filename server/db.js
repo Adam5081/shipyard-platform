@@ -192,9 +192,14 @@ for (const [name, decl] of NEW_COLUMNS) {
 const mentorCols = new Set(db.prepare("PRAGMA table_info(mentors)").all().map(c => c.name));
 if (!mentorCols.has("role")) db.exec("ALTER TABLE mentors ADD COLUMN role TEXT NOT NULL DEFAULT 'mentor'");
 
-/* календарь: кто ведёт сессию (имя ментора/эксперта, свободный текст) */
+/* календарь: кто ведёт сессию — имя для показа + ссылка на команду по id (для статистики) */
 const sessionCols = new Set(db.prepare("PRAGMA table_info(sessions)").all().map(c => c.name));
 if (!sessionCols.has("host")) db.exec("ALTER TABLE sessions ADD COLUMN host TEXT NOT NULL DEFAULT ''");
+if (!sessionCols.has("host_id")) db.exec("ALTER TABLE sessions ADD COLUMN host_id INTEGER NOT NULL DEFAULT 0");
+
+/* посещаемость: -1 не отмечено, 0 не пришёл, 1 был */
+const bookingCols = new Set(db.prepare("PRAGMA table_info(bookings)").all().map(c => c.name));
+if (!bookingCols.has("attended")) db.exec("ALTER TABLE bookings ADD COLUMN attended INTEGER NOT NULL DEFAULT -1");
 
 /* Инвайты: код выдаётся заявке при статусе «взяли», регистрация — только по коду. */
 const APP_COLUMNS = [
