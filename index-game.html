@@ -1,780 +1,683 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover">
 <title>TAULAU ASCENT</title>
 <style>
-  /* ============================================================
-     TAULAU ASCENT — 2D-восхождение. Один файл, zero-dependency.
-     Эстетика: одиночество, груз, суровый склон, туман. Красный —
-     только TAULAU и ключевые акценты.
-     ============================================================ */
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  html, body { height: 100%; background: #0b0e13; overflow: hidden; }
-  #game { position: fixed; inset: 0; display: block; }
-  /* UI-слой поверх канваса: тонкий гротеск, scan-появление */
-  #ui { position: fixed; inset: 0; pointer-events: none; font-family: "Inter", "Segoe UI", -apple-system, sans-serif; }
-  .hud {
-    position: absolute; top: 14px; left: 16px;
-    color: rgba(210, 222, 235, .85); font-size: 12px; letter-spacing: .14em;
-    text-transform: uppercase; line-height: 1.9;
-  }
-  .hud b { color: #dfe8f2; font-weight: 600; }
-  .hud .alt { color: rgba(160, 178, 196, .6); }
-  .card {
-    position: absolute; left: 50%; bottom: 9%;
-    transform: translateX(-50%) translateY(20px);
-    min-width: 300px; max-width: 84vw;
-    border: 1px solid rgba(180, 200, 220, .28);
-    background: rgba(10, 14, 20, .78);
-    backdrop-filter: blur(4px);
-    padding: 14px 20px 12px;
-    color: #dfe8f2; opacity: 0;
-    transition: opacity .5s ease, transform .5s cubic-bezier(.16, 1, .3, 1);
-  }
-  .card.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-  .card .c-station { font-size: 11px; letter-spacing: .22em; text-transform: uppercase; color: rgba(160, 178, 196, .75); }
-  .card .c-title { font-size: 17px; font-weight: 600; letter-spacing: .02em; margin: 4px 0 2px; }
-  .card .c-sub { font-size: 12.5px; color: rgba(180, 198, 214, .8); }
-  .card .c-art { font-size: 12px; margin-top: 7px; padding-top: 7px; border-top: 1px solid rgba(180, 200, 220, .15); color: rgba(200, 214, 228, .85); }
-  .card::before, .card::after {
-    content: ""; position: absolute; width: 10px; height: 10px; border: 1px solid rgba(220, 60, 70, .8);
-  }
-  .card::before { left: -1px; top: -1px; border-right: 0; border-bottom: 0; }
-  .card::after { right: -1px; bottom: -1px; border-left: 0; border-top: 0; }
-  #skip {
-    position: absolute; right: 16px; bottom: 14px; pointer-events: auto;
-    background: rgba(10, 14, 20, .6); color: rgba(200, 214, 228, .8);
-    border: 1px solid rgba(180, 200, 220, .25); padding: 8px 16px;
-    font-family: inherit; font-size: 11.5px; letter-spacing: .18em; text-transform: uppercase;
-    cursor: pointer; transition: background .2s;
-  }
-  #skip:hover { background: rgba(30, 38, 50, .8); color: #fff; }
-  @media (max-width: 640px) {
-    .hud { font-size: 10px; top: 10px; left: 12px; line-height: 1.7; }
-    .card { bottom: 5%; min-width: 0; width: calc(100% - 24px); max-width: none; padding: 11px 14px 10px; }
-    .card .c-title { font-size: 15px; }
-    .card .c-sub { font-size: 11.5px; }
-    #skip { right: 10px; bottom: 10px; padding: 7px 12px; }
-  }
+  html,body{margin:0;height:100%;background:#0b1018;overflow:hidden}
+  #stage{position:fixed;inset:0;touch-action:manipulation}
+  canvas{display:block;width:100%;height:100%}
+  a{color:#9db4c7}a:hover{color:#e63946}
 </style>
 </head>
 <body>
-<canvas id="game"></canvas>
-<div id="ui">
-  <div class="hud" id="hud"></div>
-  <div class="card" id="card"></div>
-  <button id="skip" hidden>Пропустить ↦</button>
-</div>
-
+<div id="stage"><canvas id="cv"></canvas></div>
 <script>
-(() => {
 "use strict";
+/* ============ TAULAU ASCENT — 2D-восхождение ============ */
+const W=960, WORLD_H=2600, PEAK={x:480,y:170}, BASE_Y=2450;
+const RED="#E63946", PALE="#9db4c7", MOSS="#5c7050";
+const FONT=(s,w)=> (w||600)+" "+s+"px 'Segoe UI',system-ui,sans-serif";
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const lerp=(a,b,t)=>a+(b-a)*t;
+const easeIO=t=>t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
+const rnd=(i,k)=>((Math.sin(i*127.1+k*311.7)*43758.5453)%1+1)%1;
+function blend(c1,c2,t){const p=s=>[parseInt(s.slice(1,3),16),parseInt(s.slice(3,5),16),parseInt(s.slice(5,7),16)];const a=p(c1),b=p(c2);return`rgb(${a.map((v,i)=>Math.round(lerp(v,b[i],t))).join(",")})`}
 
-/* ================= данные программы ================= */
-
-const STATIONS = [
-  { n: 1, title: "Диагностика и окружение", role: "Ментор программы",  tool: "Компас",             art: "Заключение по идее + окружение" },
-  { n: 2, title: "Презентация проекта",     role: "Продюсер",          tool: "Горн проводника",    art: "Презентация, контекст для Claude", kt: 1 },
-  { n: 3, title: "Чертёж продукта",         role: "Технический контур", tool: "Маршрутный лист",   art: "Техкарта, CLAUDE.md",             kt: 2 },
-  { n: 4, title: "Ядро продукта",           role: "Технический контур", tool: "Ледоруб",           art: "Ключевой сценарий работает" },
-  { n: 5, title: "Обвязка",                 role: "Технический контур", tool: "Верёвка и обвязка", art: "Интеграции и авторизация",        kt: 3 },
-  { n: 6, title: "Тестирование и защита",   role: "Безопасность",       tool: "Каска",             art: "Чек-лист OWASP закрыт" },
-  { n: 7, title: "Продукт в сети",          role: "Право",              tool: "Сигнальная ракета", art: "Публичная ссылка + юрпакет",       kt: 4 },
-  { n: 8, title: "Защита проекта",          role: "Аналитика",          tool: "Вымпел вершины",    art: "Разбор перед экспертами" },
-  { n: 9, title: "Вывод в рабочую среду",   role: "Маркетинг",          tool: "Рупор",             art: "Первые пользователи",              kt: 5 },
+/* ---------- программа ---------- */
+const ST=[
+ {t:"Диагностика и окружение",art:"Карта запуска"},
+ {t:"Презентация проекта",art:"Питч",kt:"КТ-1"},
+ {t:"Чертёж продукта",art:"Чертёж",kt:"КТ-2"},
+ {t:"Ядро продукта",art:"Ядро"},
+ {t:"Обвязка",art:"Обвязка",kt:"КТ-3"},
+ {t:"Тестирование и защита",art:"Отчёт тестов"},
+ {t:"Продукт в сети",art:"Домен",kt:"КТ-4"},
+ {t:"Защита проекта",art:"Демо"},
+ {t:"Вывод в рабочую среду",art:"Релиз",kt:"КТ-5"},
 ];
+const halfW=y=>40+(y-PEAK.y)/(WORLD_H-PEAK.y)*480;
 
-/* ================= канвас и ретина ================= */
-
-const cv = document.getElementById("game");
-const ctx = cv.getContext("2d");
-const hud = document.getElementById("hud");
-const cardEl = document.getElementById("card");
-const skipBtn = document.getElementById("skip");
-
-let W = 0, H = 0, DPR = 1;
-let PERF = 1;                       // 1 = полные эффекты, 0.5 — деградация
-function viewport() {
-  /* iOS Safari раздувает внутренний viewport iframe под intrinsic-размер контента —
-     innerWidth врёт. Родитель same-origin, поэтому меряем сам <iframe>. */
-  try {
-    const fe = window.frameElement;
-    if (fe) {
-      const r = fe.getBoundingClientRect();
-      if (r.width > 10 && r.height > 10) return [Math.round(r.width), Math.round(r.height)];
-    }
-  } catch { /* cross-origin — падаем на innerWidth */ }
-  return [window.innerWidth, window.innerHeight];
+/* ---------- маршрут ---------- */
+const PTS=[];
+for(let i=0;i<9;i++){
+  const y=2330-i*245, side=i%2?1:-1;
+  PTS.push({x:480+side*(halfW(y)-95)*(0.5+rnd(i,7)*0.35),y});
 }
-function resize() {
-  DPR = Math.min(1.5, window.devicePixelRatio || 1);
-  [W, H] = viewport();
-  cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
-  cv.style.width = W + "px"; cv.style.height = H + "px";   // явный CSS-размер, чтобы атрибуты канваса не раздували фрейм
-  const ui = document.getElementById("ui");
-  ui.style.width = W + "px"; ui.style.height = H + "px";   // HUD и кнопки — в тех же границах, что и канвас
-  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-  VK = Math.max(0.5, Math.min(1, H / 760));
-  buildLayers();                    // статичные слои перерисовываются под новый размер
+const STARTP={x:PTS[0].x-140,y:BASE_Y-30}, DOOR={x:480,y:292};
+const MODES=["walk","walk","ladder","rope","walk","ladder","rope","walk"];
+const NODES=[{...STARTP,m:"walk"}]; const stNode=[];
+NODES.push({...PTS[0],m:"walk"}); stNode[0]=1;
+for(let i=0;i<8;i++){
+  const a=PTS[i],b=PTS[i+1],m=MODES[i];
+  if(m==="walk"){
+    NODES.push({x:(a.x+b.x)/2+(rnd(i,41)-.5)*80,y:(a.y+b.y)/2+34,m:"walk"});
+    NODES.push({...b,m:"walk"});
+  }else{
+    NODES.push({x:b.x+(m==="rope"?-16:0),y:a.y-44,m:"walk"});
+    NODES.push({...b,m});
+  }
+  stNode[i+1]=NODES.length-1;
 }
-window.addEventListener("resize", resize);
-/* resize внутри iframe на iOS может не стрелять — следим за самим фреймом */
-try {
-  if (window.frameElement && window.ResizeObserver)
-    new ResizeObserver(() => { const [w, h] = viewport(); if (w !== W || h !== H) resize(); }).observe(window.frameElement);
-} catch { /* не критично */ }
-
-/* ================= мир ================= */
-/* Мир вертикален: worldY 0 — подножье, WORLD_H — вершина.
-   Тропа — зигзаг; станции равномерно по высоте. */
-
-const WORLD_H = 5200;
-const SEG = WORLD_H / 10;                 // сегмент между станциями
-const trailX = wy => {                    // x тропы (0..1 доля ширины) на высоте wy
-  const t = wy / WORLD_H;
-  return 0.5 + Math.sin(t * Math.PI * 4.2) * (0.26 - t * 0.12);
-};
-const stationWY = i => SEG * (i + 1);     // мировые высоты станций 0..8
-
-/* камера: cam = worldY, который сейчас в центре экрана */
-let cam = WORLD_H + 400;                  // старт интро — над вершиной
-let camTarget = cam;
-
-const w2sx = wy => trailX(wy) * W;
-/* вертикальный масштаб: на низких/узких экранах мир сжимается, чтобы станции,
-   герой и укрытия оставались в кадре, а не пустой склон */
-let VK = 1;
-const w2sy = wy => H * 0.62 + (cam - wy) * VK; // мир прокручивается: выше по миру — выше на экране
-
-/* высота в «метрах» для HUD */
-const meters = wy => Math.round(wy / WORLD_H * 3720);
-
-/* ================= персонаж ================= */
-
-const hero = {
-  wy: 40, vy: 0, walking: false, facing: 1,
-  ph: 0,                     // фаза шага
-  climbing: false,           // на верёвке/лестнице
-  tools: 0,                  // сколько инструментов в снаряжении
-};
-
-/* ================= состояние игры ================= */
-
-const Q = new URLSearchParams(location.search);
-const DEMO = Q.get("demo") === "1" || !window.parent || window.parent === window;
-let progress = { station: 0, kts: 0 };    // внешние данные (0-индекс текущей станции)
-let phase = "intro";                      // intro | play | summit
-let introT = 0;
-let heroTargetWY = stationWY(0);
-let reached = -1;                         // индекс последней достигнутой станции
-let sceneT = 0;                           // таймер сценки встречи
-let npcActive = -1;
-let likes = [];                           // 👍-частицы финала
-let time = 0;
-
-/* внешний API: кабинет сообщает прогресс */
-window.TaulauAscent = {
-  setProgress(stationIndex, checkpointsPassed) {
-    progress.station = Math.max(0, Math.min(8, stationIndex | 0));
-    progress.kts = Math.max(0, Math.min(5, checkpointsPassed | 0));
-    if (phase === "intro") return;
-    const target = stationWY(progress.station);
-    reached = Math.max(reached, progress.station - 1);
-    hero.tools = Math.max(hero.tools, progress.station);
-    if (Math.abs(target - hero.wy) > 700) {          // далеко — телепорт, а не многоминутная прогулка
-      hero.wy = Math.max(40, target - 90);
-      cam = hero.wy + 120;
-    }
-    heroTargetWY = target;
-  },
-};
-window.addEventListener("message", e => {
-  const d = e.data;
-  if (d && d.type === "taulau-progress") window.TaulauAscent.setProgress(d.station, d.kts);
+NODES.push({x:(PTS[8].x+DOOR.x)/2,y:(PTS[8].y+DOOR.y)/2+16,m:"walk"});
+NODES.push({...DOOR,m:"walk"});
+const CUM=[0];
+for(let i=1;i<NODES.length;i++)CUM[i]=CUM[i-1]+Math.hypot(NODES[i].x-NODES[i-1].x,NODES[i].y-NODES[i-1].y);
+const TOTAL=CUM[CUM.length-1];
+const stDist=stNode.map(n=>CUM[n]);
+function posAt(d){
+  d=clamp(d,0,TOTAL);let i=1;while(i<CUM.length-1&&CUM[i]<d)i++;
+  const t=(d-CUM[i-1])/(CUM[i]-CUM[i-1]||1),a=NODES[i-1],b=NODES[i];
+  return{x:lerp(a.x,b.x,t),y:lerp(a.y,b.y,t),m:b.m,ang:Math.atan2(b.y-a.y,b.x-a.x)};
+}
+const GATES=ST.map((s,i)=>s.kt?{i,d:stDist[i]+80,p:posAt(stDist[i]+80)}:null).filter(Boolean);
+/* павшие — те, кто не довёл проект */
+const CORPSE_LABELS=["застрял на нейминге","бросил после КТ-1","переписывал ядро в 4-й раз","ждал вдохновения","сгорел на дедлайне"];
+const CORPSES=[[1,2],[2,3],[4,5],[5,6],[7,8]].map(([a,b],j)=>{
+  const d=lerp(stDist[a],stDist[b],.45+rnd(j,61)*.2), p=posAt(d);
+  const side=p.x<480?1:-1;
+  return {x:p.x+side*(34+rnd(j,63)*26), y:p.y+30+rnd(j,65)*22, r:(rnd(j,67)-.5)*.5, label:CORPSE_LABELS[j], flip:side};
 });
 
-/* ================= статичные слои (кэш в offscreen) ================= */
-/* 4 параллакс-слоя: L0 дальние хребты, L1 средние, L2 ближний склон, L3 передний контур */
+/* ---------- состояние ---------- */
+const S={
+  mode:"demo", state:"intro", tI:0, t:0, dt:1/60,
+  dist:0, target:TOTAL, cx:480, cy:PEAK.y+80, zoom:1,
+  delivered:new Set(), pause:0, card:null, caption:null,
+  likes:[], puffs:[], prints:[], ripples:[], drops:[], flakes:[], gateFlash:0,
+  finaleT:0, fade:0, fx:1, ph:0, lastStep:0, frames:0, slow:0, bolt:0, facing:1, stepSide:1,
+};
+function showCaption(a,b,dur){S.caption={a,b,t0:S.t,dur:dur||3.4};}
 
-const layers = [];
-function ridgeY(x, yBase, amp) {
-  const fx = Math.max(1, 900 / W);   // на узких экранах учащаем рельеф, чтобы были видны пики, а не одна пологая волна
-  const q = x * fx;
-  return yBase - (Math.sin(q * 0.004) * 0.55 + Math.sin(q * 0.0113 + 2.1) * 0.3 + Math.sin(q * 0.027 + 5.2) * 0.15 + 1) * amp * 0.5;
+/* ---------- API ---------- */
+window.TaulauAscent={
+  setProgress(st,cp){
+    S.mode="ext";
+    const i=clamp(st|0,0,8);
+    S.target=stDist[i];
+    for(let k=0;k<i;k++)S.delivered.add(k);
+    let n=0;GATES.forEach(g=>{if(g.i<i&&n<(cp==null?9:cp)){g.done=true;n++;}});
+    // длинный скачок: подводим героя к предыдущей станции, идёт только последний отрезок
+    if(i>0&&S.dist<stDist[i-1])S.dist=stDist[i-1];
+    if(S.state==="finale"){S.state="play";S.finaleT=0;S.zoom=1;}
+    if(S.state==="intro")S.tI=Math.max(S.tI,0);
+  },
+  demo(on){S.mode=on===false?"ext":"demo";if(on!==false)S.target=TOTAL;}
+};
+/* мост с кабинетом: postMessage {type:'taulau-progress', station, kts} */
+window.addEventListener("message",e=>{
+  const d=e.data;
+  if(d&&d.type==="taulau-progress")window.TaulauAscent.setProgress(d.station,d.kts);
+});
+/* режим кабинета: без интро и без демо-цикла, прогресс приходит сообщением */
+const QS=new URLSearchParams(location.search);
+if(QS.get("intro")==="0"){S.mode="ext";S.state="play";S.target=0;S.cx=STARTP.x;S.cy=STARTP.y-70;}
+
+/* ---------- канвас ---------- */
+const cv=document.getElementById("cv"),c=cv.getContext("2d");
+let k=1,vw=W,vh=540,dpr=1,RW=innerWidth,RH=innerHeight;
+/* iOS Safari раздувает внутренний viewport iframe — innerWidth врёт; меряем сам <iframe> (same-origin) */
+function vpsize(){
+  try{const fe=window.frameElement;if(fe){const r=fe.getBoundingClientRect();if(r.width>10&&r.height>10)return[Math.round(r.width),Math.round(r.height)];}}catch(e){}
+  return[innerWidth,innerHeight];
 }
-function ridge(c, yBase, amp, step, color, snowLine) {
-  c.fillStyle = color;
-  c.beginPath();
-  c.moveTo(0, yBase + 200);
-  for (let x = 0; x <= W + step; x += step) {
-    c.lineTo(x, ridgeY(x, yBase, amp));
+function resize(){
+  [RW,RH]=vpsize();dpr=Math.min(2,devicePixelRatio||1);
+  cv.width=RW*dpr;cv.height=RH*dpr;
+  cv.style.width=RW+"px";cv.style.height=RH+"px";
+  k=Math.max(RW/W,RH/640);vw=RW/k;vh=RH/k;
+}
+addEventListener("resize",resize);resize();
+try{if(window.frameElement&&window.ResizeObserver)new ResizeObserver(()=>{const[w,h]=vpsize();if(w!==RW||h!==RH)resize();}).observe(window.frameElement);}catch(e){}
+
+/* ---------- кеш горы (offscreen) ---------- */
+const MS=1.5;
+const MC=document.createElement("canvas");MC.width=W*MS;MC.height=WORLD_H*MS;
+(function buildMountain(){
+  const m=MC.getContext("2d");m.setTransform(MS,0,0,MS,0,0);
+  m.beginPath();m.moveTo(480-halfW(WORLD_H),WORLD_H+10);
+  for(let y=WORLD_H;y>=PEAK.y;y-=40)m.lineTo(480-halfW(y)-rnd(y,5)*26,y);
+  m.lineTo(480,PEAK.y-26);
+  for(let y=PEAK.y;y<=WORLD_H;y+=40)m.lineTo(480+halfW(y)+rnd(y,9)*26,y);
+  m.closePath();
+  const g=m.createLinearGradient(0,PEAK.y,0,WORLD_H);
+  g.addColorStop(0,"#dfe6ee");g.addColorStop(.13,"#b9c4d0");
+  g.addColorStop(.17,"#46525c");g.addColorStop(.55,"#3a4741");g.addColorStop(1,"#2c363b");
+  m.fillStyle=g;m.fill();
+  m.save();m.clip();
+  m.strokeStyle="rgba(0,0,0,.2)";m.lineWidth=2;
+  for(let j=0;j<34;j++){
+    const y0=PEAK.y+140+rnd(j,11)*(WORLD_H-500),x0=480+(rnd(j,13)-.5)*halfW(y0)*1.5;
+    m.beginPath();m.moveTo(x0,y0);m.lineTo(x0+30+rnd(j,15)*60,y0+70+rnd(j,17)*110);m.stroke();
   }
-  c.lineTo(W, yBase + 400);
-  c.closePath();
-  c.fill();
-  if (snowLine) {
-    // снежные шапки: заливка выше снеговой линии
-    c.save();
-    c.beginPath();
-    c.moveTo(0, yBase + 400);
-    for (let x = 0; x <= W + step; x += step) c.lineTo(x, ridgeY(x, yBase, amp));
-    c.lineTo(W, yBase + 400);
-    c.closePath();
-    c.clip();
-    c.fillStyle = "rgba(216,226,238,.4)";
-    c.fillRect(0, 0, W, yBase - amp * 0.62);
+  m.fillStyle="rgba(255,255,255,.05)";
+  for(let j=0;j<20;j++){
+    const y0=PEAK.y+200+rnd(j,51)*(WORLD_H-700),x0=480+(rnd(j,53)-.5)*halfW(y0)*1.3;
+    m.beginPath();m.ellipse(x0,y0,40+rnd(j,55)*60,10,rnd(j,57)-.5,0,7);m.fill();
+  }
+  m.fillStyle="rgba(92,112,80,.4)";
+  for(let j=0;j<46;j++){
+    const y=BASE_Y-rnd(j,21)*620,x=480+(rnd(j,23)-.5)*halfW(y)*1.6;
+    m.beginPath();m.ellipse(x,y,24+rnd(j,25)*44,8,0,0,7);m.fill();
+  }
+  m.restore();
+  // террасы + укрытия-терминалы
+  PTS.forEach((p,i)=>{
+    m.fillStyle="#20282e";m.fillRect(p.x-62,p.y,124,10);
+    m.fillStyle="rgba(255,255,255,.09)";m.fillRect(p.x-62,p.y,124,2);
+    const hx=p.x+(p.x<480?-46:32);
+    m.fillStyle="#1a222b";m.fillRect(hx,p.y-26,26,26);
+    m.fillStyle="#242f3c";m.beginPath();m.moveTo(hx-3,p.y-26);m.lineTo(hx+13,p.y-38);m.lineTo(hx+29,p.y-26);m.closePath();m.fill();
+    m.strokeStyle=PALE;m.lineWidth=1;m.beginPath();m.moveTo(hx+13,p.y-38);m.lineTo(hx+13,p.y-48);m.stroke();
+  });
+  m.fillStyle="#20282e";m.fillRect(STARTP.x-100,STARTP.y+28,260,14);
+  m.fillRect(DOOR.x-70,DOOR.y+8,140,10);
+  // лестницы и верёвки
+  for(let i=1;i<NODES.length;i++){
+    const a=NODES[i-1],b=NODES[i];
+    if(b.m==="ladder"){
+      m.strokeStyle="#c8a24a";m.lineWidth=3;
+      m.beginPath();m.moveTo(b.x-7,a.y);m.lineTo(b.x-7,b.y);m.moveTo(b.x+7,a.y);m.lineTo(b.x+7,b.y);m.stroke();
+      m.lineWidth=2;
+      for(let y=b.y+8;y<a.y;y+=16){m.beginPath();m.moveTo(b.x-7,y);m.lineTo(b.x+7,y);m.stroke();}
+    }else if(b.m==="rope"){
+      m.strokeStyle="#8fa7bd";m.lineWidth=2.5;
+      m.beginPath();m.moveTo(a.x,a.y);m.quadraticCurveTo(b.x-14,(a.y+b.y)/2,b.x,b.y);m.stroke();
+      m.fillStyle="#8fa7bd";
+      for(let t=.2;t<1;t+=.2){const y=lerp(a.y,b.y,t);m.beginPath();m.arc(lerp(a.x,b.x,t)-14*Math.sin(t*3.14),y,2.5,0,7);m.fill();}
+    }
+  }
+  /* павшие носильщики */
+  CORPSES.forEach(cc=>{
+    m.save();m.translate(cc.x,cc.y);m.rotate(cc.r);m.scale(cc.flip,1);
+    m.strokeStyle="rgba(210,219,228,.7)";m.lineWidth=2;m.lineCap="round";
+    m.beginPath();m.moveTo(-9,0);m.lineTo(5,0);m.stroke();
+    for(let r2=-7;r2<=-1;r2+=3){m.beginPath();m.moveTo(r2,-3);m.lineTo(r2,2.6);m.stroke();}
+    m.beginPath();m.moveTo(5,0);m.lineTo(10,5);m.moveTo(5,0);m.lineTo(11,1);m.stroke();
+    m.beginPath();m.moveTo(-5,0);m.lineTo(-8,6);m.stroke();
+    m.fillStyle="rgba(222,229,236,.85)";m.beginPath();m.arc(-12.5,-1,3.2,0,7);m.fill();
+    m.fillStyle="#0c1118";m.fillRect(-14.2,-2.2,1.6,1.6);m.fillRect(-11.6,-2.2,1.6,1.6);
+    m.fillStyle="rgba(52,62,78,.85)";m.fillRect(7,-10,9,8);
+    m.fillStyle="rgba(157,180,199,.3)";m.fillRect(7,-10,9,1.6);
+    m.restore();
+    m.fillStyle="rgba(88,98,110,.9)";
+    m.beginPath();m.arc(cc.x+18*cc.flip,cc.y+2,4,3.14,0);m.fill();
+    m.beginPath();m.arc(cc.x+18*cc.flip,cc.y-2,2.6,3.14,0);m.fill();
+  });
+})();
+
+/* ---------- ввод ---------- */
+cv.addEventListener("pointerdown",()=>{
+  if(S.state==="intro"){S.state="play";showCaption("СТАНЦИЯ 1 · ДИАГНОСТИКА И ОКРУЖЕНИЕ","НАЧАЛО ПУТИ");}
+  else if(S.pause>0)S.pause=.01;
+});
+
+/* ---------- цикл ---------- */
+let prev=performance.now();
+function loop(now){
+  const dt=Math.min(.05,(now-prev)/1000);prev=now;S.dt=dt;S.t+=dt;
+  if(dt>.024){if(++S.slow>50){S.fx=.5;S.slow=0;}}else S.slow=Math.max(0,S.slow-1);
+  step(dt);draw();requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+function heroPos(){return posAt(S.dist);}
+function altOf(y){return Math.max(0,Math.round((BASE_Y-y)*1.15));}
+function zoneOf(y){return y<950?"snow":y>1850?"sun":"mid";}
+
+function step(dt){
+  /* интро: пик → спуск → подножье */
+  if(S.state==="intro"){
+    S.tI+=dt;
+    const HOLD=2.6,PAN=4.6,SETTLE=1.0;
+    if(S.tI<HOLD){S.cy=PEAK.y+80;S.cx=480;}
+    else if(S.tI<HOLD+PAN){
+      const p=easeIO((S.tI-HOLD)/PAN);
+      S.cy=lerp(PEAK.y+80,BASE_Y-120,p);S.cx=lerp(480,STARTP.x+60,p);
+    }else if(S.tI<HOLD+PAN+SETTLE){S.cy=BASE_Y-120;S.cx=STARTP.x+60;}
+    else{S.state="play";showCaption("СТАНЦИЯ 1 · ДИАГНОСТИКА И ОКРУЖЕНИЕ","НАЧАЛО ПУТИ");}
+  }
+  /* движение героя */
+  const h=heroPos();
+  if(S.state==="play"){
+    if(S.pause>0){S.pause-=dt;}
+    else{
+      const gap=S.target-S.dist;
+      const speed=(h.m==="walk"?92:58)*clamp(gap/46,.3,1);
+      if(S.dist<S.target-1){
+        S.dist=Math.min(S.target,S.dist+speed*dt);S.ph+=speed*dt*.115;
+        const p1=posAt(S.dist);
+        if(Math.abs(p1.x-h.x)>.05)S.facing=p1.x>h.x?1:-1;
+        // станции: пауза + сдача груза
+        for(let i=0;i<9;i++)if(!S.delivered.has(i)&&S.dist>=stDist[i]&&stDist[i]>1){
+          S.delivered.add(i);S.dist=stDist[i];S.pause=2.6;
+          S.card={i,t0:S.t};S.facing=PTS[i].x<480?-1:1;
+          showCaption(`СТАНЦИЯ ${i+1} ИЗ 9`,ST[i].t.toUpperCase(),2.6);
+        }
+        // контрольные точки: вспышка
+        GATES.forEach(g=>{if(!g.done&&S.dist>=g.d){g.done=true;S.gateFlash=1;showCaption(ST[g.i].kt+" ПРОЙДЕНА","СКАНИРОВАНИЕ ГРУЗА",2);}});
+        // следы на снегу
+        if(zoneOf(h.y)==="snow"&&S.t-S.lastStep>.26){S.lastStep=S.t;S.stepSide*=-1;S.prints.push({x:h.x-S.facing*4+S.stepSide*3,y:h.y+2,t0:S.t});}
+        // пар изо рта
+        if(h.y<1400&&Math.random()<.02)S.puffs.push({x:h.x+S.facing*12,y:h.y-46,t0:S.t});
+      }else if(S.dist>=TOTAL-1&&S.mode!=="ext"){S.state="finale";S.finaleT=0;}
+      else if(S.mode==="ext"&&Math.abs(S.dist-S.target)<1.5){/* стоим у цели */}
+    }
+    S.cx=lerp(S.cx,h.x,.04);S.cy=lerp(S.cy,h.y-70,.04);
+  }
+  if(S.state==="finale"){
+    S.finaleT+=dt;
+    S.zoom=lerp(S.zoom,.72,.02);
+    S.cx=lerp(S.cx,480,.03);S.cy=lerp(S.cy,PEAK.y+120,.03);
+    if(S.likes.length<46&&Math.random()<.35)S.likes.push({x:DOOR.x+(Math.random()-.5)*160,y:DOOR.y,vy:-(30+Math.random()*50),vx:(Math.random()-.5)*30,t0:S.t,s:10+Math.random()*14});
+    if(S.mode==="demo"&&S.finaleT>6){S.fade+=dt;if(S.fade>=1)reset();}
+  }else S.zoom=lerp(S.zoom,1,.04);
+  if(S.state!=="finale")S.likes.length=0;
+  S.cy=clamp(S.cy,vh/2/S.zoom-40,WORLD_H-vh/2/S.zoom+40);
+  S.cx=clamp(S.cx,Math.min(480,vw/2/S.zoom),Math.max(480,W-vw/2/S.zoom));
+  if(S.bolt>0)S.bolt-=dt*2.4;
+  if(Math.random()<.004&&zoneOf(S.cy)==="snow")S.bolt=1;
+}
+function reset(){
+  S.state="intro";S.tI=0;S.dist=0;S.target=TOTAL;S.delivered.clear();
+  GATES.forEach(g=>g.done=false);S.card=null;S.caption=null;S.likes=[];S.prints=[];
+  S.finaleT=0;S.fade=0;S.zoom=1;S.cy=PEAK.y+80;S.cx=480;
+}
+
+/* ---------- отрисовка ---------- */
+function draw(){
+  const z=k*S.zoom,vW=RW/z,vH=RH/z;
+  const left=S.cx-vW/2,top=S.cy-vH/2;
+  const night=clamp((BASE_Y-S.cy)/(BASE_Y-PEAK.y),0,1);
+  c.setTransform(z*dpr,0,0,z*dpr,0,0);
+  /* небо */
+  const g=c.createLinearGradient(0,0,0,vH);
+  g.addColorStop(0,blend("#7fb0dd","#070b12",night));
+  g.addColorStop(.6,blend("#bcd6ea","#131c2c",night));
+  g.addColorStop(1,blend("#f4d9a4","#273246",night));
+  c.fillStyle=g;c.fillRect(0,0,vW,vH);
+  if(night>.35){c.fillStyle=`rgba(255,255,255,${(night-.35)*.9})`;
+    for(let j=0;j<70;j++){const x=rnd(j,1)*vW,y=rnd(j,2)*vH*.65;if(Math.sin(S.t*2+j)>-.55)c.fillRect(x,y,j%8?1:2,j%8?1:2);}}
+  /* солнце у подножья */
+  if(night<.62){
+    const su=1-night/.62,sx=vW*.74,sy=vH*.13+night*vH*.5;
+    const sg=c.createRadialGradient(sx,sy,6,sx,sy,240);
+    sg.addColorStop(0,`rgba(255,247,222,${.95*su})`);sg.addColorStop(.25,`rgba(255,226,164,${.42*su})`);sg.addColorStop(1,"rgba(255,226,164,0)");
+    c.fillStyle=sg;c.fillRect(sx-240,sy-240,480,480);
+    c.save();c.shadowColor="#fff3cf";c.shadowBlur=44*su;
+    c.fillStyle=`rgba(255,251,238,${.98*su})`;c.beginPath();c.arc(sx,sy,26,0,7);c.fill();c.restore();
+    c.fillStyle=`rgba(255,238,190,${.5*su})`;c.beginPath();c.arc(sx,sy,26,0,7);c.fill();
+    c.save();c.strokeStyle=`rgba(255,244,208,${.5*su})`;c.lineWidth=2;
+    for(let q=0;q<8;q++){const an=q*Math.PI/4+S.t*.05;
+      c.beginPath();c.moveTo(sx+Math.cos(an)*34,sy+Math.sin(an)*34);
+      c.lineTo(sx+Math.cos(an)*(46+Math.sin(S.t*2+q)*5),sy+Math.sin(an)*(46+Math.sin(S.t*2+q)*5));c.stroke();}
+    c.restore();
+    c.fillStyle=`rgba(255,236,184,${.2*su})`;
+    for(let q=1;q<=4;q++){c.beginPath();c.arc(lerp(sx,vW*.34,q/4),lerp(sy,vH*.7,q/4),(5-q)*3+3,0,7);c.fill();}
+  }
+  if(S.bolt>0){
+    c.fillStyle=`rgba(200,214,235,${S.bolt*.22})`;c.fillRect(0,0,vW,vH);
+    if(S.bolt>.65){c.strokeStyle=`rgba(235,242,255,${S.bolt})`;c.lineWidth=2.5;
+      let x=rnd(Math.floor(S.t*3),31)*vW,y=0;c.beginPath();c.moveTo(x,0);
+      while(y<vH*.45){x+=(rnd(y,33)-.5)*80;y+=44;c.lineTo(x,y);}c.stroke();}
+  }
+  /* солнечные лучи у подножья */
+  if(night<.4&&S.fx>=1){
+    c.save();c.globalAlpha=(.4-night)*.55;
+    for(let j=0;j<3;j++){
+      const gg=c.createLinearGradient(vW*.8,0,vW*.3+j*vW*.18,vH);
+      gg.addColorStop(0,"rgba(255,238,190,.45)");gg.addColorStop(1,"rgba(255,238,190,0)");
+      c.fillStyle=gg;
+      c.beginPath();c.moveTo(vW*(.62+j*.14),-10);c.lineTo(vW*(.72+j*.14),-10);
+      c.lineTo(vW*(.3+j*.2)+Math.sin(S.t*.18+j)*24,vH+10);c.lineTo(vW*(.14+j*.2),vH+10);c.fill();
+    }
+    c.restore();
+  }
+  /* параллакс-хребты: 3 слоя */
+  const RD=["#93aec7","#7c99b6","#647f9f"],RN=["#101726","#172032","#1f2a3e"];
+  for(let L=0;L<3;L++){
+    const par=.15+L*.16;
+    c.globalAlpha=.6+L*.14;c.fillStyle=blend(RD[L],RN[L],night);
+    const base=vH*(.6+L*.15)+ (S.cy-1300)*par*-.12;
+    c.beginPath();c.moveTo(-10,vH+300);c.lineTo(-10,base);
+    for(let x=-10;x<=vW+10;x+=56){
+      const wx=x+left*par;
+      c.lineTo(x,base-50-rnd(Math.floor(wx/56)+L*777,3)*170-Math.sin(wx*.008+L)*45);
+    }
+    c.lineTo(vW+10,vH+300);c.fill();
+  }
+  c.globalAlpha=1;
+  /* мир */
+  c.save();c.translate(-left,-top);
+  c.drawImage(MC,0,0,W,WORLD_H);
+  if(night<.55){const wg=c.createLinearGradient(0,1500,0,WORLD_H);wg.addColorStop(0,"rgba(255,216,150,0)");wg.addColorStop(1,`rgba(255,212,140,${.16*(1-night)})`);c.fillStyle=wg;c.fillRect(0,1500,W,WORLD_H-1500);}
+  drawNet();drawChevrons();drawPrints();drawStations();drawGates();drawBirds();drawMemorials();drawPeak();
+  drawHero();drawFX();drawWeather(left,top,vW,vH);
+  c.restore();
+  /* туман-ленты */
+  if(S.fx>=.5)for(let L=0;L<3;L++){
+    const fy=vH*(.25+L*.3)+Math.sin(S.t*.25+L*2.1)*24;
+    const fg=c.createLinearGradient(0,fy-50,0,fy+50);
+    const a=.07+night*.08;
+    fg.addColorStop(0,"rgba(176,192,214,0)");fg.addColorStop(.5,`rgba(176,192,214,${a})`);fg.addColorStop(1,"rgba(176,192,214,0)");
+    c.fillStyle=fg;c.fillRect(0,fy-50,vW,100);
+  }
+  /* виньетка */
+  const v=c.createRadialGradient(vW/2,vH/2,Math.min(vW,vH)*.5,vW/2,vH/2,Math.max(vW,vH)*.75);
+  v.addColorStop(0,"rgba(0,0,0,0)");v.addColorStop(1,`rgba(0,0,0,${(.26+night*.16).toFixed(3)})`);
+  c.fillStyle=v;c.fillRect(0,0,vW,vH);
+  if(S.gateFlash>0){c.fillStyle=`rgba(230,240,255,${S.gateFlash*.5})`;c.fillRect(0,0,vW,vH);S.gateFlash-=.05;}
+  drawUI(vW,vH,night);
+  if(S.fade>0){c.fillStyle=`rgba(5,8,14,${clamp(S.fade,0,1)})`;c.fillRect(0,0,vW,vH);}
+}
+
+/* хиральная сеть между пройденными станциями */
+function drawNet(){
+  c.save();c.strokeStyle="rgba(157,180,199,.28)";c.lineWidth=1;c.setLineDash([2,6]);
+  let last=null;const segs=[];
+  for(let i=0;i<9;i++){
+    if(!S.delivered.has(i))break;
+    if(last!==null){c.beginPath();c.moveTo(PTS[last].x,PTS[last].y-64);c.lineTo(PTS[i].x,PTS[i].y-64);c.stroke();segs.push([last,i]);}
+    last=i;
+  }
+  c.setLineDash([]);
+  segs.forEach(([a,b],j)=>{
+    const tt=(S.t*.3+j*.27)%1;
+    const px2=lerp(PTS[a].x,PTS[b].x,tt),py2=lerp(PTS[a].y,PTS[b].y,tt)-64;
+    c.save();c.shadowColor=PALE;c.shadowBlur=7;c.fillStyle="rgba(215,230,244,.85)";
+    c.beginPath();c.arc(px2,py2,1.8,0,7);c.fill();c.restore();
+  });
+  c.restore();
+}
+function drawChevrons(){
+  for(let d=26;d<TOTAL;d+=26){
+    const p=posAt(d);if(Math.abs(p.y-S.cy)>900)continue;
+    const done=d<=S.dist;
+    c.save();c.translate(p.x,p.y-6);c.rotate(p.ang);
+    c.fillStyle=done?"rgba(157,180,199,.85)":"rgba(255,255,255,.22)";
+    c.beginPath();c.moveTo(-5,-3);c.lineTo(2,0);c.lineTo(-5,3);c.fill();c.restore();
+  }
+}
+function drawPrints(){
+  S.prints=S.prints.filter(p=>S.t-p.t0<14);
+  c.fillStyle="rgba(70,85,100,.5)";
+  S.prints.forEach(p=>{c.globalAlpha=clamp(1-(S.t-p.t0)/14,0,1)*.6;c.fillRect(p.x-1.5,p.y,3,2);});
+  c.globalAlpha=1;
+}
+function drawStations(){
+  const cur=(()=>{let i=0;for(let j=0;j<9;j++)if(S.dist>=stDist[j]-2)i=j;return i;})();
+  ST.forEach((s,i)=>{
+    const p=PTS[i];if(Math.abs(p.y-S.cy)>1000)return;
+    const done=S.delivered.has(i),active=i===cur&&!done||i===cur&&S.pause>0;
+    if(i===cur){
+      const a=.12+Math.sin(S.t*2.2)*.05;
+      const bg=c.createLinearGradient(0,p.y-230,0,p.y);
+      bg.addColorStop(0,"rgba(157,180,199,0)");bg.addColorStop(1,`rgba(157,180,199,${a})`);
+      c.fillStyle=bg;c.fillRect(p.x-24,p.y-230,48,230);
+    }
+    const col=done?PALE:i===cur?"#dfe8f2":"rgba(190,205,222,.32)";
+    c.strokeStyle=col;c.fillStyle=col;c.lineWidth=2;
+    c.beginPath();c.moveTo(p.x,p.y);c.lineTo(p.x,p.y-46);c.stroke();
+    c.save();if(done||i===cur){c.shadowColor=PALE;c.shadowBlur=10;}
+    c.beginPath();c.arc(p.x,p.y-62,15,0,7);c.stroke();
+    c.font=FONT(14,700);c.textAlign="center";c.fillText(String(i+1),p.x,p.y-57);
+    c.restore();
+    c.font=FONT(13,600);
+    c.fillStyle=done?"rgba(157,180,199,.85)":i===cur?"#e8eef6":"rgba(200,212,228,.4)";
+    c.fillText(s.t.toUpperCase(),p.x,p.y-90);
+    c.font=FONT(10,400);c.fillStyle="rgba(157,180,199,.4)";
+    c.fillText(`${altOf(p.y)} М · ${String(i+1).padStart(2,"0")}/09`,p.x,p.y-104);
+    if(done){c.strokeStyle="#7fc98f";c.lineWidth=2.5;c.beginPath();
+      c.moveTo(p.x-6,p.y-122);c.lineTo(p.x-1,p.y-117);c.lineTo(p.x+7,p.y-128);c.stroke();}
+    /* жизнь станции: маяк, экран, кольцо, дым, флаг */
+    const hx=p.x+(p.x<480?-46:32);
+    const bl=.5+.5*Math.sin(S.t*3.2+i*1.7);
+    c.fillStyle=`rgba(230,57,70,${.2+bl*.65})`;c.beginPath();c.arc(hx+13,p.y-50,2.2,0,7);c.fill();
+    c.fillStyle=`rgba(157,180,199,${.22+rnd(Math.floor(S.t*9),i)*.35})`;c.fillRect(hx+7,p.y-19,9,6);
+    if(i===cur){c.save();c.strokeStyle="rgba(157,180,199,.55)";c.lineWidth=1.5;c.setLineDash([4,7]);c.lineDashOffset=-S.t*26;c.beginPath();c.arc(p.x,p.y-62,22,0,7);c.stroke();c.restore();}
+    if(done){
+      for(let s2=0;s2<3;s2++){
+        const tt=(S.t*.22+s2*.34+i*.19)%1;
+        c.fillStyle=`rgba(205,216,228,${(1-tt)*.28})`;
+        c.beginPath();c.arc(hx+20+Math.sin(tt*5+i)*2,p.y-34-tt*30,1.6+tt*4,0,7);c.fill();
+      }
+      c.save();c.translate(p.x,p.y-46);c.fillStyle="rgba(157,180,199,.85)";
+      c.beginPath();c.moveTo(0,-8);
+      for(let fx=2;fx<=13;fx+=2)c.lineTo(fx,-8+Math.sin(S.t*6+fx*.7+i)*1.5*(fx/13));
+      c.lineTo(13,-3.4+Math.sin(S.t*6+9.1+i)*1.5);c.lineTo(0,-2.6);c.closePath();c.fill();
+      c.restore();
+    }
+  });
+}
+function drawGates(){
+  GATES.forEach(g=>{
+    const p=g.p;if(Math.abs(p.y-S.cy)>900)return;
+    const col=g.done?"rgba(127,201,143,.9)":"rgba(157,180,199,.7)";
+    c.strokeStyle=col;c.lineWidth=3;
+    c.beginPath();c.moveTo(p.x-20,p.y);c.lineTo(p.x-20,p.y-44);
+    c.quadraticCurveTo(p.x,p.y-62,p.x+20,p.y-44);c.lineTo(p.x+20,p.y);c.stroke();
+    if(!g.done){const sy=p.y-4-((S.t*30)%40);
+      c.strokeStyle="rgba(230,57,70,.65)";c.lineWidth=1.5;
+      c.beginPath();c.moveTo(p.x-18,sy);c.lineTo(p.x+18,sy);c.stroke();}
+    c.font=FONT(10,700);c.textAlign="center";c.fillStyle=col;
+    c.fillText(ST[g.i].kt,p.x,p.y+16);
+  });
+}
+function drawBirds(){
+  [CORPSES[1],CORPSES[3]].forEach((a,g2)=>{
+    if(Math.abs(a.y-S.cy)>800)return;
+    c.strokeStyle="rgba(18,24,32,.75)";c.lineWidth=1.5;c.lineCap="round";
+    for(let j=0;j<3;j++){
+      const an=S.t*(.35+j*.09)+j*2.1+g2*3;
+      const bx=a.x+Math.cos(an)*(36+j*14),by=a.y-64+Math.sin(an*1.7)*12-j*8;
+      const w2=Math.abs(Math.sin(S.t*7+j*2))*4;
+      c.beginPath();c.moveTo(bx-5,by-w2+2);c.quadraticCurveTo(bx,by,bx+5,by-w2+2);c.stroke();
+    }
+  });
+}
+function drawMemorials(){
+  CORPSES.forEach(cc=>{
+    if(Math.abs(cc.y-S.cy)>700)return;
+    c.font="italic 9px 'Segoe UI',sans-serif";c.textAlign="center";
+    c.fillStyle="rgba(188,199,212,.55)";
+    c.fillText("† "+cc.label,cc.x,cc.y-16);
+  });
+}
+function drawPeak(){
+  const open=S.dist>=TOTAL-2;
+  c.fillStyle="#131a24";c.fillRect(DOOR.x-22,DOOR.y-58,44,66);
+  c.fillStyle=open?"rgba(127,201,143,.85)":"#1f2a38";c.fillRect(DOOR.x-15,DOOR.y-52,30,60);
+  c.strokeStyle=PALE;c.lineWidth=1.5;c.strokeRect(DOOR.x-22,DOOR.y-58,44,66);
+  c.font=FONT(12,700);c.textAlign="center";
+  c.fillStyle=open?"#7fc98f":PALE;c.fillText("ДВЕРЬ MVP",DOOR.x,DOOR.y-68);
+  const pu=.7+Math.sin(S.t*1.7)*.3;
+  c.save();
+  c.shadowColor=RED;c.shadowBlur=36*pu;c.fillStyle=RED;
+  c.font=FONT(56,800);
+  try{c.letterSpacing="6px";}catch(e){}
+  c.fillText("TAULAU",480,PEAK.y-40);
+  try{c.letterSpacing="0px";}catch(e){}
+  c.shadowBlur=0;c.font=FONT(12,400);c.fillStyle="rgba(230,57,70,.8)";
+  c.fillText("· ВЕРШИНА · 2622 М ·",480,PEAK.y-16);
+  c.fillStyle=`rgba(230,57,70,${pu})`;
+  c.beginPath();c.arc(480,PEAK.y-96,4,0,7);c.fill();
+  c.strokeStyle=`rgba(230,57,70,${.5*pu})`;c.lineWidth=1.5;
+  c.beginPath();c.arc(480,PEAK.y-96,10+Math.sin(S.t*3)*4,0,7);c.stroke();
+  c.restore();
+}
+function drawHero(){
+  const h=heroPos();
+  const climbing=h.m!=="walk";
+  const moving=S.state==="play"&&S.pause<=0&&S.dist<S.target-1;
+  const HS=1.5,f=S.facing;
+  const bob=moving?-Math.abs(Math.sin(S.ph))*2.4:Math.sin(S.t*1.5)*.9;
+  const x=h.x,y=h.y+bob;
+  c.fillStyle="rgba(0,0,0,.32)";c.beginPath();c.ellipse(x,h.y+2,19,5,0,0,7);c.fill();
+  const P=(dx,dy,w,hh,col)=>{c.fillStyle=col;c.fillRect(dx,dy,w,hh);};
+  c.save();c.translate(x,y);
+  if(climbing){
+    c.scale(HS,HS);
+    const a1=Math.sin(S.ph*1.2),a2=Math.sin(S.ph*1.2+Math.PI);
+    P(-10,-40,7,20,"#43506a");P(-10,-40,7,4,"#5d6c88");P(-10,-31,7,2,"#39465a");P(-10,-25,7,2,"#39465a");
+    c.save();c.shadowColor=PALE;c.shadowBlur=6;P(-9,-43,3,3,PALE);c.restore();
+    P(-4,-26,8,17,"#2a3440");P(-4,-26,8,3,"#3a4757");
+    P(-6,-36+a1*3.5,3,12,"#232c36");P(3,-36+a2*3.5,3,12,"#1c232c");
+    P(-4,-9+a2*2,3,9,"#20262e");P(1,-9+a1*2,3,9,"#181d24");
+    P(-3,-35,7,9,"#1b232e");P(-1,-33,4,5,"#c69b7b");P(-1,-33,4,2,"#3a3a3a");
+  }else{
+    const sa=Math.atan2(Math.sin(h.ang),Math.abs(Math.cos(h.ang)));
+    const lean=clamp(-sa*.55,-.32,.32)*(moving?1:.25);
+    const bow=S.pause>0?Math.sin(clamp((2.6-S.pause)*2.2,0,Math.PI))*.16:0;
+    c.scale(f*HS,HS);c.rotate(lean*.6+bow);
+    const leg=(ph0,near)=>{
+      const sw=moving?Math.sin(S.ph+ph0)*.62:(near?.05:-.05);
+      const kn=moving?Math.max(0,Math.sin(S.ph+ph0-1.4))*.75:0;
+      c.save();c.translate(near?1.5:-1.5,-11.5);c.rotate(sw);
+      c.fillStyle=near?"#242d38":"#181e26";c.fillRect(-1.6,0,3.2,6);
+      c.translate(0,5.6);c.rotate(kn);
+      c.fillRect(-1.6,0,3.2,5);c.fillRect(-1.6,3.6,4.6,1.8);
+      c.restore();
+    };
+    leg(Math.PI,false);
+    c.save();c.translate(-2.5,-22);c.rotate(moving?Math.sin(S.ph)*.5:.1);
+    c.fillStyle="#1c242e";c.fillRect(-1.2,0,2.6,9);c.restore();
+    P(-4.5,-25,9,16,"#2a3440");P(-4.5,-25,9,3,"#3a4757");
+    P(-1,-22,1.6,12,"#39465a");
+    c.save();c.translate(-6,-24);c.rotate(moving?Math.sin(S.ph-.9)*.07:Math.sin(S.t*1.1)*.025);
+    c.fillStyle="#43506a";c.fillRect(-7,-13,8,15);
+    c.fillStyle="#4d5b78";c.fillRect(-6.5,-18,7,5);
+    c.fillStyle="#39465a";c.fillRect(-7,-8,8,1.6);c.fillRect(-7,-2,8,1.6);
+    c.fillStyle="#2a3440";c.fillRect(-7.5,-13,1.4,15);
+    c.save();c.shadowColor=PALE;c.shadowBlur=7;c.fillStyle=PALE;c.fillRect(-6,-21,3,3);c.restore();
+    c.restore();
+    leg(0,true);
+    P(0,-22,2.6,5,"#242d38");P(0,-18,4,2.4,"#242d38");
+    P(-2.5,-32,7,8,"#1b232e");
+    P(-.5,-30,4.4,5,"#c69b7b");P(-.5,-30,4.4,1.8,"#3a3a3a");
+    P(3.4,-28.4,.8,2,"#8a6a4e");
+  }
+  c.restore();
+  // сдача груза
+  if(S.card&&S.t-S.card.t0<1){
+    const t=S.t-S.card.t0,p=PTS[S.card.i];
+    const bx=lerp(x-10,p.x+(p.x<480?-33:45),t),by=lerp(y-44,p.y-30,t)-Math.sin(t*Math.PI)*40;
+    c.fillStyle="#43506a";c.fillRect(bx-5,by-5,11,11);c.fillStyle=PALE;c.fillRect(bx-5,by-5,11,2.4);
+  }
+}
+function drawFX(){
+  S.puffs=S.puffs.filter(p=>S.t-p.t0<1.4);
+  S.puffs.forEach(p=>{const a=1-(S.t-p.t0)/1.4;
+    c.fillStyle=`rgba(220,230,242,${a*.4})`;
+    c.beginPath();c.arc(p.x+(S.t-p.t0)*10,p.y-(S.t-p.t0)*6,2+(S.t-p.t0)*4,0,7);c.fill();});
+  S.likes=S.likes.filter(l=>S.t-l.t0<4);
+  S.likes.forEach(l=>{const t=S.t-l.t0;
+    c.save();c.globalAlpha=clamp(1-t/4,0,1);
+    c.font=l.s+"px sans-serif";c.textAlign="center";
+    c.fillText("👍",l.x+l.vx*t+Math.sin(t*3+l.s)*8,l.y+l.vy*t);
+    c.restore();});
+}
+function drawWeather(left,top,vW,vH){
+  const zone=zoneOf(S.cy);
+  const n=S.fx>=1?90:45;
+  while(S.flakes.length<n)S.flakes.push({x:left+Math.random()*vW,y:top+Math.random()*vH,s:.5+Math.random()});
+  S.flakes.forEach(p=>{
+    if(zone==="snow"){p.y+=p.s*1.3;p.x+=Math.sin(p.y*.02+p.s*9)*.9+.5;}
+    else if(zone==="sun"){p.y-=p.s*.45;p.x+=Math.sin(S.t*.6+p.s*11)*.5;}
+    else{p.y+=p.s*.7;p.x+=p.s*3+Math.sin(S.t+p.s*7)*1.4;}
+    if(p.y>top+vH+8){p.y=top-8;p.x=left+Math.random()*vW;}
+    if(p.y<top-8){p.y=top+vH+8;p.x=left+Math.random()*vW;}
+    if(p.x<left-8)p.x=left+vW+8;if(p.x>left+vW+8)p.x=left-8;
+    if(zone==="snow"){c.fillStyle=`rgba(235,242,252,${.45+p.s*.3})`;c.fillRect(p.x,p.y,2,2);}
+    else if(zone==="sun"){c.fillStyle=`rgba(255,234,176,${.16+p.s*.16})`;c.fillRect(p.x,p.y,1.6,1.6);}
+    else{c.fillStyle=`rgba(190,205,220,${.15+p.s*.12})`;c.fillRect(p.x,p.y,1.5,1.5);}
+  });
+}
+
+/* ---------- UI ---------- */
+function glitchText(txt,x,y,font,col,age){
+  c.font=font;c.textAlign="center";
+  if(age<.45){
+    for(let j=0;j<3;j++){
+      const off=(Math.random()-.5)*(1-age/.45)*14;
+      c.fillStyle=j?`rgba(230,57,70,${.3*(1-age/.45)})`:col;
+      c.fillText(txt,x+off,y+(j?(Math.random()-.5)*3:0));
+    }
+  }else{c.fillStyle=col;c.fillText(txt,x,y);}
+}
+function fitFont(txt,maxW,size,weight){let s=size;c.font=FONT(s,weight);while(s>9&&c.measureText(txt).width>maxW){s-=1;c.font=FONT(s,weight);}return s;}
+function drawUI(vW,vH,night){
+  const u=clamp(430/vW,1,1.7),pad=16;
+  const h=heroPos(),alt=altOf(h.y),pct=Math.round(S.dist/TOTAL*100);
+  const cur=(()=>{let i=0;for(let j=0;j<9;j++)if(S.delivered.has(j))i=j+1;return Math.min(i+1,9);})();
+  c.textAlign="left";
+  c.font=FONT(12*u,700);c.fillStyle="rgba(157,180,199,.95)";
+  try{c.letterSpacing=(2*u)+"px";}catch(e){}
+  c.fillText("TAULAU ASCENT",pad,pad+12*u);
+  c.font=FONT(10.5*u,400);c.fillStyle="rgba(215,224,236,.8)";
+  if(vW<560){
+    c.fillText(`ВЫСОТА ${alt} М · ${pct}%`,pad,pad+31*u);
+    c.fillText(`СТАНЦИЯ ${cur} ИЗ 9`,pad,pad+47*u);
+  }else{
+    c.fillText(`ВЫСОТА ${alt} М · ПРОГРЕСС ${pct}% · СТАНЦИЯ ${cur} ИЗ 9`,pad,pad+32*u);
+  }
+  try{c.letterSpacing="0px";}catch(e){}
+  // шкала высоты
+  const bw=3*u,bx=vW-pad-bw,by=pad+42*u,bh=vH-by-72*u;
+  c.fillStyle="rgba(255,255,255,.12)";c.fillRect(bx,by,bw,bh);
+  c.fillStyle=PALE;const fh=bh*S.dist/TOTAL;c.fillRect(bx,by+bh-fh,bw,fh);
+  stDist.forEach((d,i)=>{const yy=by+bh-bh*d/TOTAL;
+    c.fillStyle=S.delivered.has(i)?PALE:"rgba(255,255,255,.28)";c.fillRect(bx-4*u,yy,bw+8*u,1.5*u);});
+  c.fillStyle=RED;c.beginPath();c.arc(bx+bw/2,by,4*u,0,7);c.fill();
+  // подпись/карточка
+  if(S.caption){
+    const age=S.t-S.caption.t0;
+    if(age<S.caption.dur){
+      const a=clamp(Math.min(age*3,(S.caption.dur-age)*2),0,1);
+      c.save();c.globalAlpha=a;
+      const s1=fitFont(S.caption.a,vW-2*pad-10,Math.round(19*u),700);
+      const s2=fitFont(S.caption.b,vW-2*pad-10,Math.round(11.5*u),400);
+      glitchText(S.caption.a,vW/2,vH*.8,FONT(s1,700),"#eef3f8",age);
+      glitchText(S.caption.b,vW/2,vH*.8+s1*1.35,FONT(s2,400),"rgba(157,180,199,.9)",age);
+      c.restore();
+    }else S.caption=null;
+  }
+  if(S.card){
+    const age=S.t-S.card.t0;
+    if(age<2.6){
+      const a=clamp(Math.min((age-.6)*3,(2.6-age)*2),0,1);
+      if(a>0){
+        c.save();c.globalAlpha=a;
+        const cw=Math.min(230*u,vW-2*pad-16*u),ch=64*u,cx0=pad,cy0=pad+58*u;
+        c.fillStyle="rgba(10,15,24,.85)";c.fillRect(cx0,cy0,cw,ch);
+        c.strokeStyle="rgba(157,180,199,.4)";c.lineWidth=1;c.strokeRect(cx0,cy0,cw,ch);
+        c.fillStyle=RED;c.fillRect(cx0,cy0,3*u,ch);
+        c.font=(20*u)+"px sans-serif";c.textAlign="left";c.fillText("📦",cx0+12*u,cy0+38*u);
+        c.font=FONT(11*u,700);c.fillStyle="#e8eef6";
+        c.fillText("ГРУЗ ДОСТАВЛЕН",cx0+44*u,cy0+22*u);
+        c.font=FONT(10*u,400);c.fillStyle="rgba(157,180,199,.85)";
+        c.fillText("Артефакт: "+ST[S.card.i].art,cx0+44*u,cy0+38*u);
+        c.fillText(`Станция ${S.card.i+1} из 9`,cx0+44*u,cy0+53*u);
+        c.restore();
+      }
+    }else S.card=null;
+  }
+  if(S.state==="intro"&&S.tI>1){
+    c.font=FONT(10.5*u,400);c.textAlign="center";
+    c.fillStyle=`rgba(200,212,228,${.45+Math.sin(S.t*4)*.25})`;
+    c.fillText("НАЖМИТЕ, ЧТОБЫ ПРОПУСТИТЬ",vW/2,vH-18*u);
+  }
+  if(S.state==="finale"){
+    const a=clamp(S.finaleT*.8,0,1);
+    c.save();c.globalAlpha=a;
+    const f1=fitFont("ВОСХОЖДЕНИЕ ЗАВЕРШЕНО",vW-2*pad,Math.round(21*u),700);
+    glitchText("ВОСХОЖДЕНИЕ ЗАВЕРШЕНО",vW/2,vH*.84,FONT(f1,700),"#e8eef6",S.finaleT);
+    glitchText("MVP ДОСТАВЛЕН · 9 ИЗ 9",vW/2,vH*.84+f1*1.3,FONT(Math.round(12*u),400),"rgba(230,57,70,.9)",S.finaleT);
     c.restore();
   }
 }
-function buildLayers() {
-  layers.length = 0;
-  const defs = [
-    { f: 0.12, draw: c => { ridge(c, H * 0.75, H * 0.42, 8, "#141a24", true); } },
-    { f: 0.26, draw: c => { ridge(c, H * 0.85, H * 0.38, 7, "#1a222e", true); } },
-    { f: 0.5,  draw: c => { ridge(c, H * 0.95, H * 0.34, 6, "#232c3a", false); } },
-  ];
-  for (const d of defs) {
-    const oc = document.createElement("canvas");
-    oc.width = W; oc.height = H * 1.6;
-    const c = oc.getContext("2d");
-    d.draw(c);
-    layers.push({ f: d.f, cv: oc });
-  }
-}
-
-/* ================= частицы погоды ================= */
-
-const drops = [];   // дождь/снег/пыль — один пул
-function seedWeather() {
-  drops.length = 0;
-  const n = PERF < 1 ? 60 : 140;
-  for (let i = 0; i < n; i++)
-    drops.push({ x: Math.random() * 1.2, y: Math.random(), s: 0.4 + Math.random() * 0.8, d: Math.random() * 6.28 });
-}
-seedWeather();
-
-/* пар изо рта и следы */
-const puffs = [];
-const steps = [];
-
-/* ================= отрисовка ================= */
-
-function skyGradient() {
-  const t = Math.min(1, Math.max(0, cam / WORLD_H));      // 0 подножье → 1 вершина
-  const top = [`#2a3444`, `#242e3e`, `#1c2431`][t < .34 ? 0 : t < .67 ? 1 : 2];
-  const g = ctx.createLinearGradient(0, 0, 0, H);
-  g.addColorStop(0, mix("#39465c", "#141922", t));
-  g.addColorStop(0.55, mix("#2c3648", "#1a2230", t));
-  g.addColorStop(1, mix("#232c3a", "#242f3d", t * 0.5));
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, W, H);
-  // god rays на средних высотах
-  if (PERF === 1 && t > 0.25 && t < 0.75) {
-    ctx.save();
-    ctx.globalAlpha = 0.05 + Math.sin(time * 0.4) * 0.015;
-    ctx.fillStyle = "#cfe0ee";
-    for (let i = 0; i < 3; i++) {
-      const rx = W * (0.2 + i * 0.3) + Math.sin(time * 0.1 + i) * 30;
-      ctx.beginPath();
-      ctx.moveTo(rx, -50);
-      ctx.lineTo(rx + 140, -50);
-      ctx.lineTo(rx + 420, H + 50);
-      ctx.lineTo(rx + 220, H + 50);
-      ctx.closePath();
-      ctx.fill();
-    }
-    ctx.restore();
-  }
-}
-function mix(a, b, t) {
-  const pa = [parseInt(a.slice(1, 3), 16), parseInt(a.slice(3, 5), 16), parseInt(a.slice(5, 7), 16)];
-  const pb = [parseInt(b.slice(1, 3), 16), parseInt(b.slice(3, 5), 16), parseInt(b.slice(5, 7), 16)];
-  const c = pa.map((v, i) => Math.round(v + (pb[i] - v) * t));
-  return `rgb(${c[0]},${c[1]},${c[2]})`;
-}
-
-function drawParallax() {
-  for (const L of layers) {
-    const off = (cam - WORLD_H * 0.5) * L.f * 0.3;
-    ctx.drawImage(L.cv, 0, H * 0.62 - L.cv.height * 0.62 + off * 0.2 - 40);
-  }
-}
-
-/* тропа + связи станций («хиральная» тонкая сеть) */
-function drawTrail() {
-  ctx.save();
-  ctx.strokeStyle = "rgba(190, 205, 220, .16)";
-  ctx.lineWidth = 4;
-  ctx.beginPath();
-  let first = true;
-  for (let wy = Math.max(0, cam - H / VK); wy <= Math.min(WORLD_H, cam + H / VK); wy += 26) {
-    const x = w2sx(wy), y = w2sy(wy);
-    if (first) { ctx.moveTo(x, y); first = false; } else ctx.lineTo(x, y);
-  }
-  ctx.stroke();
-  // пунктир поверх — пройденная часть чуть светлее
-  ctx.strokeStyle = "rgba(210, 224, 238, .3)";
-  ctx.lineWidth = 1.5;
-  ctx.setLineDash([2, 7]);
-  ctx.beginPath();
-  first = true;
-  for (let wy = Math.max(0, cam - H / VK); wy <= Math.min(hero.wy, cam + H / VK); wy += 26) {
-    const x = w2sx(wy), y = w2sy(wy);
-    if (first) { ctx.moveTo(x, y); first = false; } else ctx.lineTo(x, y);
-  }
-  ctx.stroke();
-  ctx.setLineDash([]);
-  ctx.restore();
-}
-
-/* лестницы и верёвки на крутых участках между станциями */
-function drawClimbAids() {
-  for (let i = 0; i < 9; i++) {
-    const wy = stationWY(i) + SEG * 0.45;          // середина перегона выше станции i
-    if (Math.abs(wy - cam) > H / VK) continue;
-    const unlocked = reached >= i;
-    const x = w2sx(wy), y = w2sy(wy);
-    ctx.save();
-    ctx.globalAlpha = unlocked ? 0.9 : 0.25;
-    if (i % 2 === 0) {                              // лестница
-      ctx.strokeStyle = unlocked ? "#8fa3b8" : "#4a5a6c";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(x - 7, y + 40); ctx.lineTo(x - 7, y - 40);
-      ctx.moveTo(x + 7, y + 40); ctx.lineTo(x + 7, y - 40);
-      ctx.stroke();
-      for (let r = -36; r <= 36; r += 12) {
-        ctx.beginPath(); ctx.moveTo(x - 7, y + r); ctx.lineTo(x + 7, y + r); ctx.stroke();
-      }
-    } else {                                        // верёвка
-      ctx.strokeStyle = unlocked ? "#b8a98c" : "#5a5648";
-      ctx.lineWidth = 2.5;
-      ctx.beginPath();
-      ctx.moveTo(x, y - 46);
-      for (let r = -46; r <= 46; r += 8)
-        ctx.lineTo(x + Math.sin(r * 0.2 + time * (unlocked ? 1.2 : 0)) * 3, y + r);
-      ctx.stroke();
-    }
-    if (!unlocked) {                                // тупик без инструмента
-      ctx.globalAlpha = 0.5;
-      ctx.fillStyle = "#31404f";
-      ctx.fillRect(x - 26, y - 4, 52, 8);
-    }
-    ctx.restore();
-  }
-}
-
-/* станция: укрытие-терминал + НПС + арка КТ */
-function drawStations() {
-  for (let i = 0; i < 9; i++) {
-    const st = STATIONS[i];
-    const wy = stationWY(i);
-    if (Math.abs(wy - cam) > H / VK) continue;
-    const x = w2sx(wy), y = w2sy(wy);
-    const passed = reached >= i;
-    const side = i % 2 ? -1 : 1;
-    const hx = x + side * 64;
-
-    ctx.save();
-
-    // арка контрольной точки
-    if (st.kt) {
-      const glow = passed ? 0.55 + Math.sin(time * 3) * 0.1 : 0.18;
-      ctx.strokeStyle = `rgba(224, 76, 88, ${glow})`;
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(x - 30, y + 6);
-      ctx.lineTo(x - 30, y - 52);
-      ctx.arc(x, y - 52, 30, Math.PI, 0);
-      ctx.lineTo(x + 30, y + 6);
-      ctx.stroke();
-      ctx.fillStyle = `rgba(224, 76, 88, ${glow})`;
-      ctx.font = "600 9px Inter, sans-serif";
-      ctx.textAlign = "center";
-      ctx.fillText(`KT-${st.kt}`, x, y - 86);
-      if (passed && PERF === 1) {                  // сканер-луч
-        ctx.globalAlpha = 0.12 + Math.sin(time * 5) * 0.06;
-        ctx.fillStyle = "#e04c58";
-        ctx.fillRect(x - 28, y - 52 + Math.sin(time * 2.2) * 24, 56, 3);
-        ctx.globalAlpha = 1;
-      }
-    }
-
-    // укрытие-терминал
-    ctx.fillStyle = passed ? "#2e3a49" : "#242e3b";
-    ctx.fillRect(hx - 26, y - 34, 52, 34);
-    ctx.fillStyle = passed ? "#3b4a5c" : "#2c3745";
-    ctx.beginPath();
-    ctx.moveTo(hx - 30, y - 34); ctx.lineTo(hx, y - 52); ctx.lineTo(hx + 30, y - 34);
-    ctx.closePath(); ctx.fill();
-    ctx.fillStyle = passed ? "rgba(255, 214, 120, .85)" : "rgba(140, 160, 180, .3)";
-    ctx.fillRect(hx - 8, y - 24, 16, 12);          // окно-терминал
-
-    // НПС-эксперт у станции
-    const npcX = hx - side * 34;
-    const bob = Math.sin(time * 1.4 + i) * 1.5;
-    ctx.fillStyle = passed ? "#5d6f83" : "#414f60";
-    ctx.fillRect(npcX - 5, y - 26 + bob, 10, 18);  // корпус
-    ctx.fillStyle = "#8fa0b2";
-    ctx.beginPath(); ctx.arc(npcX, y - 30 + bob, 5, 0, 6.28); ctx.fill();  // капюшон
-    ctx.fillStyle = passed ? "#ffd678" : "#5d6f83";
-    ctx.fillRect(npcX - 7, y - 20 + bob, 3, 8);    // фонарь на плече
-
-    // подпись станции: координатная метка
-    ctx.font = "600 10px Inter, sans-serif";
-    ctx.textAlign = side > 0 ? "left" : "right";
-    ctx.fillStyle = passed ? "rgba(220, 232, 244, .9)" : "rgba(150, 168, 186, .5)";
-    ctx.fillText(`${st.n.toString().padStart(2, "0")} · ${st.title.toUpperCase()}`, hx + side * 36, y - 40);
-    ctx.strokeStyle = "rgba(180, 200, 220, .2)";
-    ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(hx + side * 30, y - 43); ctx.lineTo(hx + side * 33, y - 43); ctx.stroke();
-
-    ctx.restore();
-  }
-}
-
-/* персонаж-носильщик */
-function drawHero() {
-  const x = w2sx(hero.wy), y = w2sy(hero.wy);
-  const grade = trailX(hero.wy + 30) - trailX(hero.wy - 30);   // крутизна для наклона
-  const lean = Math.max(-0.3, Math.min(0.3, hero.walking ? grade * 60 + hero.facing * 0.05 : 0));
-  const step = Math.sin(hero.ph);
-  const bob = hero.walking ? Math.abs(Math.cos(hero.ph)) * 2.2 : Math.sin(time * 1.8) * 0.8;
-
-  ctx.save();
-  ctx.translate(x, y - bob);
-  ctx.rotate(lean);
-  ctx.scale(hero.facing * 1.35, 1.35);
-
-  // тень
-  ctx.save();
-  ctx.rotate(-lean);
-  ctx.fillStyle = "rgba(0,0,0,.35)";
-  ctx.beginPath(); ctx.ellipse(0, bob + 2, 13, 3.5, 0, 0, 6.28); ctx.fill();
-  ctx.restore();
-
-  // ноги под грузом — широкий устойчивый шаг
-  ctx.strokeStyle = "#252d38"; ctx.lineWidth = 4; ctx.lineCap = "round";
-  ctx.beginPath(); ctx.moveTo(-2, -14); ctx.lineTo(-2 + step * 6, 0); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(2, -14); ctx.lineTo(2 - step * 6, 0); ctx.stroke();
-  // ботинки
-  ctx.fillStyle = "#1b2129";
-  ctx.fillRect(-6 + step * 6, -2, 8, 3);
-  ctx.fillRect(-2 - step * 6, -2, 8, 3);
-
-  // корпус, согнутый под весом
-  ctx.fillStyle = "#3a4656";
-  ctx.save();
-  ctx.rotate(-0.14);
-  ctx.fillRect(-6, -34, 12, 21);
-  ctx.restore();
-
-  // ГРУЗ: башня контейнеров за спиной (растёт с инструментами)
-  ctx.save();
-  ctx.rotate(-0.14);
-  const packH = Math.min(26, 12 + hero.tools * 1.6);
-  ctx.fillStyle = "#4c5a6c";
-  ctx.fillRect(-14, -32 - packH + 8, 9, packH);
-  ctx.fillStyle = "#5d6d80";
-  for (let b = 0; b < Math.min(6, 2 + hero.tools); b++)
-    ctx.fillRect(-14, -30 - b * 5, 8, 3);
-  ctx.strokeStyle = "rgba(224, 76, 88, .8)";       // красный ремень-акцент
-  ctx.lineWidth = 1.5;
-  ctx.beginPath(); ctx.moveTo(-15, -26); ctx.lineTo(-5, -22); ctx.stroke();
-  ctx.restore();
-
-  // руки — балансируют на крутизне
-  ctx.strokeStyle = "#33404f"; ctx.lineWidth = 3.5;
-  const armSwing = hero.walking ? step * 5 : 0;
-  ctx.beginPath(); ctx.moveTo(-4, -28); ctx.lineTo(-8 - armSwing - grade * 40, -18); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(4, -28); ctx.lineTo(9 + armSwing - grade * 40, -19); ctx.stroke();
-
-  // голова в капюшоне
-  ctx.fillStyle = "#46536352";
-  ctx.fillStyle = "#465363";
-  ctx.beginPath(); ctx.arc(1, -38, 6, 0, 6.28); ctx.fill();
-  ctx.fillStyle = "#d9c9a8";
-  ctx.fillRect(2, -40, 5, 5);                       // лицо из-под капюшона
-
-  ctx.restore();
-
-  // пар изо рта на высоте
-  if (hero.wy > WORLD_H * 0.45 && PERF === 1 && Math.random() < 0.05)
-    puffs.push({ x: x + hero.facing * 8, y: y - 38, a: 0.5, r: 2 });
-
-  // следы на снегу
-  if (hero.walking && hero.wy > WORLD_H * 0.62 && Math.abs(step) > 0.93)
-    steps.push({ wy: hero.wy, off: step > 0 ? 3 : -3, a: 0.5 });
-}
-
-function drawPuffsSteps() {
-  for (let i = puffs.length - 1; i >= 0; i--) {
-    const p = puffs[i];
-    p.y -= 0.4; p.x += 0.3; p.r += 0.12; p.a -= 0.012;
-    if (p.a <= 0) { puffs.splice(i, 1); continue; }
-    ctx.fillStyle = `rgba(220, 230, 240, ${p.a})`;
-    ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 6.28); ctx.fill();
-  }
-  for (let i = steps.length - 1; i >= 0; i--) {
-    const s = steps[i];
-    s.a -= 0.004;
-    if (s.a <= 0) { steps.splice(i, 1); continue; }
-    const x = w2sx(s.wy) + s.off, y = w2sy(s.wy) + 2;
-    if (y < -20 || y > H + 20) continue;
-    ctx.fillStyle = `rgba(120, 140, 160, ${s.a})`;
-    ctx.beginPath(); ctx.ellipse(x, y, 2.5, 1.4, 0, 0, 6.28); ctx.fill();
-  }
-}
-
-/* погода по высоте: морось → туман/ветер → снег */
-function drawWeather() {
-  const t = Math.min(1, Math.max(0, cam / WORLD_H));
-  ctx.save();
-  for (const d of drops) {
-    d.y += (t > 0.6 ? 0.0016 : 0.006) * d.s * (PERF === 1 ? 1 : 1.6);
-    d.x += t > 0.6 ? Math.sin(time + d.d) * 0.0009 : 0.0012;
-    if (d.y > 1.05) { d.y = -0.05; d.x = Math.random() * 1.2 - 0.1; }
-    const x = d.x * W, y = d.y * H;
-    if (t < 0.35) {                                  // темпоральная морось
-      ctx.strokeStyle = `rgba(150, 170, 190, ${0.25 * d.s})`;
-      ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - 2, y + 9 * d.s); ctx.stroke();
-    } else if (t < 0.65) {                           // взвесь в тумане
-      ctx.fillStyle = `rgba(190, 205, 220, ${0.14 * d.s})`;
-      ctx.fillRect(x, y, 1.6, 1.6);
-    } else {                                         // снег
-      ctx.fillStyle = `rgba(230, 238, 246, ${0.5 * d.s})`;
-      ctx.beginPath(); ctx.arc(x, y, 1.3 * d.s, 0, 6.28); ctx.fill();
-    }
-  }
-  // объёмный туман: две полосы с шумом синусов
-  const fogA = t < 0.35 ? 0.10 : t < 0.7 ? 0.22 : 0.12;
-  for (let b = 0; b < 2; b++) {
-    ctx.fillStyle = `rgba(170, 186, 204, ${fogA - b * 0.05})`;
-    ctx.beginPath();
-    const base = H * (0.3 + b * 0.36) + Math.sin(time * 0.22 + b * 2) * 16;
-    ctx.moveTo(0, base);
-    for (let x = 0; x <= W; x += 40)
-      ctx.lineTo(x, base + Math.sin(x * 0.008 + time * 0.35 + b) * 22);
-    ctx.lineTo(W, base + 130); ctx.lineTo(0, base + 130);
-    ctx.closePath(); ctx.fill();
-  }
-  ctx.restore();
-}
-
-/* красный TAULAU */
-function drawTitle(alpha, scale = 1, yPos = 0.3) {
-  if (alpha <= 0) return;
-  ctx.save();
-  ctx.globalAlpha = alpha;
-  ctx.textAlign = "center";
-  const size = Math.min(W * 0.14, 120) * scale;
-  ctx.font = `800 ${size}px Inter, "Segoe UI", sans-serif`;
-  ctx.fillStyle = "#E63946";
-  ctx.shadowColor = "rgba(230, 57, 70, .55)";
-  ctx.shadowBlur = 34;
-  ctx.fillText("TAULAU", W / 2, H * yPos);
-  ctx.shadowBlur = 0;
-  ctx.font = `500 ${Math.max(10, size * 0.11)}px Inter, sans-serif`;
-  ctx.fillStyle = "rgba(220, 230, 240, .75)";
-  ctx.fillText("A S C E N T", W / 2, H * yPos + size * 0.24);
-  ctx.restore();
-}
-
-/* 👍-финал */
-function drawLikes() {
-  for (let i = likes.length - 1; i >= 0; i--) {
-    const l = likes[i];
-    l.y -= l.v; l.a -= 0.005; l.x += Math.sin(l.y * 0.02 + l.d) * 0.6;
-    if (l.a <= 0) { likes.splice(i, 1); continue; }
-    ctx.globalAlpha = l.a;
-    ctx.font = `${l.s}px sans-serif`;
-    ctx.fillText("👍", l.x, l.y);
-  }
-  ctx.globalAlpha = 1;
-}
-
-/* ================= сценки и HUD ================= */
-
-function showCard(st) {
-  cardEl.innerHTML = `
-    <div class="c-station">Станция ${st.n} из 9 · ${meters(stationWY(st.n - 1))} м${st.kt ? ` · KT-${st.kt}` : ""}</div>
-    <div class="c-title">${st.title}</div>
-    <div class="c-sub">${st.role} вручает: ${st.tool}</div>
-    <div class="c-art">📦 ${st.art}</div>`;
-  cardEl.classList.add("show");
-  clearTimeout(showCard.t);
-  showCard.t = setTimeout(() => cardEl.classList.remove("show"), 4200);
-}
-
-function updateHUD() {
-  /* в кабинете показываем станцию в работе и реальные КТ участника, в демо — достигнутую */
-  const cab = Q.get("intro") === "0";
-  const st = Math.min(8, Math.max(0, cab ? progress.station : (reached < 0 ? 0 : reached)));
-  const kt = cab ? progress.kts : Math.min(5, STATIONS.filter((s, i) => i <= reached && s.kt).length);
-  hud.innerHTML = phase === "intro" ? "" : `
-    <b>Станция ${Math.min(9, st + 1)} из 9</b><br>
-    <span class="alt">Высота ${meters(hero.wy)} м · КТ ${kt}/5</span>`;
-}
-
-/* ================= цикл ================= */
-
-let last = 0, fpsAcc = 0, fpsN = 0;
-function frame(ts) {
-  const dt = Math.min(0.05, (ts - last) / 1000 || 0.016);
-  last = ts; time += dt;
-
-  // деградация эффектов, если не тянем 60
-  fpsAcc += dt; fpsN++;
-  if (fpsN === 90) { if (fpsAcc / fpsN > 0.022 && PERF === 1) { PERF = 0.5; seedWeather(); } fpsAcc = fpsN = 0; }
-
-  if (phase === "intro") {
-    introT += dt;
-    if (introT < 2.2) {
-      cam = WORLD_H + 60;                                     // держим пик: титул
-    } else if (introT < 8.2) {
-      const k = (introT - 2.2) / 6;                           // спуск с easing
-      const e = 1 - Math.pow(1 - k, 3);
-      cam = WORLD_H + 60 - e * (WORLD_H + 60 - 400);
-    } else {
-      phase = "play";
-      skipBtn.hidden = true;
-      heroTargetWY = stationWY(progress.station);
-      showCard(STATIONS[0]);
-    }
-  } else {
-    // камера следует за героем
-    camTarget = hero.wy + 120;
-    cam += (camTarget - cam) * Math.min(1, dt * 2.2);
-
-    // герой идёт к цели
-    const dy = heroTargetWY - hero.wy;
-    hero.walking = Math.abs(dy) > 2;
-    if (hero.walking) {
-      const v = 46 * dt;
-      hero.wy += Math.sign(dy) * Math.min(Math.abs(dy), v);
-      hero.ph += dt * 7;
-      hero.facing = trailX(hero.wy + 8) > trailX(hero.wy) ? 1 : -1;
-    }
-
-    // достигли новой станции
-    const at = Math.round(hero.wy / SEG) - 1;
-    if (!hero.walking && at > reached && Math.abs(hero.wy - stationWY(at)) < 8) {
-      reached = at;
-      hero.tools = reached + 1;
-      showCard(STATIONS[Math.min(8, reached)]);
-      if (reached >= 8) {
-        phase = "summit";
-        setTimeout(() => { camTarget = WORLD_H + 100; }, 800);
-      } else if (DEMO) {
-        setTimeout(() => { heroTargetWY = stationWY(Math.min(8, reached + 1)); }, 2600);
-      }
-    }
-
-    if (phase === "summit") {
-      cam += (WORLD_H - 100 - cam) * dt * 0.7;
-      if (PERF === 1 && Math.random() < 0.3)
-        likes.push({ x: W / 2 + (Math.random() - 0.5) * W * 0.5, y: H * 0.7, v: 0.8 + Math.random(), a: 1, s: 14 + Math.random() * 14, d: Math.random() * 7 });
-      if (DEMO && likes.length === 0 && time % 1 < 0.02) {    // перезапуск демо-цикла
-        setTimeout(() => {
-          reached = -1; hero.wy = 40; hero.tools = 0; phase = "play";
-          heroTargetWY = stationWY(0); cam = 400;
-        }, 1400);
-      }
-    }
-  }
-
-  // ---------- рендер ----------
-  skyGradient();
-  drawParallax();
-  drawTrail();
-  drawClimbAids();
-  drawStations();
-  if (phase !== "intro" || introT > 6) drawHero();
-  drawPuffsSteps();
-  drawWeather();
-
-  if (phase === "intro") {
-    const a = introT < 2.2 ? Math.min(1, introT / 0.8) : Math.max(0, 1 - (introT - 2.2) / 1.2);
-    drawTitle(a);
-    // подписи станций мелькают при спуске
-    if (introT > 2.4 && introT < 8) {
-      ctx.font = "600 11px Inter, sans-serif";
-      ctx.textAlign = "center";
-      for (let i = 8; i >= 0; i--) {
-        const y = w2sy(stationWY(i));
-        if (y > 40 && y < H - 40) {
-          ctx.fillStyle = "rgba(200, 214, 228, .5)";
-          ctx.fillText(`${STATIONS[i].n} · ${STATIONS[i].title}`, W / 2, y - 60);
-        }
-      }
-    }
-    if (introT > 7.6 && phase === "intro") {
-      ctx.font = "600 13px Inter, sans-serif";
-      ctx.textAlign = "center";
-      ctx.fillStyle = `rgba(220, 232, 244, ${Math.min(1, (introT - 7.6) * 2)})`;
-      ctx.fillText("Станция 1 · Диагностика и окружение", W / 2, H * 0.24);
-    }
-  }
-  skipBtn.hidden = phase !== "intro";
-  if (phase === "summit") {
-    drawTitle(Math.min(1, (cam - WORLD_H + 300) / 280), 0.9, 0.26);
-    drawLikes();
-  }
-
-  updateHUD();
-  requestAnimationFrame(frame);
-}
-
-skipBtn.hidden = false;
-skipBtn.addEventListener("click", () => {
-  introT = 99; phase = "play";
-  cam = 400; heroTargetWY = stationWY(progress.station);
-  skipBtn.hidden = true;
-  showCard(STATIONS[0]);
-});
-
-/* тач/клик на мобиле в демо: следующий шаг */
-cv.addEventListener("pointerdown", () => {
-  if (phase === "play" && !hero.walking && reached < 8)
-    heroTargetWY = stationWY(Math.min(8, reached + 1));
-});
-
-resize();
-
-/* режим кабинета: без интро, сразу текущая станция */
-if (Q.get("intro") === "0") {
-  phase = "play"; introT = 99; skipBtn.hidden = true;
-  reached = progress.station - 1;
-  hero.wy = Math.max(40, stationWY(progress.station) - 90);
-  heroTargetWY = stationWY(progress.station);
-  hero.tools = Math.max(0, progress.station);
-  cam = hero.wy + 120;
-}
-
-/* отладочный телепорт для скриншотов: ?at=intro3 | 0..8 | summit */
-const AT = Q.get("at");
-if (AT !== null) {
-  if (AT.startsWith("intro")) {
-    introT = Number(AT.slice(5)) || 0.5;
-  } else if (AT === "summit") {
-    phase = "summit"; reached = 8; hero.tools = 9;
-    hero.wy = WORLD_H - 140; cam = WORLD_H - 100; introT = 99;
-    for (let i = 0; i < 40; i++)
-      likes.push({ x: W / 2 + (Math.random() - 0.5) * W * 0.5, y: H * (0.3 + Math.random() * 0.5), v: 1, a: 0.5 + Math.random() * 0.5, s: 14 + Math.random() * 14, d: Math.random() * 7 });
-  } else {
-    const st = Math.max(0, Math.min(8, Number(AT) | 0));
-    phase = "play"; introT = 99; reached = st - 1;
-    hero.wy = stationWY(st) - 60; heroTargetWY = stationWY(st);
-    hero.tools = st; cam = hero.wy + 120; hero.walking = true; hero.ph = 1.2;
-    skipBtn.hidden = true;
-  }
-}
-
-requestAnimationFrame(frame);
-})();
 </script>
 </body>
 </html>
