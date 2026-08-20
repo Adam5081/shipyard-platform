@@ -96,15 +96,35 @@ const skipBtn = document.getElementById("skip");
 
 let W = 0, H = 0, DPR = 1;
 let PERF = 1;                       // 1 = полные эффекты, 0.5 — деградация
+function viewport() {
+  /* iOS Safari раздувает внутренний viewport iframe под intrinsic-размер контента —
+     innerWidth врёт. Родитель same-origin, поэтому меряем сам <iframe>. */
+  try {
+    const fe = window.frameElement;
+    if (fe) {
+      const r = fe.getBoundingClientRect();
+      if (r.width > 10 && r.height > 10) return [Math.round(r.width), Math.round(r.height)];
+    }
+  } catch { /* cross-origin — падаем на innerWidth */ }
+  return [window.innerWidth, window.innerHeight];
+}
 function resize() {
   DPR = Math.min(1.5, window.devicePixelRatio || 1);
-  W = window.innerWidth; H = window.innerHeight;
+  [W, H] = viewport();
   cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+  cv.style.width = W + "px"; cv.style.height = H + "px";   // явный CSS-размер, чтобы атрибуты канваса не раздували фрейм
+  const ui = document.getElementById("ui");
+  ui.style.width = W + "px"; ui.style.height = H + "px";   // HUD и кнопки — в тех же границах, что и канвас
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   VK = Math.max(0.5, Math.min(1, H / 760));
   buildLayers();                    // статичные слои перерисовываются под новый размер
 }
 window.addEventListener("resize", resize);
+/* resize внутри iframe на iOS может не стрелять — следим за самим фреймом */
+try {
+  if (window.frameElement && window.ResizeObserver)
+    new ResizeObserver(() => { const [w, h] = viewport(); if (w !== W || h !== H) resize(); }).observe(window.frameElement);
+} catch { /* не критично */ }
 
 /* ================= мир ================= */
 /* Мир вертикален: worldY 0 — подножье, WORLD_H — вершина.

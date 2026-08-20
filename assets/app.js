@@ -899,7 +899,7 @@ const VIEWS = {
         <span>⏳ ${timePct > 0 ? `Осталось <b>${timePct}%</b> времени потока` : "Время потока вышло"}</span>
       </div>
       <div class="map-stage" style="padding:0;overflow:hidden;border-radius:var(--radius-m)">
-        <iframe id="ascentFrame" src="index-game.html?intro=0" style="width:100%;height:430px;border:0;display:block" title="TAULAU ASCENT"></iframe>
+        <iframe id="ascentFrame" src="index-game.html?intro=0&v=36" style="width:100%;height:430px;border:0;display:block" title="TAULAU ASCENT"></iframe>
       </div>
       <div class="scene-dots">
         ${STATIONS.map((p, i) => `
