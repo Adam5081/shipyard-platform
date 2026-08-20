@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>TAULAU ASCENT</title>
+<style>
+  /* ============================================================
+     TAULAU ASCENT — 2D-восхождение. Один файл, zero-dependency.
+     Эстетика: одиночество, груз, суровый склон, туман. Красный —
+     только TAULAU и ключевые акценты.
+     ============================================================ */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; background: #0b0e13; overflow: hidden; }
+  #game { position: fixed; inset: 0; display: block; }
+  /* UI-слой поверх канваса: тонкий гротеск, scan-появление */
+  #ui { position: fixed; inset: 0; pointer-events: none; font-family: "Inter", "Segoe UI", -apple-system, sans-serif; }
+  .hud {
+    position: absolute; top: 14px; left: 16px;
+    color: rgba(210, 222, 235, .85); font-size: 12px; letter-spacing: .14em;
+    text-transform: uppercase; line-height: 1.9;
+  }
+  .hud b { color: #dfe8f2; font-weight: 600; }
+  .hud .alt { color: rgba(160, 178, 196, .6); }
+  .card {
+    position: absolute; left: 50%; bottom: 9%;
+    transform: translateX(-50%) translateY(20px);
+    min-width: 300px; max-width: 84vw;
+    border: 1px solid rgba(180, 200, 220, .28);
+    background: rgba(10, 14, 20, .78);
+    backdrop-filter: blur(4px);
+    padding: 14px 20px 12px;
+    color: #dfe8f2; opacity: 0;
+    transition: opacity .5s ease, transform .5s cubic-bezier(.16, 1, .3, 1);
+  }
+  .card.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .card .c-station { font-size: 11px; letter-spacing: .22em; text-transform: uppercase; color: rgba(160, 178, 196, .75); }
+  .card .c-title { font-size: 17px; font-weight: 600; letter-spacing: .02em; margin: 4px 0 2px; }
+  .card .c-sub { font-size: 12.5px; color: rgba(180, 198, 214, .8); }
+  .card .c-art { font-size: 12px; margin-top: 7px; padding-top: 7px; border-top: 1px solid rgba(180, 200, 220, .15); color: rgba(200, 214, 228, .85); }
+  .card::before, .card::after {
+    content: ""; position: absolute; width: 10px; height: 10px; border: 1px solid rgba(220, 60, 70, .8);
+  }
+  .card::before { left: -1px; top: -1px; border-right: 0; border-bottom: 0; }
+  .card::after { right: -1px; bottom: -1px; border-left: 0; border-top: 0; }
+  #skip {
+    position: absolute; right: 16px; bottom: 14px; pointer-events: auto;
+    background: rgba(10, 14, 20, .6); color: rgba(200, 214, 228, .8);
+    border: 1px solid rgba(180, 200, 220, .25); padding: 8px 16px;
+    font-family: inherit; font-size: 11.5px; letter-spacing: .18em; text-transform: uppercase;
+    cursor: pointer; transition: background .2s;
+  }
+  #skip:hover { background: rgba(30, 38, 50, .8); color: #fff; }
+  @media (max-width: 640px) { .hud { font-size: 10.5px; } .card { bottom: 6%; } }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="ui">
+  <div class="hud" id="hud"></div>
+  <div class="card" id="card"></div>
+  <button id="skip" hidden>Пропустить ↦</button>
+</div>
+
+<script>
+(() => {
+"use strict";
+
+/* ================= данные программы ================= */
+
+const STATIONS = [
+  { n: 1, title: "Диагностика и окружение", role: "Ментор программы",  tool: "Компас",             art: "Заключение по идее + окружение" },
+  { n: 2, title: "Презентация проекта",     role: "Продюсер",          tool: "Горн проводника",    art: "Презентация, контекст для Claude", kt: 1 },
+  { n: 3, title: "Чертёж продукта",         role: "Технический контур", tool: "Маршрутный лист",   art: "Техкарта, CLAUDE.md",             kt: 2 },
+  { n: 4, title: "Ядро продукта",           role: "Технический контур", tool: "Ледоруб",           art: "Ключевой сценарий работает" },
+  { n: 5, title: "Обвязка",                 role: "Технический контур", tool: "Верёвка и обвязка", art: "Интеграции и авторизация",        kt: 3 },
+  { n: 6, title: "Тестирование и защита",   role: "Безопасность",       tool: "Каска",             art: "Чек-лист OWASP закрыт" },
+  { n: 7, title: "Продукт в сети",          role: "Право",              tool: "Сигнальная ракета", art: "Публичная ссылка + юрпакет",       kt: 4 },
+  { n: 8, title: "Защита проекта",          role: "Аналитика",          tool: "Вымпел вершины",    art: "Разбор перед экспертами" },
+  { n: 9, title: "Вывод в рабочую среду",   role: "Маркетинг",          tool: "Рупор",             art: "Первые пользователи",              kt: 5 },
+];
+
+/* ================= канвас и ретина ================= */
+
+const cv = document.getElementById("game");
+const ctx = cv.getContext("2d");
+const hud = document.getElementById("hud");
+const cardEl = document.getElementById("card");
+const skipBtn = document.getElementById("skip");
+
+let W = 0, H = 0, DPR = 1;
+let PERF = 1;                       // 1 = полные эффекты, 0.5 — деградация
+function resize() {
+  DPR = Math.min(1.5, window.devicePixelRatio || 1);
+  W = window.innerWidth; H = window.innerHeight;
+  cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  buildLayers();                    // статичные слои перерисовываются под новый размер
+}
+window.addEventListener("resize", resize);
+
+/* ================= мир ================= */
+/* Мир вертикален: worldY 0 — подножье, WORLD_H — вершина.
+   Тропа — зигзаг; станции равномерно по высоте. */
+
+const WORLD_H = 5200;
+const SEG = WORLD_H / 10;                 // сегмент между станциями
+const trailX = wy => {                    // x тропы (0..1 доля ширины) на высоте wy
+  const t = wy / WORLD_H;
+  return 0.5 + Math.sin(t * Math.PI * 4.2) * (0.26 - t * 0.12);
+};
+const stationWY = i => SEG * (i + 1);     // мировые высоты станций 0..8
+
+/* камера: cam = worldY, который сейчас в центре экрана */
+let cam = WORLD_H + 400;                  // старт интро — над вершиной
+let camTarget = cam;
+
+const w2sx = wy => trailX(wy) * W;
+const w2sy = wy => H * 0.62 + (cam - wy); // мир прокручивается: выше по миру — выше на экране
+
+/* высота в «метрах» для HUD */
+const meters = wy => Math.round(wy / WORLD_H * 3720);
+
+/* ================= персонаж ================= */
+
+const hero = {
+  wy: 40, vy: 0, walking: false, facing: 1,
+  ph: 0,                     // фаза шага
+  climbing: false,           // на верёвке/лестнице
+  tools: 0,                  // сколько инструментов в снаряжении
+};
+
+/* ================= состояние игры ================= */
+
+const Q = new URLSearchParams(location.search);
+const DEMO = Q.get("demo") === "1" || !window.parent || window.parent === window;
+let progress = { station: 0, kts: 0 };    // внешние данные (0-индекс текущей станции)
+let phase = "intro";                      // intro | play | summit
+let introT = 0;
+let heroTargetWY = stationWY(0);
+let reached = -1;                         // индекс последней достигнутой станции
+let sceneT = 0;                           // таймер сценки встречи
+let npcActive = -1;
+let likes = [];                           // 👍-частицы финала
+let time = 0;
+
+/* внешний API: кабинет сообщает прогресс */
+window.TaulauAscent = {
+  setProgress(stationIndex, checkpointsPassed) {
+    progress.station = Math.max(0, Math.min(8, stationIndex | 0));
+    progress.kts = Math.max(0, Math.min(5, checkpointsPassed | 0));
+    if (phase !== "intro") heroTargetWY = stationWY(progress.station);
+  },
+};
+window.addEventListener("message", e => {
+  const d = e.data;
+  if (d && d.type === "taulau-progress") window.TaulauAscent.setProgress(d.station, d.kts);
+});
+
+/* ================= статичные слои (кэш в offscreen) ================= */
+/* 4 параллакс-слоя: L0 дальние хребты, L1 средние, L2 ближний склон, L3 передний контур */
+
+const layers = [];
+function ridgeY(x, yBase, amp) {
+  return yBase - (Math.sin(x * 0.004) * 0.55 + Math.sin(x * 0.0113 + 2.1) * 0.3 + Math.sin(x * 0.027 + 5.2) * 0.15 + 1) * amp * 0.5;
+}
+function ridge(c, yBase, amp, step, color, snowLine) {
+  c.fillStyle = color;
+  c.beginPath();
+  c.moveTo(0, yBase + 200);
+  for (let x = 0; x <= W + step; x += step) {
+    c.lineTo(x, ridgeY(x, yBase, amp));
+  }
+  c.lineTo(W, yBase + 400);
+  c.closePath();
+  c.fill();
+  if (snowLine) {
+    // снежные шапки: заливка выше снеговой линии
+    c.save();
+    c.beginPath();
+    c.moveTo(0, yBase + 400);
+    for (let x = 0; x <= W + step; x += step) c.lineTo(x, ridgeY(x, yBase, amp));
+    c.lineTo(W, yBase + 400);
+    c.closePath();
+    c.clip();
+    c.fillStyle = "rgba(216,226,238,.4)";
+    c.fillRect(0, 0, W, yBase - amp * 0.62);
+    c.restore();
+  }
+}
+function buildLayers() {
+  layers.length = 0;
+  const defs = [
+    { f: 0.12, draw: c => { ridge(c, H * 0.75, H * 0.42, 8, "#141a24", true); } },
+    { f: 0.26, draw: c => { ridge(c, H * 0.85, H * 0.38, 7, "#1a222e", true); } },
+    { f: 0.5,  draw: c => { ridge(c, H * 0.95, H * 0.34, 6, "#232c3a", false); } },
+  ];
+  for (const d of defs) {
+    const oc = document.createElement("canvas");
+    oc.width = W; oc.height = H * 1.6;
+    const c = oc.getContext("2d");
+    d.draw(c);
+    layers.push({ f: d.f, cv: oc });
+  }
+}
+
+/* ================= частицы погоды ================= */
+
+const drops = [];   // дождь/снег/пыль — один пул
+function seedWeather() {
+  drops.length = 0;
+  const n = PERF < 1 ? 60 : 140;
+  for (let i = 0; i < n; i++)
+    drops.push({ x: Math.random() * 1.2, y: Math.random(), s: 0.4 + Math.random() * 0.8, d: Math.random() * 6.28 });
+}
+seedWeather();
+
+/* пар изо рта и следы */
+const puffs = [];
+const steps = [];
+
+/* ================= отрисовка ================= */
+
+function skyGradient() {
+  const t = Math.min(1, Math.max(0, cam / WORLD_H));      // 0 подножье → 1 вершина
+  const top = [`#2a3444`, `#242e3e`, `#1c2431`][t < .34 ? 0 : t < .67 ? 1 : 2];
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, mix("#39465c", "#141922", t));
+  g.addColorStop(0.55, mix("#2c3648", "#1a2230", t));
+  g.addColorStop(1, mix("#232c3a", "#242f3d", t * 0.5));
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+  // god rays на средних высотах
+  if (PERF === 1 && t > 0.25 && t < 0.75) {
+    ctx.save();
+    ctx.globalAlpha = 0.05 + Math.sin(time * 0.4) * 0.015;
+    ctx.fillStyle = "#cfe0ee";
+    for (let i = 0; i < 3; i++) {
+      const rx = W * (0.2 + i * 0.3) + Math.sin(time * 0.1 + i) * 30;
+      ctx.beginPath();
+      ctx.moveTo(rx, -50);
+      ctx.lineTo(rx + 140, -50);
+      ctx.lineTo(rx + 420, H + 50);
+      ctx.lineTo(rx + 220, H + 50);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+function mix(a, b, t) {
+  const pa = [parseInt(a.slice(1, 3), 16), parseInt(a.slice(3, 5), 16), parseInt(a.slice(5, 7), 16)];
+  const pb = [parseInt(b.slice(1, 3), 16), parseInt(b.slice(3, 5), 16), parseInt(b.slice(5, 7), 16)];
+  const c = pa.map((v, i) => Math.round(v + (pb[i] - v) * t));
+  return `rgb(${c[0]},${c[1]},${c[2]})`;
+}
+
+function drawParallax() {
+  for (const L of layers) {
+    const off = (cam - WORLD_H * 0.5) * L.f * 0.3;
+    ctx.drawImage(L.cv, 0, H * 0.62 - L.cv.height * 0.62 + off * 0.2 - 40);
+  }
+}
+
+/* тропа + связи станций («хиральная» тонкая сеть) */
+function drawTrail() {
+  ctx.save();
+  ctx.strokeStyle = "rgba(190, 205, 220, .16)";
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  let first = true;
+  for (let wy = Math.max(0, cam - H); wy <= Math.min(WORLD_H, cam + H); wy += 26) {
+    const x = w2sx(wy), y = w2sy(wy);
+    if (first) { ctx.moveTo(x, y); first = false; } else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+  // пунктир поверх — пройденная часть чуть светлее
+  ctx.strokeStyle = "rgba(210, 224, 238, .3)";
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([2, 7]);
+  ctx.beginPath();
+  first = true;
+  for (let wy = Math.max(0, cam - H); wy <= Math.min(hero.wy, cam + H); wy += 26) {
+    const x = w2sx(wy), y = w2sy(wy);
+    if (first) { ctx.moveTo(x, y); first = false; } else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
+}
+
+/* лестницы и верёвки на крутых участках между станциями */
+function drawClimbAids() {
+  for (let i = 0; i < 9; i++) {
+    const wy = stationWY(i) + SEG * 0.45;          // середина перегона выше станции i
+    if (Math.abs(wy - cam) > H) continue;
+    const unlocked = reached >= i;
+    const x = w2sx(wy), y = w2sy(wy);
+    ctx.save();
+    ctx.globalAlpha = unlocked ? 0.9 : 0.25;
+    if (i % 2 === 0) {                              // лестница
+      ctx.strokeStyle = unlocked ? "#8fa3b8" : "#4a5a6c";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x - 7, y + 40); ctx.lineTo(x - 7, y - 40);
+      ctx.moveTo(x + 7, y + 40); ctx.lineTo(x + 7, y - 40);
+      ctx.stroke();
+      for (let r = -36; r <= 36; r += 12) {
+        ctx.beginPath(); ctx.moveTo(x - 7, y + r); ctx.lineTo(x + 7, y + r); ctx.stroke();
+      }
+    } else {                                        // верёвка
+      ctx.strokeStyle = unlocked ? "#b8a98c" : "#5a5648";
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(x, y - 46);
+      for (let r = -46; r <= 46; r += 8)
+        ctx.lineTo(x + Math.sin(r * 0.2 + time * (unlocked ? 1.2 : 0)) * 3, y + r);
+      ctx.stroke();
+    }
+    if (!unlocked) {                                // тупик без инструмента
+      ctx.globalAlpha = 0.5;
+      ctx.fillStyle = "#31404f";
+      ctx.fillRect(x - 26, y - 4, 52, 8);
+    }
+    ctx.restore();
+  }
+}
+
+/* станция: укрытие-терминал + НПС + арка КТ */
+function drawStations() {
+  for (let i = 0; i < 9; i++) {
+    const st = STATIONS[i];
+    const wy = stationWY(i);
+    if (Math.abs(wy - cam) > H) continue;
+    const x = w2sx(wy), y = w2sy(wy);
+    const passed = reached >= i;
+    const side = i % 2 ? -1 : 1;
+    const hx = x + side * 64;
+
+    ctx.save();
+
+    // арка контрольной точки
+    if (st.kt) {
+      const glow = passed ? 0.55 + Math.sin(time * 3) * 0.1 : 0.18;
+      ctx.strokeStyle = `rgba(224, 76, 88, ${glow})`;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(x - 30, y + 6);
+      ctx.lineTo(x - 30, y - 52);
+      ctx.arc(x, y - 52, 30, Math.PI, 0);
+      ctx.lineTo(x + 30, y + 6);
+      ctx.stroke();
+      ctx.fillStyle = `rgba(224, 76, 88, ${glow})`;
+      ctx.font = "600 9px Inter, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(`KT-${st.kt}`, x, y - 86);
+      if (passed && PERF === 1) {                  // сканер-луч
+        ctx.globalAlpha = 0.12 + Math.sin(time * 5) * 0.06;
+        ctx.fillStyle = "#e04c58";
+        ctx.fillRect(x - 28, y - 52 + Math.sin(time * 2.2) * 24, 56, 3);
+        ctx.globalAlpha = 1;
+      }
+    }
+
+    // укрытие-терминал
+    ctx.fillStyle = passed ? "#2e3a49" : "#242e3b";
+    ctx.fillRect(hx - 26, y - 34, 52, 34);
+    ctx.fillStyle = passed ? "#3b4a5c" : "#2c3745";
+    ctx.beginPath();
+    ctx.moveTo(hx - 30, y - 34); ctx.lineTo(hx, y - 52); ctx.lineTo(hx + 30, y - 34);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle = passed ? "rgba(255, 214, 120, .85)" : "rgba(140, 160, 180, .3)";
+    ctx.fillRect(hx - 8, y - 24, 16, 12);          // окно-терминал
+
+    // НПС-эксперт у станции
+    const npcX = hx - side * 34;
+    const bob = Math.sin(time * 1.4 + i) * 1.5;
+    ctx.fillStyle = passed ? "#5d6f83" : "#414f60";
+    ctx.fillRect(npcX - 5, y - 26 + bob, 10, 18);  // корпус
+    ctx.fillStyle = "#8fa0b2";
+    ctx.beginPath(); ctx.arc(npcX, y - 30 + bob, 5, 0, 6.28); ctx.fill();  // капюшон
+    ctx.fillStyle = passed ? "#ffd678" : "#5d6f83";
+    ctx.fillRect(npcX - 7, y - 20 + bob, 3, 8);    // фонарь на плече
+
+    // подпись станции: координатная метка
+    ctx.font = "600 10px Inter, sans-serif";
+    ctx.textAlign = side > 0 ? "left" : "right";
+    ctx.fillStyle = passed ? "rgba(220, 232, 244, .9)" : "rgba(150, 168, 186, .5)";
+    ctx.fillText(`${st.n.toString().padStart(2, "0")} · ${st.title.toUpperCase()}`, hx + side * 36, y - 40);
+    ctx.strokeStyle = "rgba(180, 200, 220, .2)";
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(hx + side * 30, y - 43); ctx.lineTo(hx + side * 33, y - 43); ctx.stroke();
+
+    ctx.restore();
+  }
+}
+
+/* персонаж-носильщик */
+function drawHero() {
+  const x = w2sx(hero.wy), y = w2sy(hero.wy);
+  const grade = trailX(hero.wy + 30) - trailX(hero.wy - 30);   // крутизна для наклона
+  const lean = Math.max(-0.3, Math.min(0.3, hero.walking ? grade * 60 + hero.facing * 0.05 : 0));
+  const step = Math.sin(hero.ph);
+  const bob = hero.walking ? Math.abs(Math.cos(hero.ph)) * 2.2 : Math.sin(time * 1.8) * 0.8;
+
+  ctx.save();
+  ctx.translate(x, y - bob);
+  ctx.rotate(lean);
+  ctx.scale(hero.facing * 1.35, 1.35);
+
+  // тень
+  ctx.save();
+  ctx.rotate(-lean);
+  ctx.fillStyle = "rgba(0,0,0,.35)";
+  ctx.beginPath(); ctx.ellipse(0, bob + 2, 13, 3.5, 0, 0, 6.28); ctx.fill();
+  ctx.restore();
+
+  // ноги под грузом — широкий устойчивый шаг
+  ctx.strokeStyle = "#252d38"; ctx.lineWidth = 4; ctx.lineCap = "round";
+  ctx.beginPath(); ctx.moveTo(-2, -14); ctx.lineTo(-2 + step * 6, 0); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(2, -14); ctx.lineTo(2 - step * 6, 0); ctx.stroke();
+  // ботинки
+  ctx.fillStyle = "#1b2129";
+  ctx.fillRect(-6 + step * 6, -2, 8, 3);
+  ctx.fillRect(-2 - step * 6, -2, 8, 3);
+
+  // корпус, согнутый под весом
+  ctx.fillStyle = "#3a4656";
+  ctx.save();
+  ctx.rotate(-0.14);
+  ctx.fillRect(-6, -34, 12, 21);
+  ctx.restore();
+
+  // ГРУЗ: башня контейнеров за спиной (растёт с инструментами)
+  ctx.save();
+  ctx.rotate(-0.14);
+  const packH = Math.min(26, 12 + hero.tools * 1.6);
+  ctx.fillStyle = "#4c5a6c";
+  ctx.fillRect(-14, -32 - packH + 8, 9, packH);
+  ctx.fillStyle = "#5d6d80";
+  for (let b = 0; b < Math.min(6, 2 + hero.tools); b++)
+    ctx.fillRect(-14, -30 - b * 5, 8, 3);
+  ctx.strokeStyle = "rgba(224, 76, 88, .8)";       // красный ремень-акцент
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(-15, -26); ctx.lineTo(-5, -22); ctx.stroke();
+  ctx.restore();
+
+  // руки — балансируют на крутизне
+  ctx.strokeStyle = "#33404f"; ctx.lineWidth = 3.5;
+  const armSwing = hero.walking ? step * 5 : 0;
+  ctx.beginPath(); ctx.moveTo(-4, -28); ctx.lineTo(-8 - armSwing - grade * 40, -18); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(4, -28); ctx.lineTo(9 + armSwing - grade * 40, -19); ctx.stroke();
+
+  // голова в капюшоне
+  ctx.fillStyle = "#46536352";
+  ctx.fillStyle = "#465363";
+  ctx.beginPath(); ctx.arc(1, -38, 6, 0, 6.28); ctx.fill();
+  ctx.fillStyle = "#d9c9a8";
+  ctx.fillRect(2, -40, 5, 5);                       // лицо из-под капюшона
+
+  ctx.restore();
+
+  // пар изо рта на высоте
+  if (hero.wy > WORLD_H * 0.45 && PERF === 1 && Math.random() < 0.05)
+    puffs.push({ x: x + hero.facing * 8, y: y - 38, a: 0.5, r: 2 });
+
+  // следы на снегу
+  if (hero.walking && hero.wy > WORLD_H * 0.62 && Math.abs(step) > 0.93)
+    steps.push({ wy: hero.wy, off: step > 0 ? 3 : -3, a: 0.5 });
+}
+
+function drawPuffsSteps() {
+  for (let i = puffs.length - 1; i >= 0; i--) {
+    const p = puffs[i];
+    p.y -= 0.4; p.x += 0.3; p.r += 0.12; p.a -= 0.012;
+    if (p.a <= 0) { puffs.splice(i, 1); continue; }
+    ctx.fillStyle = `rgba(220, 230, 240, ${p.a})`;
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 6.28); ctx.fill();
+  }
+  for (let i = steps.length - 1; i >= 0; i--) {
+    const s = steps[i];
+    s.a -= 0.004;
+    if (s.a <= 0) { steps.splice(i, 1); continue; }
+    const x = w2sx(s.wy) + s.off, y = w2sy(s.wy) + 2;
+    if (y < -20 || y > H + 20) continue;
+    ctx.fillStyle = `rgba(120, 140, 160, ${s.a})`;
+    ctx.beginPath(); ctx.ellipse(x, y, 2.5, 1.4, 0, 0, 6.28); ctx.fill();
+  }
+}
+
+/* погода по высоте: морось → туман/ветер → снег */
+function drawWeather() {
+  const t = Math.min(1, Math.max(0, cam / WORLD_H));
+  ctx.save();
+  for (const d of drops) {
+    d.y += (t > 0.6 ? 0.0016 : 0.006) * d.s * (PERF === 1 ? 1 : 1.6);
+    d.x += t > 0.6 ? Math.sin(time + d.d) * 0.0009 : 0.0012;
+    if (d.y > 1.05) { d.y = -0.05; d.x = Math.random() * 1.2 - 0.1; }
+    const x = d.x * W, y = d.y * H;
+    if (t < 0.35) {                                  // темпоральная морось
+      ctx.strokeStyle = `rgba(150, 170, 190, ${0.25 * d.s})`;
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - 2, y + 9 * d.s); ctx.stroke();
+    } else if (t < 0.65) {                           // взвесь в тумане
+      ctx.fillStyle = `rgba(190, 205, 220, ${0.14 * d.s})`;
+      ctx.fillRect(x, y, 1.6, 1.6);
+    } else {                                         // снег
+      ctx.fillStyle = `rgba(230, 238, 246, ${0.5 * d.s})`;
+      ctx.beginPath(); ctx.arc(x, y, 1.3 * d.s, 0, 6.28); ctx.fill();
+    }
+  }
+  // объёмный туман: две полосы с шумом синусов
+  const fogA = t < 0.35 ? 0.10 : t < 0.7 ? 0.22 : 0.12;
+  for (let b = 0; b < 2; b++) {
+    ctx.fillStyle = `rgba(170, 186, 204, ${fogA - b * 0.05})`;
+    ctx.beginPath();
+    const base = H * (0.3 + b * 0.36) + Math.sin(time * 0.22 + b * 2) * 16;
+    ctx.moveTo(0, base);
+    for (let x = 0; x <= W; x += 40)
+      ctx.lineTo(x, base + Math.sin(x * 0.008 + time * 0.35 + b) * 22);
+    ctx.lineTo(W, base + 130); ctx.lineTo(0, base + 130);
+    ctx.closePath(); ctx.fill();
+  }
+  ctx.restore();
+}
+
+/* красный TAULAU */
+function drawTitle(alpha, scale = 1, yPos = 0.3) {
+  if (alpha <= 0) return;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.textAlign = "center";
+  const size = Math.min(W * 0.14, 120) * scale;
+  ctx.font = `800 ${size}px Inter, "Segoe UI", sans-serif`;
+  ctx.fillStyle = "#E63946";
+  ctx.shadowColor = "rgba(230, 57, 70, .55)";
+  ctx.shadowBlur = 34;
+  ctx.fillText("TAULAU", W / 2, H * yPos);
+  ctx.shadowBlur = 0;
+  ctx.font = `500 ${Math.max(10, size * 0.11)}px Inter, sans-serif`;
+  ctx.fillStyle = "rgba(220, 230, 240, .75)";
+  ctx.fillText("A S C E N T", W / 2, H * yPos + size * 0.24);
+  ctx.restore();
+}
+
+/* 👍-финал */
+function drawLikes() {
+  for (let i = likes.length - 1; i >= 0; i--) {
+    const l = likes[i];
+    l.y -= l.v; l.a -= 0.005; l.x += Math.sin(l.y * 0.02 + l.d) * 0.6;
+    if (l.a <= 0) { likes.splice(i, 1); continue; }
+    ctx.globalAlpha = l.a;
+    ctx.font = `${l.s}px sans-serif`;
+    ctx.fillText("👍", l.x, l.y);
+  }
+  ctx.globalAlpha = 1;
+}
+
+/* ================= сценки и HUD ================= */
+
+function showCard(st) {
+  cardEl.innerHTML = `
+    <div class="c-station">Станция ${st.n} из 9 · ${meters(stationWY(st.n - 1))} м${st.kt ? ` · KT-${st.kt}` : ""}</div>
+    <div class="c-title">${st.title}</div>
+    <div class="c-sub">${st.role} вручает: ${st.tool}</div>
+    <div class="c-art">📦 ${st.art}</div>`;
+  cardEl.classList.add("show");
+  clearTimeout(showCard.t);
+  showCard.t = setTimeout(() => cardEl.classList.remove("show"), 4200);
+}
+
+function updateHUD() {
+  const st = Math.min(8, Math.max(0, reached < 0 ? 0 : reached));
+  hud.innerHTML = phase === "intro" ? "" : `
+    <b>Станция ${Math.min(9, st + 1)} из 9</b><br>
+    <span class="alt">Высота ${meters(hero.wy)} м · КТ ${Math.min(5, STATIONS.filter((s, i) => i <= reached && s.kt).length)}/5</span>`;
+}
+
+/* ================= цикл ================= */
+
+let last = 0, fpsAcc = 0, fpsN = 0;
+function frame(ts) {
+  const dt = Math.min(0.05, (ts - last) / 1000 || 0.016);
+  last = ts; time += dt;
+
+  // деградация эффектов, если не тянем 60
+  fpsAcc += dt; fpsN++;
+  if (fpsN === 90) { if (fpsAcc / fpsN > 0.022 && PERF === 1) { PERF = 0.5; seedWeather(); } fpsAcc = fpsN = 0; }
+
+  if (phase === "intro") {
+    introT += dt;
+    if (introT < 2.2) {
+      cam = WORLD_H + 60;                                     // держим пик: титул
+    } else if (introT < 8.2) {
+      const k = (introT - 2.2) / 6;                           // спуск с easing
+      const e = 1 - Math.pow(1 - k, 3);
+      cam = WORLD_H + 60 - e * (WORLD_H + 60 - 400);
+    } else {
+      phase = "play";
+      skipBtn.hidden = true;
+      heroTargetWY = stationWY(progress.station);
+      showCard(STATIONS[0]);
+    }
+  } else {
+    // камера следует за героем
+    camTarget = hero.wy + 120;
+    cam += (camTarget - cam) * Math.min(1, dt * 2.2);
+
+    // герой идёт к цели
+    const dy = heroTargetWY - hero.wy;
+    hero.walking = Math.abs(dy) > 2;
+    if (hero.walking) {
+      const v = 46 * dt;
+      hero.wy += Math.sign(dy) * Math.min(Math.abs(dy), v);
+      hero.ph += dt * 7;
+      hero.facing = trailX(hero.wy + 8) > trailX(hero.wy) ? 1 : -1;
+    }
+
+    // достигли новой станции
+    const at = Math.round(hero.wy / SEG) - 1;
+    if (!hero.walking && at > reached && Math.abs(hero.wy - stationWY(at)) < 8) {
+      reached = at;
+      hero.tools = reached + 1;
+      showCard(STATIONS[Math.min(8, reached)]);
+      if (reached >= 8) {
+        phase = "summit";
+        setTimeout(() => { camTarget = WORLD_H + 100; }, 800);
+      } else if (DEMO) {
+        setTimeout(() => { heroTargetWY = stationWY(Math.min(8, reached + 1)); }, 2600);
+      }
+    }
+
+    if (phase === "summit") {
+      cam += (WORLD_H - 100 - cam) * dt * 0.7;
+      if (PERF === 1 && Math.random() < 0.3)
+        likes.push({ x: W / 2 + (Math.random() - 0.5) * W * 0.5, y: H * 0.7, v: 0.8 + Math.random(), a: 1, s: 14 + Math.random() * 14, d: Math.random() * 7 });
+      if (DEMO && likes.length === 0 && time % 1 < 0.02) {    // перезапуск демо-цикла
+        setTimeout(() => {
+          reached = -1; hero.wy = 40; hero.tools = 0; phase = "play";
+          heroTargetWY = stationWY(0); cam = 400;
+        }, 1400);
+      }
+    }
+  }
+
+  // ---------- рендер ----------
+  skyGradient();
+  drawParallax();
+  drawTrail();
+  drawClimbAids();
+  drawStations();
+  if (phase !== "intro" || introT > 6) drawHero();
+  drawPuffsSteps();
+  drawWeather();
+
+  if (phase === "intro") {
+    const a = introT < 2.2 ? Math.min(1, introT / 0.8) : Math.max(0, 1 - (introT - 2.2) / 1.2);
+    drawTitle(a);
+    // подписи станций мелькают при спуске
+    if (introT > 2.4 && introT < 8) {
+      ctx.font = "600 11px Inter, sans-serif";
+      ctx.textAlign = "center";
+      for (let i = 8; i >= 0; i--) {
+        const y = w2sy(stationWY(i));
+        if (y > 40 && y < H - 40) {
+          ctx.fillStyle = "rgba(200, 214, 228, .5)";
+          ctx.fillText(`${STATIONS[i].n} · ${STATIONS[i].title}`, W / 2, y - 60);
+        }
+      }
+    }
+    if (introT > 7.6 && phase === "intro") {
+      ctx.font = "600 13px Inter, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillStyle = `rgba(220, 232, 244, ${Math.min(1, (introT - 7.6) * 2)})`;
+      ctx.fillText("Станция 1 · Диагностика и окружение", W / 2, H * 0.24);
+    }
+  }
+  skipBtn.hidden = phase !== "intro";
+  if (phase === "summit") {
+    drawTitle(Math.min(1, (cam - WORLD_H + 300) / 280), 0.9, 0.26);
+    drawLikes();
+  }
+
+  updateHUD();
+  requestAnimationFrame(frame);
+}
+
+skipBtn.hidden = false;
+skipBtn.addEventListener("click", () => {
+  introT = 99; phase = "play";
+  cam = 400; heroTargetWY = stationWY(progress.station);
+  skipBtn.hidden = true;
+  showCard(STATIONS[0]);
+});
+
+/* тач/клик на мобиле в демо: следующий шаг */
+cv.addEventListener("pointerdown", () => {
+  if (phase === "play" && !hero.walking && reached < 8)
+    heroTargetWY = stationWY(Math.min(8, reached + 1));
+});
+
+resize();
+
+/* режим кабинета: без интро, сразу текущая станция */
+if (Q.get("intro") === "0") {
+  phase = "play"; introT = 99; skipBtn.hidden = true;
+  reached = progress.station - 1;
+  hero.wy = Math.max(40, stationWY(progress.station) - 90);
+  heroTargetWY = stationWY(progress.station);
+  hero.tools = Math.max(0, progress.station);
+  cam = hero.wy + 120;
+}
+
+/* отладочный телепорт для скриншотов: ?at=intro3 | 0..8 | summit */
+const AT = Q.get("at");
+if (AT !== null) {
+  if (AT.startsWith("intro")) {
+    introT = Number(AT.slice(5)) || 0.5;
+  } else if (AT === "summit") {
+    phase = "summit"; reached = 8; hero.tools = 9;
+    hero.wy = WORLD_H - 140; cam = WORLD_H - 100; introT = 99;
+    for (let i = 0; i < 40; i++)
+      likes.push({ x: W / 2 + (Math.random() - 0.5) * W * 0.5, y: H * (0.3 + Math.random() * 0.5), v: 1, a: 0.5 + Math.random() * 0.5, s: 14 + Math.random() * 14, d: Math.random() * 7 });
+  } else {
+    const st = Math.max(0, Math.min(8, Number(AT) | 0));
+    phase = "play"; introT = 99; reached = st - 1;
+    hero.wy = stationWY(st) - 60; heroTargetWY = stationWY(st);
+    hero.tools = st; cam = hero.wy + 120; hero.walking = true; hero.ph = 1.2;
+    skipBtn.hidden = true;
+  }
+}
+
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

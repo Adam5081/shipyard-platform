@@ -898,17 +898,8 @@ const VIEWS = {
         <div class="tb-track"><i style="width:${timePct}%"></i></div>
         <span>⏳ ${timePct > 0 ? `Осталось <b>${timePct}%</b> времени потока` : "Время потока вышло"}</span>
       </div>
-
-      <div class="map-stage">
-        <canvas id="mapCanvas"></canvas>
-        <button class="scene-nav prev" data-station="${Math.max(0, sel - 1)}" ${sel === 0 ? "disabled" : ""} aria-label="Предыдущая станция">‹</button>
-        <button class="scene-nav next" data-station="${Math.min(8, sel + 1)}" ${sel === 8 ? "disabled" : ""} aria-label="Следующая станция">›</button>
-        <div class="scene-title">Станция ${sel + 1} из 9 · ${esc(st.title)}</div>
-        <div class="map-hint">${
-          sel === cur
-            ? `Персонаж на этой карте: закрыто ${st.tasks.filter(t => S.done[t.id]).length} из ${st.tasks.length} задач — дойдёт до флага, когда станция будет закрыта · всего пройдено ${prog}% пути`
-            : done ? "Карта пройдена — инструмент собран, дорога открыта"
-            : "Эта карта впереди — персонаж придёт сюда после предыдущих станций"}</div>
+      <div class="map-stage" style="padding:0;overflow:hidden;border-radius:var(--radius-m)">
+        <iframe id="ascentFrame" src="index-game.html?intro=0" style="width:100%;height:430px;border:0;display:block" title="TAULAU ASCENT"></iframe>
       </div>
       <div class="scene-dots">
         ${STATIONS.map((p, i) => `
@@ -1792,35 +1783,19 @@ let mapInstance = null;
 let lastScene = null;   // { idx, x } — чтобы персонаж не телепортировался при перерисовке
 
 function mountMap() {
-  const cv = document.getElementById("mapCanvas");
-  if (!cv) return;
-  const cur = currentStationIdx();
-  const sel = S.selStation === null ? cur : Math.max(0, Math.min(8, S.selStation));
-  const st = STATIONS[sel];
-  const frac = stationDone(st) ? 1 : st.tasks.filter(t => S.done[t.id]).length / st.tasks.length;
-
-  mapInstance = new GAME.StationScene(cv);
-  // счётчик задач переживает перерисовку вьюхи — иначе искры чекпоинта не сработают
-  if (lastScene && lastScene.idx === sel && lastScene.done !== undefined)
-    mapInstance.prevDone = lastScene.done;
-  mapInstance.set({
-    index: sel,
-    progress: frac,
-    tasksTotal: st.tasks.length,
-    tasksDone: st.tasks.filter(t => S.done[t.id]).length,
-    hero: sel === cur,                 // персонаж живёт на своей текущей карте
-    locked: sel > cur,
-    done: stationDone(st),
-    tool: st.tool,
-    gate: !!st.cp,
-    gatePassed: cpPassed(st),
-    doorOpen: doorOpen(),
-    avatar: myAvatar(),
-    // соседи, находящиеся на этой же карте, идут рядом по дороге (пока поток скрыт — не показываем)
-    peers: !FLOW_UI ? [] : flowRows().filter(r => !r.me && r.station === sel)
-      .map(r => ({ avatar: r.avatar, frac: Math.max(0, Math.min(1, (r.walk || 0) * 9 - sel)) })),
-  });
-  if (lastScene && lastScene.idx === sel) mapInstance.charX = lastScene.x;
+  const f = document.getElementById("ascentFrame");
+  if (!f) return;
+  const send = () => {
+    try {
+      f.contentWindow.postMessage({
+        type: "taulau-progress",
+        station: currentStationIdx(),
+        kts: Object.values(S.gates || {}).filter(s => s === "approved").length,
+      }, "*");
+    } catch { /* фрейм ещё грузится */ }
+  };
+  f.addEventListener("load", send);
+  send();
 }
 
 function unmountMap() {
