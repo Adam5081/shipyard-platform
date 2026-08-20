@@ -82,7 +82,7 @@ const q = {
   acceptContract: db.prepare("UPDATE users SET contract_accepted_at = ? WHERE id = ?"),
   sessionsUpcoming: db.prepare("SELECT * FROM sessions WHERE starts_at > ? ORDER BY starts_at LIMIT 60"),
   sessionById: db.prepare("SELECT * FROM sessions WHERE id = ?"),
-  insertSession: db.prepare("INSERT INTO sessions (title, dir, type, starts_at, duration_min, meet_url, capacity, created_at) VALUES (?,?,?,?,?,?,?,?)"),
+  insertSession: db.prepare("INSERT INTO sessions (title, dir, type, starts_at, duration_min, meet_url, capacity, created_at, host) VALUES (?,?,?,?,?,?,?,?,?)"),
   deleteSession: db.prepare("DELETE FROM sessions WHERE id = ?"),
   sessionBookings: db.prepare("SELECT b.user_id, u.name FROM bookings b JOIN users u ON u.id = b.user_id WHERE b.session_id = ?"),
   bookingCount: db.prepare("SELECT COUNT(*) AS n FROM bookings WHERE session_id = ?"),
@@ -1132,7 +1132,7 @@ const routes = {
     const now = Date.now();
     const mine = new Set(q.myBookings.all(u.id).map(r => r.session_id));
     const list = q.sessionsUpcoming.all(now - 2 * 3600000).map(s => ({
-      id: s.id, title: s.title, dir: s.dir, type: s.type,
+      id: s.id, title: s.title, dir: s.dir, type: s.type, host: s.host || "",
       startsAt: s.starts_at, duration: s.duration_min, capacity: s.capacity,
       booked: q.bookingCount.get(s.id).n,
       my: mine.has(s.id),
@@ -1180,7 +1180,7 @@ const routes = {
     const r = roleOf(req);
     if (!r) return err(res, 401, "Нужен ключ доступа");
     const list = q.sessionsUpcoming.all(Date.now() - 7 * 86400000).map(s => ({
-      id: s.id, title: s.title, dir: s.dir, type: s.type,
+      id: s.id, title: s.title, dir: s.dir, type: s.type, host: s.host || "",
       startsAt: s.starts_at, duration: s.duration_min, capacity: s.capacity, meetUrl: s.meet_url,
       bookings: q.sessionBookings.all(s.id).map(x => x.name),
     }));
@@ -1206,7 +1206,7 @@ const routes = {
     const dur = Math.max(15, Math.min(240, Number(b.duration) || 60));
     const cap = Math.max(1, Math.min(50, Number(b.capacity) || (type === "live" ? 50 : 4)));
     const ins = q.insertSession.run(title, String(b.dir || "").slice(0, 60), type, startsAt, dur,
-      String(b.meetUrl || "").trim().slice(0, 300), cap, Date.now());
+      String(b.meetUrl || "").trim().slice(0, 300), cap, Date.now(), String(b.host || "").trim().slice(0, 80));
     send(res, 201, { ok: true, id: Number(ins.lastInsertRowid) });
   },
 

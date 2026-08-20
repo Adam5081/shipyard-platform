@@ -192,6 +192,10 @@ for (const [name, decl] of NEW_COLUMNS) {
 const mentorCols = new Set(db.prepare("PRAGMA table_info(mentors)").all().map(c => c.name));
 if (!mentorCols.has("role")) db.exec("ALTER TABLE mentors ADD COLUMN role TEXT NOT NULL DEFAULT 'mentor'");
 
+/* календарь: кто ведёт сессию (имя ментора/эксперта, свободный текст) */
+const sessionCols = new Set(db.prepare("PRAGMA table_info(sessions)").all().map(c => c.name));
+if (!sessionCols.has("host")) db.exec("ALTER TABLE sessions ADD COLUMN host TEXT NOT NULL DEFAULT ''");
+
 /* Инвайты: код выдаётся заявке при статусе «взяли», регистрация — только по коду. */
 const APP_COLUMNS = [
   ["invite_code",     "TEXT NOT NULL DEFAULT ''"],    // код приглашения (пустой — не выдан)

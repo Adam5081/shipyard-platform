@@ -735,16 +735,8 @@ async function go(name) {
   if (name !== "auth") history.replaceState(null, "", "#" + name);
   document.querySelectorAll(".side-link").forEach(b =>
     b.classList.toggle("active", b.dataset.view === name));
-  try {
-    if (API !== null && TOKEN) {
-      if (name === "demos" && !CACHE.demos) CACHE.demos = (await apiCall("/demos")).demos;
-      if (name === "league") CACHE.league = (await apiCall("/league")).rows;
-      if (FLOW_UI && (name === "flow" || name === "map")) CACHE.flow = (await apiCall("/flow")).rows;
-      if (LOTTERY_UI && name === "map" && !CACHE.lottery) CACHE.lottery = await apiCall("/lottery");
-      if (name === "experts") CACHE.sessions = await apiCall("/sessions");
-      if (name === "battles" && !CACHE.battles) CACHE.battles = await apiCall("/battles");
-    }
-  } catch (e) { toast(e.message); }
+  // новый раздел рисуется СРАЗУ (со скелетом/кэшем) — прежде здесь ждали сеть,
+  // и на время запроса висел контент предыдущего раздела
   render();
   // мягкий каскадный вход панелей — только при смене раздела, не на каждый клик
   view.classList.remove("view-anim");
@@ -753,6 +745,19 @@ async function go(name) {
   setTimeout(() => view.classList.remove("view-anim"), 700);
   document.getElementById("sidebar").classList.remove("open");
   window.scrollTo({ top: 0 });
+  // данные подтягиваются после и дорисовываются вторым проходом
+  try {
+    let fetched = false;
+    if (API !== null && TOKEN) {
+      if (name === "demos" && !CACHE.demos) { CACHE.demos = (await apiCall("/demos")).demos; fetched = true; }
+      if (name === "league") { CACHE.league = (await apiCall("/league")).rows; fetched = true; }
+      if (FLOW_UI && (name === "flow" || name === "map")) { CACHE.flow = (await apiCall("/flow")).rows; fetched = true; }
+      if (LOTTERY_UI && name === "map" && !CACHE.lottery) { CACHE.lottery = await apiCall("/lottery"); fetched = true; }
+      if (name === "experts") { CACHE.sessions = await apiCall("/sessions"); fetched = true; }
+      if (name === "battles" && !CACHE.battles) { CACHE.battles = await apiCall("/battles"); fetched = true; }
+    }
+    if (fetched && activeView === name) render();   // раздел мог смениться, пока грузили
+  } catch (e) { toast(e.message); }
 }
 
 document.querySelectorAll(".side-link").forEach(b =>
@@ -899,7 +904,7 @@ const VIEWS = {
         <span>⏳ ${timePct > 0 ? `Осталось <b>${timePct}%</b> времени потока` : "Время потока вышло"}</span>
       </div>
       <div class="map-stage" style="padding:0;overflow:hidden;border-radius:var(--radius-m)">
-        <iframe id="ascentFrame" src="index-game.html?intro=0&v=37" style="width:100%;height:430px;border:0;display:block" title="TAULAU ASCENT"></iframe>
+        <iframe id="ascentFrame" src="index-game.html?intro=0&v=38" style="width:100%;height:430px;border:0;display:block" title="TAULAU ASCENT"></iframe>
       </div>
       <div class="scene-dots">
         ${STATIONS.map((p, i) => `
@@ -1211,7 +1216,7 @@ const VIEWS = {
       ${SECURITY.map(g => `
         <div class="panel">
           <span class="sec-level-tag l${g.level}">Уровень ${g.level} · ${esc(g.tag)}</span>
-          ${g.level === 3 && S.tariff === "Solo" ? `<span class="status-chip wait" style="margin-left:8px">🔒 доступно на Pro / Partner — для КТ-4 не требуется</span>` : ""}
+          ${g.level === 3 && S.tariff === "Solo" ? `<span class="status-chip wait" style="margin-left:8px">🔒 доступно на Pro / Partner — для КТ-4 не требуется</span><a class="btn btn-primary btn-sm" href="index.html#pricing" target="_blank" rel="noopener" style="margin-left:10px;vertical-align:middle">Улучшить до Pro</a>` : ""}
           <h2>${esc(g.title)}</h2>
           <div style="margin-top:10px">
             ${g.items.map(i => `
@@ -1641,12 +1646,19 @@ const VIEWS = {
 /* календарь сессий: лайвы для всех, созвоны — по часам тарифа */
 function sessionsBlock() {
   const S9 = CACHE.sessions;
-  const fmtD = ts => new Date(ts).toLocaleString("ru-RU", { weekday: "short", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
-  const rows = (S9.list || []).map(s => `
+  const fmtT = ts => new Date(ts).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+  const fmtDay = ts => new Date(ts).toLocaleDateString("ru-RU", { weekday: "long", day: "numeric", month: "long" });
+  /* слоты сгруппированы по дням — читается как календарь */
+  let lastDay = "";
+  const rows = (S9.list || []).map(s => {
+    const day = fmtDay(s.startsAt);
+    const head = day !== lastDay ? `<p class="eyebrow" style="margin:14px 0 4px;text-transform:capitalize">${day}</p>` : "";
+    lastDay = day;
+    return `${head}
     <div class="task" style="align-items:center">
       <div style="flex:1;min-width:0">
-        <b>${s.type === "live" ? "🎥" : "👥"} ${esc(s.title)}</b>
-        <small style="display:block;color:var(--ink-3)">${fmtD(s.startsAt)} · ${s.duration} мин${s.dir ? " · " + esc(s.dir) : ""} ·
+        <b>${s.type === "live" ? "🎥" : "👥"} ${fmtT(s.startsAt)} · ${esc(s.title)}</b>
+        <small style="display:block;color:var(--ink-3)">${s.host ? "ведёт " + esc(s.host) + " · " : ""}${s.duration} мин${s.dir ? " · " + esc(s.dir) : ""} ·
           ${s.type === "live" ? "лайв-сессия, для всех" : `созвон · записано ${s.booked}/${s.capacity}`}</small>
         ${s.my && s.meetUrl ? `<small style="display:block"><a href="${esc(s.meetUrl)}" target="_blank" rel="noopener">Ссылка на Google Meet →</a></small>` : ""}
       </div>
@@ -1655,13 +1667,15 @@ function sessionsBlock() {
         : s.booked >= s.capacity
           ? `<span class="status-chip wait">мест нет</span>`
           : `<button class="btn btn-primary btn-sm" data-book-session="${s.id}">Записаться</button>`}
-    </div>`).join("");
+    </div>`;
+  }).join("");
   const used = Math.round((S9.usedMin || 0) / 6) / 10;
   const limit = S9.limitMin ? S9.limitMin / 60 : null;
   return `
     <div class="panel">
       <h2>Календарь сессий</h2>
       <p class="muted" style="margin-bottom:6px">Лайв-сессии открыты всем. Групповые созвоны с экспертами — по часам тарифа${limit ? `: использовано <b>${used} из ${limit} ч</b> на этой неделе` : " — на вашем тарифе без лимита"}.</p>
+      ${limit && used >= limit ? `<div class="notice" style="margin-bottom:10px"><b>Лимит часов на этой неделе исчерпан.</b> Часы обновятся в понедельник${S.tariff === "Solo" ? " — или расширьте лимит на тарифе выше" : ""}. ${S.tariff !== "Partner" ? `<a class="btn btn-primary btn-sm" href="index.html#pricing" target="_blank" rel="noopener" style="margin-left:6px">Улучшить тариф</a>` : ""}</div>` : ""}
       ${rows || `<p class="muted" style="padding:12px 0">Ближайших сессий пока нет. Расписание пополняет ментор потока — напишите ему в Telegram и предложите удобное время.</p>`}
     </div>`;
 }

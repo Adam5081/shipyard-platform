@@ -238,14 +238,13 @@ body.cyber .proj-card .p-tag { background: rgba(94, 106, 210, .15); color: #a7ae
 body.cyber .team-card .t-role { color: #8a8f98; text-transform: uppercase; font-size: 11px; letter-spacing: .08em; }
 
 /* ---------- лента «Как это работает» ---------- */
+/* полоса вкладок НЕ прилипает при скролле — требование ПМ от 20.08 */
 body.cyber .stats {
   background: #0B0C0E;
   border-top: 1px solid rgba(255, 255, 255, .07);
   border-bottom: 1px solid rgba(255, 255, 255, .07);
   gap: 1px;
-  position: sticky;
-  top: var(--nav-h);
-  z-index: 60;
+  position: static;
 }
 body.cyber button.stat {
   background: #101114;
@@ -266,10 +265,6 @@ body.cyber button.stat.active {
 body.cyber button.stat.active b { color: #fff; }
 body.cyber button.stat.active .stat-arrow { transform: rotate(45deg); color: #9aa5e8; }
 
-body.cyber .stats.stuck button.stat { padding: 13px 16px; }
-body.cyber .stats.stuck button.stat b { font-size: 14.5px; }
-body.cyber .stats.stuck button.stat span { display: none; }
-body.cyber .stats.stuck .stat-arrow { margin-top: 3px; font-size: 13px; }
 
 body.cyber .stat-panel,
 body.cyber .stat-panel.section-alt,

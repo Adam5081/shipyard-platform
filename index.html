@@ -6,12 +6,12 @@
 <title>Taulau - от идеи до продукта, который работает у клиента</title>
 <meta name="description" content="Программа для отраслевых экспертов: вы собираете продукт сами - с Claude Code, производственным пайплайном и экспертами отрасли рядом. Контрольные точки, безопасность, вывод в рабочую среду.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230071e3'/><path d='M27 34h46M50 34v32q0 13 13 13 7 0 10-6' stroke='white' stroke-width='11' fill='none' stroke-linecap='round'/></svg>">
-<link rel="stylesheet" href="assets/styles.css?v=37">
-<link rel="stylesheet" href="assets/theme-cyber.css?v=37">
+<link rel="stylesheet" href="assets/styles.css?v=38">
+<link rel="stylesheet" href="assets/theme-cyber.css?v=38">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="assets/config.js?v=37"></script>
+<script src="assets/config.js?v=38"></script>
 </head>
 <body class="cyber">
 
@@ -123,7 +123,7 @@
   </svg>
   </div>
   <div class="wrap">
-    <h1 class="display reveal">От идеи до рабочего продукта — <br><span class="gradient-text">без опыта в программировании.</span></h1>
+    <h1 class="display reveal">От идеи до рабочего продукта - <br><span class="gradient-text">без опыта в программировании</span></h1>
     <p class="sub reveal">Достаточно идеи и готовности дойти до запуска: код по вашим задачам пишет Claude Code, а эксперты сопровождают вас до результата.</p>
     <div class="hero-cta reveal">
       <a class="btn btn-primary btn-lg btn-breathe" href="#apply">Занять место в потоке</a>
@@ -140,7 +140,7 @@
 <section class="section section-alt" id="team" data-metric="team">
   <div class="wrap">
     <p class="eyebrow reveal">Кто мы</p>
-    <h2 class="headline reveal">Практики, а не лекторы.</h2>
+    <h2 class="headline reveal">Практики, а не лекторы</h2>
     <p class="sub reveal" style="margin-top:22px;max-width:740px">Мы сами выпускаем продукты этим пайплайном и закрываем в них те же участки, что будем закрывать в вашем проекте.</p>
     <div class="team">
       <div class="card team-card reveal">
@@ -172,11 +172,11 @@
   <div class="wrap">
     <p class="eyebrow reveal" style="color:#30b0c7">Платформа</p>
     <h2 class="headline reveal">Виден путь, а не список уроков.</h2>
-    <p class="sub reveal" style="margin-top:22px;max-width:700px">Кабинет показывает одну вещь: где вы на пути к работающему продукту. Персонаж, созданный из вашего фото, идёт по карте от станции к станции, забирая на каждой инструменты, чтобы ваш продукт приносил ценность. В конце пути - дверь MVP.</p>
+    <p class="sub reveal" style="margin-top:22px;max-width:700px">Кабинет показывает одну вещь: где вы на пути к работающему продукту. Персонаж, созданный из вашего фото, идёт по карте от станции к станции, забирая на каждой инструменты, чтобы ваш продукт приносил ценность. В конце пути - дверь MVP.</p>
 
     <div class="live-demo reveal">
       <div class="ld-frame">
-        <iframe id="ascentDemo" src="index-game.html?demo=1&amp;v=37" loading="lazy"
+        <iframe id="ascentDemo" src="index-game.html?demo=1&amp;v=38" loading="lazy"
           style="width:100%;height:560px;border:0;display:block" title="TAULAU ASCENT"></iframe>
       </div>
       <p class="ld-note">Это не видео - живая игра-восхождение из кабинета. Каждая станция программы - отметка высоты: персонаж-носильщик поднимается на гору Taulau, получая снаряжение у экспертов.</p>
@@ -608,7 +608,7 @@
   </div>
 </footer>
 
-<script src="assets/metrics.js?v=37" defer></script>
+<script src="assets/metrics.js?v=38" defer></script>
 <script>
   const io = new IntersectionObserver(entries => {
     entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
@@ -630,8 +630,6 @@
     statCur = key === statCur ? null : key;
     statBtns.forEach(b => b.classList.toggle('active', b.dataset.stat === statCur));
     statPanels.forEach(p => p.classList.toggle('open', p.dataset.panel === statCur));
-    // лента прилипает и сжимается, пока открыта панель - переключение без скролла наверх
-    document.querySelector('.stats').classList.toggle('stuck', statCur !== null);
     if (statCur && scroll && !wasOpen) {
       const s = document.querySelector('.stats');
       setTimeout(() => s.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
