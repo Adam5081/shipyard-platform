@@ -51,7 +51,13 @@
     cursor: pointer; transition: background .2s;
   }
   #skip:hover { background: rgba(30, 38, 50, .8); color: #fff; }
-  @media (max-width: 640px) { .hud { font-size: 10.5px; } .card { bottom: 6%; } }
+  @media (max-width: 640px) {
+    .hud { font-size: 10px; top: 10px; left: 12px; line-height: 1.7; }
+    .card { bottom: 5%; min-width: 0; width: calc(100% - 24px); max-width: none; padding: 11px 14px 10px; }
+    .card .c-title { font-size: 15px; }
+    .card .c-sub { font-size: 11.5px; }
+    #skip { right: 10px; bottom: 10px; padding: 7px 12px; }
+  }
 </style>
 </head>
 <body>
@@ -95,6 +101,7 @@ function resize() {
   W = window.innerWidth; H = window.innerHeight;
   cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  VK = Math.max(0.5, Math.min(1, H / 760));
   buildLayers();                    // статичные слои перерисовываются под новый размер
 }
 window.addEventListener("resize", resize);
@@ -116,7 +123,10 @@ let cam = WORLD_H + 400;                  // старт интро — над в
 let camTarget = cam;
 
 const w2sx = wy => trailX(wy) * W;
-const w2sy = wy => H * 0.62 + (cam - wy); // мир прокручивается: выше по миру — выше на экране
+/* вертикальный масштаб: на низких/узких экранах мир сжимается, чтобы станции,
+   герой и укрытия оставались в кадре, а не пустой склон */
+let VK = 1;
+const w2sy = wy => H * 0.62 + (cam - wy) * VK; // мир прокручивается: выше по миру — выше на экране
 
 /* высота в «метрах» для HUD */
 const meters = wy => Math.round(wy / WORLD_H * 3720);
@@ -149,7 +159,15 @@ window.TaulauAscent = {
   setProgress(stationIndex, checkpointsPassed) {
     progress.station = Math.max(0, Math.min(8, stationIndex | 0));
     progress.kts = Math.max(0, Math.min(5, checkpointsPassed | 0));
-    if (phase !== "intro") heroTargetWY = stationWY(progress.station);
+    if (phase === "intro") return;
+    const target = stationWY(progress.station);
+    reached = Math.max(reached, progress.station - 1);
+    hero.tools = Math.max(hero.tools, progress.station);
+    if (Math.abs(target - hero.wy) > 700) {          // далеко — телепорт, а не многоминутная прогулка
+      hero.wy = Math.max(40, target - 90);
+      cam = hero.wy + 120;
+    }
+    heroTargetWY = target;
   },
 };
 window.addEventListener("message", e => {
@@ -162,7 +180,9 @@ window.addEventListener("message", e => {
 
 const layers = [];
 function ridgeY(x, yBase, amp) {
-  return yBase - (Math.sin(x * 0.004) * 0.55 + Math.sin(x * 0.0113 + 2.1) * 0.3 + Math.sin(x * 0.027 + 5.2) * 0.15 + 1) * amp * 0.5;
+  const fx = Math.max(1, 900 / W);   // на узких экранах учащаем рельеф, чтобы были видны пики, а не одна пологая волна
+  const q = x * fx;
+  return yBase - (Math.sin(q * 0.004) * 0.55 + Math.sin(q * 0.0113 + 2.1) * 0.3 + Math.sin(q * 0.027 + 5.2) * 0.15 + 1) * amp * 0.5;
 }
 function ridge(c, yBase, amp, step, color, snowLine) {
   c.fillStyle = color;
@@ -269,7 +289,7 @@ function drawTrail() {
   ctx.lineWidth = 4;
   ctx.beginPath();
   let first = true;
-  for (let wy = Math.max(0, cam - H); wy <= Math.min(WORLD_H, cam + H); wy += 26) {
+  for (let wy = Math.max(0, cam - H / VK); wy <= Math.min(WORLD_H, cam + H / VK); wy += 26) {
     const x = w2sx(wy), y = w2sy(wy);
     if (first) { ctx.moveTo(x, y); first = false; } else ctx.lineTo(x, y);
   }
@@ -280,7 +300,7 @@ function drawTrail() {
   ctx.setLineDash([2, 7]);
   ctx.beginPath();
   first = true;
-  for (let wy = Math.max(0, cam - H); wy <= Math.min(hero.wy, cam + H); wy += 26) {
+  for (let wy = Math.max(0, cam - H / VK); wy <= Math.min(hero.wy, cam + H / VK); wy += 26) {
     const x = w2sx(wy), y = w2sy(wy);
     if (first) { ctx.moveTo(x, y); first = false; } else ctx.lineTo(x, y);
   }
@@ -293,7 +313,7 @@ function drawTrail() {
 function drawClimbAids() {
   for (let i = 0; i < 9; i++) {
     const wy = stationWY(i) + SEG * 0.45;          // середина перегона выше станции i
-    if (Math.abs(wy - cam) > H) continue;
+    if (Math.abs(wy - cam) > H / VK) continue;
     const unlocked = reached >= i;
     const x = w2sx(wy), y = w2sy(wy);
     ctx.save();
@@ -331,7 +351,7 @@ function drawStations() {
   for (let i = 0; i < 9; i++) {
     const st = STATIONS[i];
     const wy = stationWY(i);
-    if (Math.abs(wy - cam) > H) continue;
+    if (Math.abs(wy - cam) > H / VK) continue;
     const x = w2sx(wy), y = w2sy(wy);
     const passed = reached >= i;
     const side = i % 2 ? -1 : 1;
@@ -570,10 +590,13 @@ function showCard(st) {
 }
 
 function updateHUD() {
-  const st = Math.min(8, Math.max(0, reached < 0 ? 0 : reached));
+  /* в кабинете показываем станцию в работе и реальные КТ участника, в демо — достигнутую */
+  const cab = Q.get("intro") === "0";
+  const st = Math.min(8, Math.max(0, cab ? progress.station : (reached < 0 ? 0 : reached)));
+  const kt = cab ? progress.kts : Math.min(5, STATIONS.filter((s, i) => i <= reached && s.kt).length);
   hud.innerHTML = phase === "intro" ? "" : `
     <b>Станция ${Math.min(9, st + 1)} из 9</b><br>
-    <span class="alt">Высота ${meters(hero.wy)} м · КТ ${Math.min(5, STATIONS.filter((s, i) => i <= reached && s.kt).length)}/5</span>`;
+    <span class="alt">Высота ${meters(hero.wy)} м · КТ ${kt}/5</span>`;
 }
 
 /* ================= цикл ================= */

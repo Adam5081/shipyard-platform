@@ -988,6 +988,11 @@ pre.code .h { color: #7fd4e4; font-weight: 600; }
   border-bottom: 1px solid var(--bg-alt);
 }
 .legal-step:last-child { border-bottom: none; }
+@media (max-width: 640px) {
+  /* на узком экране кнопка уходит под текст, а не липнет к нему сбоку */
+  .legal-step { grid-template-columns: 44px 1fr; gap: 10px 14px; }
+  .legal-step > :last-child { grid-column: 2; justify-self: start; }
+}
 .legal-step .wk { font-size: 13px; font-weight: 700; color: var(--ink-3); }
 .legal-step b { display: block; font-size: 15.5px; }
 .legal-step small { color: var(--ink-2); font-size: 13.5px; }
