@@ -1,7 +1,7 @@
 /* ============================================================
-   Taulau — пиксельный движок карты пути
-   · PixelAvatar — фото участника → мультяшный пиксельный спрайт
-   · CityMap     — карта Астаны: персонаж идёт по станциям к двери MVP
+   Taulau - пиксельный движок карты пути
+   · PixelAvatar - фото участника → мультяшный пиксельный спрайт
+   · CityMap     - карта Астаны: персонаж идёт по станциям к двери MVP
    Никаких зависимостей, всё рисуется на canvas.
    ============================================================ */
 
@@ -122,7 +122,7 @@ function drawSprite(ctx, rows, x, y, px = 1) {
 }
 
 /* ---------------- фото → пиксельный персонаж ----------------
-   Уменьшать фото до 16 пикселей бессмысленно — получается пятно.
+   Уменьшать фото до 16 пикселей бессмысленно - получается пятно.
    Вместо этого из портрета вынимаются цвета (волосы, кожа, пиджак,
    рубашка, галстук) и собирается нарисованный спрайт-бюст: узнаётся
    и причёска, и костюм, и галстук. */
@@ -135,7 +135,7 @@ const PixelAvatar = {
     return this.build(this.samplePortrait(img));
   },
 
-  /* Замер портрета. Кадр не режем — фото целиком растягивается в сетку
+  /* Замер портрета. Кадр не режем - фото целиком растягивается в сетку
      100×100 (для замера цвета искажение неважно), затем ищется полоса лица,
      и все зоны отсчитываются от неё. Так работает и квадратное фото,
      и вертикальное, и снятое с разного расстояния. */
@@ -177,7 +177,7 @@ const PixelAvatar = {
     const skinLike = ([r, g, b]) =>
       r > 60 && r < 253 && r > g + 8 && r - b > 12 && r - b < 115 && Math.abs(g - b) < 75;
 
-    // самая длинная полоса строк, где кожи много, — лицо
+    // самая длинная полоса строк, где кожи много, - лицо
     const rows = [];
     for (let y = 0; y < N; y++) {
       let n = 0;
@@ -192,7 +192,7 @@ const PixelAvatar = {
         curStart = -1;
       }
     }
-    if (bestLen < 8) { top = 18; bot = 48; }          // лицо не нашлось — обычная портретная рамка
+    if (bestLen < 8) { top = 18; bot = 48; }          // лицо не нашлось - обычная портретная рамка
     const fh = Math.max(10, bot - top);
 
     // горизонтальный центр лица
@@ -230,7 +230,7 @@ const PixelAvatar = {
     return p;
   },
 
-  /* Без фото — тот же персонаж, но цвета собраны из имени. */
+  /* Без фото - тот же персонаж, но цвета собраны из имени. */
   generated(name) {
     const memo = this._memo || (this._memo = new Map());
     if (memo.has(name)) return memo.get(name);
@@ -273,7 +273,7 @@ const PixelAvatar = {
     R(4, 4, 2, 1, p.hair);
     R(10, 4, 2, 1, p.hair);
     R(6, 3, 2, 1, hairLite);
-    // глаза по одному пикселю: шире — читается как тёмная полоса на пол-лица
+    // глаза по одному пикселю: шире - читается как тёмная полоса на пол-лица
     R(6, 6, 1, 1, eye);
     R(9, 6, 1, 1, eye);
     // нос, рот, подбородок
@@ -333,7 +333,7 @@ function hash(s) {
 function readImage(file) {
   return new Promise((resolve, reject) => {
     if (!file || !/^image\//.test(file.type)) return reject(new Error("Нужен файл изображения"));
-    if (file.size > 12 * 1024 * 1024) return reject(new Error("Фото больше 12 МБ — возьмите поменьше"));
+    if (file.size > 12 * 1024 * 1024) return reject(new Error("Фото больше 12 МБ - возьмите поменьше"));
     const url = URL.createObjectURL(file);
     const img = new Image();
     img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
@@ -352,10 +352,10 @@ function avatarImage(dataUrl) {
     im.src = dataUrl;
     imgCache.set(dataUrl, im);
   }
-  return im.complete && im.naturalWidth ? im : null;   // догрузится — появится на следующем кадре
+  return im.complete && im.naturalWidth ? im : null;   // догрузится - появится на следующем кадре
 }
 
-/* Цвета костюма читаются прямо из спрайта — ноги и руки на карте
+/* Цвета костюма читаются прямо из спрайта - ноги и руки на карте
    должны быть того же пиджака, что и бюст. */
 const colorCache = new Map();
 function spriteColors(dataUrl) {
@@ -374,7 +374,7 @@ function spriteColors(dataUrl) {
   };
   let colors = null;
   try { colors = { jacket: at(2, 14), skin: at(5, 4), tie: at(7, 14), shirt: at(7, 13) }; }
-  catch { colors = null; }                    // холст «испачкан» — работаем на запасных цветах
+  catch { colors = null; }                    // холст «испачкан» - работаем на запасных цветах
   if (colors) colorCache.set(dataUrl, colors);
   return colors;
 }
@@ -391,7 +391,7 @@ const lumOf = css => {
 };
 
 /* сегмент конечности: рисуется от точки-сустава вниз под углом a
-   (0 — вертикально, положительный — вперёд по ходу), возвращает
+   (0 - вертикально, положительный - вперёд по ходу), возвращает
    координаты следующего сустава. На этом собраны ноги и руки персонажа. */
 function limbSeg(ctx, px, py, a, len, w, col) {
   ctx.save();
@@ -404,7 +404,7 @@ function limbSeg(ctx, px, py, a, len, w, col) {
 }
 
 /* ---------------- сцены станций ----------------
-   Каждый этап — отдельная карта: фон на весь кадр, время суток движется
+   Каждый этап - отдельная карта: фон на весь кадр, время суток движется
    от рассвета (станция 0) к ночи (станция 8), персонаж идёт по дороге
    слева направо по мере закрытия задач станции. */
 
@@ -416,7 +416,7 @@ const ROAD_H = 12;
 const SSTART = 26;         // старт персонажа
 const SFINISH = 300;       // финишный флаг
 
-/* дальние силуэты Астаны — общие кисти сцен */
+/* дальние силуэты Астаны - общие кисти сцен */
 
 function fTower(ctx, x, base, w, h, color, win) {
   ctx.fillStyle = color;
@@ -480,7 +480,7 @@ function fAkOrda(ctx, x, base) {
   ctx2.fillRect(x - 2, base - 28, 4, 3);
 }
 
-/* горные пики на горизонте — Taulau про восхождение, а не про город */
+/* горные пики на горизонте - Taulau про восхождение, а не про город */
 function fPeak(ctx, x, base, w, hgt, color, snow) {
   ctx.fillStyle = color;
   ctx.beginPath();
@@ -555,7 +555,7 @@ class StationScene {
     this.charX = SSTART;
     this.targetX = SSTART;
     this.vx = 0;             // скорость: персонаж разгоняется и тормозит, а не телепортируется
-    this.ph = 0;             // фаза шага, привязана к пройденному пути — ноги не «скользят»
+    this.ph = 0;             // фаза шага, привязана к пройденному пути - ноги не «скользят»
     this.lastStep = 0;       // для пыли из-под ног
     this.parts = [];         // частицы: пыль и искры чекпоинтов
     this.prevDone = null;
@@ -588,7 +588,7 @@ class StationScene {
 
   set(data) {
     const sceneChanged = data.index !== undefined && data.index !== this.data.index;
-    // закрыл задачу — у нового чекпоинта брызнут искры, когда персонаж дойдёт.
+    // закрыл задачу - у нового чекпоинта брызнут искры, когда персонаж дойдёт.
     // prevDone переживает пересоздание сцены: кабинет восстанавливает его снаружи.
     if (this.prevDone !== null && data.tasksDone !== undefined &&
         data.tasksDone > this.prevDone) this.sparkAt = data.tasksDone;
@@ -596,7 +596,7 @@ class StationScene {
     Object.assign(this.data, data);
     const p = Math.max(0, Math.min(1, this.data.progress || 0));
     this.targetX = SSTART + p * (SFINISH - 24 - SSTART);
-    // при смене сцены персонаж появляется на месте — бежит только внутри своей карты
+    // при смене сцены персонаж появляется на месте - бежит только внутри своей карты
     if (sceneChanged) { this.charX = this.targetX; this.vx = 0; this.parts = []; }
   }
 
@@ -611,7 +611,7 @@ class StationScene {
     if (Math.abs(d) < 0.5 && Math.abs(this.vx) < 0.08) { this.charX = this.targetX; this.vx = 0; }
     else this.charX += this.vx;
 
-    // фаза шага пропорциональна пути; на каждом касании ноги — облачко пыли
+    // фаза шага пропорциональна пути; на каждом касании ноги - облачко пыли
     const sp = Math.abs(this.vx);
     this.ph += sp * 0.3;
     if (sp > 0.5 && Math.floor(this.ph / Math.PI) !== this.lastStep) {
@@ -655,7 +655,7 @@ class StationScene {
     if (this.data.hero) this.hero();
     this.particles();
     if (this.data.locked) {
-      ctx.fillStyle = "rgba(240,244,248,.45)";      // станция впереди — сцена в дымке
+      ctx.fillStyle = "rgba(240,244,248,.45)";      // станция впереди - сцена в дымке
       ctx.fillRect(0, 0, SW, SH);
     }
   }
@@ -694,7 +694,7 @@ class StationScene {
       }
     }
 
-    // облака — медленный дрейф (ночью почти не видны)
+    // облака - медленный дрейф (ночью почти не видны)
     const clouds = [[30, 18], [120, 10], [200, 24], [255, 14]];
     ctx.fillStyle = sc.stars ? "rgba(255,255,255,.14)" : "rgba(255,255,255,.92)";
     clouds.forEach(([cx, cy], i) => {
@@ -724,7 +724,7 @@ class StationScene {
     const sc = this.scene();
     const i = this.data.index || 0;
 
-    // пологие холмы за лугом — низкие бугры чуть выше горизонта, город не закрывают
+    // пологие холмы за лугом - низкие бугры чуть выше горизонта, город не закрывают
     ctx.fillStyle = darken(sc.grass, 1.06);
     for (let h = 0; h < 4; h++) {
       const hx = 20 + h * 90 + Math.round(rnd(i, h + 31) * 40);
@@ -775,7 +775,7 @@ class StationScene {
     ctx.fillStyle = darken(sc.soil, 0.75);
     ctx.fillRect(0, ROAD + ROAD_H, SW, SH - ROAD - ROAD_H);
 
-    // фонари у дороги; ночью — тёплый свет
+    // фонари у дороги; ночью - тёплый свет
     const night = !!sc.stars;
     [86, 216].forEach(lx => {
       ctx.fillStyle = "#4a5058";
@@ -804,8 +804,8 @@ class StationScene {
     ctx.fillText(String(this.data.index ?? 0), 16, ROAD - 19);
   }
 
-  /* вехи вдоль дороги — по одной на задачу станции: видно, к чему идёшь.
-     Пройденные — зелёные с галочкой, следующая пульсирует и держит звезду. */
+  /* вехи вдоль дороги - по одной на задачу станции: видно, к чему идёшь.
+     Пройденные - зелёные с галочкой, следующая пульсирует и держит звезду. */
   checkpoints() {
     const ctx = this.ctx;
     const d = this.data;
@@ -859,7 +859,7 @@ class StationScene {
     const d = this.data;
     const base = ROAD + 2;
 
-    if (d.index === 8) {                             // дверь MVP — в рост персонажа
+    if (d.index === 8) {                             // дверь MVP - в рост персонажа
       const open = !!d.doorOpen;
       ctx.fillStyle = open ? "#2a7d46" : "#5b4632";
       ctx.fillRect(x - 16, base - 74, 32, 74);
@@ -891,11 +891,11 @@ class StationScene {
     ctx.font = "7px monospace";
     ctx.fillText(String((d.index ?? 0) + 1), x + 8, ROAD - 44);
 
-    // контрольная точка — шлагбаум поперёк дороги
+    // контрольная точка - шлагбаум поперёк дороги
     if (d.gate) {
       ctx.fillStyle = d.gatePassed ? P.g : "#e0a33a";
       ctx.fillRect(x + 26, ROAD - 30, 4, 32);
-      const arm = d.gatePassed ? -24 : 0;            // пройдена — стрела поднята
+      const arm = d.gatePassed ? -24 : 0;            // пройдена - стрела поднята
       ctx.fillRect(x + 26 - (d.gatePassed ? 3 : 24), ROAD - 30 + arm, d.gatePassed ? 6 : 27, 4);
       ctx.fillStyle = "rgba(0,0,0,.15)";
       ctx.fillRect(x + 26, ROAD + 2, 4, 1);
@@ -931,7 +931,7 @@ class StationScene {
   }
 
   /* Персонаж переднего плана: рост ~68px при сцене 150 (около половины
-     экрана — пропорции бойца, но не во весь кадр). Голова — из спрайта-
+     экрана - пропорции бойца, но не во весь кадр). Голова - из спрайта-
      аватара (узнаваемое лицо), костюм в его же цветах. Походка привязана
      к скорости: фаза шага растёт от пройденного пути, корпус наклоняется
      вперёд на ходу, ноги сгибаются, ступня приподнимается при переносе. */
@@ -952,8 +952,8 @@ class StationScene {
       { jacket: "rgb(63,71,86)", skin: "rgb(232,176,136)", shirt: "rgb(241,242,245)", tie: "rgb(140,43,58)" };
     const trousers = darken(col.jacket, 0.62);
     const jacketDark = darken(col.jacket, 0.8);
-    // цвета из фото бывают блёклыми и сливаются в один — гарантируем контраст:
-    // рубашка заметно отличается от пиджака, галстук — от рубашки
+    // цвета из фото бывают блёклыми и сливаются в один - гарантируем контраст:
+    // рубашка заметно отличается от пиджака, галстук - от рубашки
     let shirt = col.shirt || "rgb(241,242,245)";
     if (Math.abs(lumOf(shirt) - lumOf(col.jacket)) < 45)
       shirt = lumOf(col.jacket) > 150 ? "rgb(58,63,74)" : "rgb(241,242,245)";
@@ -1002,7 +1002,7 @@ class StationScene {
     ctx.fillRect(tx - 9, feet - 29, 18, 2);
 
     /* руки: плечо и предплечье на суставах, в противофазе со своей ногой,
-       локоть всегда подсогнут — стойка бойца, а не висящие палки */
+       локоть всегда подсогнут - стойка бойца, а не висящие палки */
     for (let armI = 0; armI < 2; armI++) {
       const p = this.ph + (armI ? Math.PI : 0) + Math.PI; // рука против своей ноги
       const shA = Math.sin(p) * 0.35 * walk * dir;

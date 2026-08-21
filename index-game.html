@@ -17,7 +17,7 @@
 <div id="stage"><canvas id="cv"></canvas></div>
 <script>
 "use strict";
-/* ============ TAULAU ASCENT — 2D-восхождение ============ */
+/* ============ TAULAU ASCENT - 2D-восхождение ============ */
 const W=960, WORLD_H=2600, PEAK={x:480,y:170}, BASE_Y=2450;
 const RED="#E63946", PALE="#9db4c7", MOSS="#5c7050";
 const FONT=(s,w)=> (w||600)+" "+s+"px 'Segoe UI',system-ui,sans-serif";
@@ -74,7 +74,7 @@ function posAt(d){
   return{x:lerp(a.x,b.x,t),y:lerp(a.y,b.y,t),m:b.m,ang:Math.atan2(b.y-a.y,b.x-a.x)};
 }
 const GATES=ST.map((s,i)=>s.kt?{i,d:stDist[i]+80,p:posAt(stDist[i]+80)}:null).filter(Boolean);
-/* павшие — те, кто не довёл проект */
+/* павшие - те, кто не довёл проект */
 const CORPSE_LABELS=["застрял на нейминге","бросил после КТ-1","переписывал ядро в 4-й раз","ждал вдохновения","сгорел на дедлайне"];
 const CORPSES=[[1,2],[2,3],[4,5],[5,6],[7,8]].map(([a,b],j)=>{
   const d=lerp(stDist[a],stDist[b],.45+rnd(j,61)*.2), p=posAt(d);
@@ -119,7 +119,7 @@ if(QS.get("intro")==="0"){S.mode="ext";S.state="play";S.target=0;S.cx=STARTP.x;S
 /* ---------- канвас ---------- */
 const cv=document.getElementById("cv"),c=cv.getContext("2d");
 let k=1,vw=W,vh=540,dpr=1,RW=innerWidth,RH=innerHeight;
-/* iOS Safari раздувает внутренний viewport iframe — innerWidth врёт; меряем сам <iframe> (same-origin) */
+/* iOS Safari раздувает внутренний viewport iframe - innerWidth врёт; меряем сам <iframe> (same-origin) */
 function vpsize(){
   try{const fe=window.frameElement;if(fe){const r=fe.getBoundingClientRect();if(r.width>10&&r.height>10)return[Math.round(r.width),Math.round(r.height)];}}catch(e){}
   return[innerWidth,innerHeight];
