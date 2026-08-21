@@ -255,8 +255,8 @@ function userRow(u) {
       </td>
       <td>${esc(u.email)}<div class="u-sub">${esc(u.tariff)}${u.dock ? ' · док ' + esc(u.dock) : ''}</div>
         ${!u.seed && ROLE?.role === 'admin' ? (u.approvedAt
-          ? '<div class="u-sub">✅ подтверждён</div>'
-          : ('<button class="btn btn-primary btn-sm" data-approve="' + u.id + '" style="margin-top:6px">Подтвердить (оплатил)</button>')) : ''}
+          ? ('<div class="u-sub">✅ подтверждён · <a href="#" data-revoke="' + u.id + '" style="color:#d70015">закрыть доступ</a></div>')
+          : ('<div class="u-sub" style="color:#8a5a00">⏳ доступ закрыт</div><button class="btn btn-primary btn-sm" data-approve="' + u.id + '" style="margin-top:6px">Подтвердить (оплатил)</button>')) : ''}
         ${u.prizes && u.prizes.length ? `<div class="u-sub">🎁 ${u.prizes.map(esc).join(' · ')}</div>` : ''}</td>
       <td>
         станция ${u.station + 1} из 9 · ур. ${u.level}
@@ -356,10 +356,16 @@ async function loadUsers() {
       toast('Сохранено'); load();
     } catch (e) { toast(e.message); }
   }));
-  // подтверждение участника после оплаты - открывает ему полный доступ
+  // подтверждение участника после оплаты - открывает ему полный доступ; отзыв закрывает
   list.querySelectorAll('[data-approve]').forEach(el => el.addEventListener('click', async () => {
     try { await call('/api/admin/approve-user', 'POST', { userId: Number(el.dataset.approve), approved: true }); toast('Участник подтверждён - доступ открыт'); load(); }
     catch (e) { toast(e.message); }
+  }));
+  list.querySelectorAll('[data-revoke]').forEach(el => el.addEventListener('click', async e => {
+    e.preventDefault();
+    if (!confirm('Закрыть участнику доступ? У него останутся только карта и станция 1, пока вы не подтвердите его снова.')) return;
+    try { await call('/api/admin/approve-user', 'POST', { userId: Number(el.dataset.revoke), approved: false }); toast('Доступ закрыт'); load(); }
+    catch (e2) { toast(e2.message); }
   }));
 
   list.querySelectorAll('[data-userdel]').forEach(el => el.addEventListener('click', async () => {
