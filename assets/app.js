@@ -432,6 +432,7 @@ function applyMe(d) {
 
 /* первая станция, ещё не открытая ментором; работать можно только на ней */
 function openStationIdx() {
+  if (GUEST()) return 0;               // гостю открыта только станция 1
   if (API === null) return Infinity;   // демо-режим — без гейта
   for (let i = 0; i < STATIONS.length; i++) if (S.ready[i] !== "approved") return i;
   return Infinity;
@@ -695,7 +696,14 @@ async function spinLottery(btn) {
 }
 
 function refreshChrome() {
-  document.getElementById("userName").textContent = S.name;
+  document.getElementById("userName").textContent = GUEST() ? "Гость" : S.name;
+  // гостю пункты меню помечены замком
+  document.querySelectorAll(".side-link").forEach(b => {
+    const lock = b.querySelector(".lock-ic");
+    if (GUEST() && b.dataset.view !== "map") {
+      if (!lock) b.insertAdjacentHTML("beforeend", '<span class="lock-ic" style="margin-left:auto;opacity:.6">🔒</span>');
+    } else if (lock) lock.remove();
+  });
   document.getElementById("userTariff").textContent =
     API !== null && !TOKEN ? "Не в системе"
       : `Тариф ${S.tariff}${S.dock ? " · " + DOCKS[S.dock].name : ""}`;
@@ -729,8 +737,32 @@ const DEMODAY_DATE_UI = false;  // дата и каунтдаун Demo Day → C
 const FLOW_VIEWS = new Set(["flow", "demos", "league", "battles"]);
 if (!FLOW_UI) { const g = document.getElementById("flowGroup"); if (g) g.remove(); }
 
+/* гостевой режим: платформа без входа — витрина. Открыта карта пути (станция 1 +
+   демо игры), остальное под замком до регистрации и одобрения командой */
+const GUEST = () => API !== null && !TOKEN;
+function showLockModal() {
+  const old = document.getElementById("lockModal");
+  if (old) old.remove();
+  const d = document.createElement("div");
+  d.id = "lockModal";
+  d.style.cssText = "position:fixed;inset:0;z-index:400;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(10,14,22,.55);backdrop-filter:blur(5px)";
+  d.innerHTML = `
+    <div style="background:var(--bg);border-radius:16px;max-width:440px;width:100%;padding:30px 28px;text-align:center;box-shadow:0 24px 80px rgba(0,0,0,.3)">
+      <div style="font-size:42px">🔒</div>
+      <h2 style="margin:10px 0 8px">Раздел под замком</h2>
+      <p class="muted" style="margin-bottom:18px">Полный доступ открывается после записи на поток и оплаты: зарегистрируйтесь - и когда команда одобрит вашу заявку, все разделы откроются.</p>
+      <button class="btn btn-primary" id="lockReg" style="width:100%">Записаться на поток</button>
+      <button class="btn btn-ghost btn-sm" id="lockClose" style="margin-top:10px">Продолжить просмотр</button>
+    </div>`;
+  document.body.appendChild(d);
+  d.addEventListener("click", e => { if (e.target === d) d.remove(); });
+  d.querySelector("#lockClose").addEventListener("click", () => d.remove());
+  d.querySelector("#lockReg").addEventListener("click", () => { d.remove(); S._reg = true; go("auth"); });
+}
+
 async function go(name) {
-  if (API !== null && !TOKEN) name = "auth";
+  // гость гуляет по карте и может открыть вход; остальные разделы — под замком
+  if (GUEST() && name !== "auth" && name !== "map") name = "map";
   // нулевой этап: без акцепта договора кабинет не открывается
   if (API !== null && TOKEN && S.contractAt === 0 && name !== "auth") name = "contract";
   if (!FLOW_UI && FLOW_VIEWS.has(name)) name = "map";
@@ -766,7 +798,10 @@ async function go(name) {
 }
 
 document.querySelectorAll(".side-link").forEach(b =>
-  b.addEventListener("click", () => go(b.dataset.view)));
+  b.addEventListener("click", () => {
+    if (GUEST() && b.dataset.view !== "map") return showLockModal();
+    go(b.dataset.view);
+  }));
 
 document.getElementById("navToggle").addEventListener("click", () =>
   document.getElementById("sidebar").classList.toggle("open"));
@@ -826,6 +861,7 @@ const VIEWS = {
           </form>
         </div>
         <p class="muted" style="text-align:center;font-size:13px">Пилотный поток №1 · права на ваш продукт всегда остаются у вас</p>
+        <p style="text-align:center;margin-top:10px"><a href="#" data-go="map" style="font-size:14px">← Посмотреть платформу гостем</a></p>
       </div>`;
   },
 
@@ -878,6 +914,12 @@ const VIEWS = {
           потока нет, участники рядом — из демонстрационного набора. Всё остальное работает по-настоящему:
           карта, миссии, инструменты, персонаж из вашего фото.
         </div>` : ""}
+      ${GUEST() ? `
+        <div class="notice">
+          <b>👋 Вы смотрите платформу как гость.</b> Открыты карта пути и станция 1 - так выглядит работа внутри потока. Полный доступ откроется после записи и одобрения командой.
+          <button class="btn btn-primary btn-sm" id="guestReg" style="margin-left:auto">Записаться на поток</button>
+          <button class="btn btn-ghost btn-sm" data-go="auth">Войти</button>
+        </div>` : ""}
       ${AVATAR_PHOTO_UI && !S.avatar ? `
         <div class="notice">
           <b>🎨 Соберите своего персонажа.</b> Загрузите фото — платформа соберёт пиксельного героя по его цветам,
@@ -909,7 +951,7 @@ const VIEWS = {
         <span>⏳ ${timePct > 0 ? `Осталось <b>${timePct}%</b> времени потока` : "Время потока вышло"}</span>
       </div>
       <div class="map-stage" style="padding:0;overflow:hidden;border-radius:var(--radius-m)">
-        <iframe id="ascentFrame" src="index-game.html?intro=0&v=41" style="width:100%;height:430px;border:0;display:block" title="TAULAU ASCENT"></iframe>
+        <iframe id="ascentFrame" src="index-game.html?${GUEST() ? "demo=1" : "intro=0"}&v=42" style="width:100%;height:430px;border:0;display:block" title="TAULAU ASCENT"></iframe>
       </div>
       <div class="scene-dots">
         ${STATIONS.map((p, i) => `
@@ -1831,6 +1873,7 @@ function mountMap() {
   const f = document.getElementById("ascentFrame");
   if (!f) return;
   const send = () => {
+    if (GUEST()) return;   // гостю крутится демо-восхождение, прогресс не шлём
     try {
       f.contentWindow.postMessage({
         type: "taulau-progress",
@@ -1885,9 +1928,15 @@ function bind() {
     el.addEventListener("click", e => { e.preventDefault(); go(el.dataset.go); }));
 
   view.querySelectorAll("[data-station]").forEach(b =>
-    b.addEventListener("click", () => { S.selStation = Number(b.dataset.station); save(); render(); }));
+    b.addEventListener("click", () => {
+      if (GUEST() && Number(b.dataset.station) > 0) return showLockModal();
+      S.selStation = Number(b.dataset.station); save(); render();
+    }));
 
   /* вход / регистрация */
+  const guestReg = view.querySelector("#guestReg");
+  if (guestReg) guestReg.addEventListener("click", () => { S._reg = true; go("auth"); });
+
   view.querySelectorAll("[data-authtab]").forEach(b =>
     b.addEventListener("click", () => { S._reg = b.dataset.authtab === "reg"; render(); }));
 
@@ -1938,6 +1987,7 @@ function bind() {
   /* сдача станции ментору */
   const srBtn = view.querySelector("[data-submit-station]");
   if (srBtn) srBtn.addEventListener("click", async () => {
+    if (GUEST()) return showLockModal();
     try {
       const r = await apiCall("/station/submit", "POST", {
         station: Number(srBtn.dataset.submitStation),
@@ -2039,6 +2089,7 @@ function bind() {
   /* задачи станций */
   view.querySelectorAll("[data-task]").forEach(cb =>
     cb.addEventListener("change", async () => {
+      if (GUEST()) { cb.checked = false; return showLockModal(); }
       const id = cb.dataset.task;
       const wasLvl = level().n;
       const wasTools = tools().length;
