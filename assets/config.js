@@ -14,6 +14,11 @@
 
 window.SHIPYARD_REMOTE_API = "https://api.taulau.com";
 window.SHIPYARD_CONTACT = "";
+
+/* Google Analytics 4: Measurement ID вида "G-XXXXXXXXXX".
+   Пусто — GA не подключается. Лендинг грузит gtag.js и шлёт туда
+   те же события, что и своя аналитика (просмотры блоков, клики). */
+window.SHIPYARD_GA_ID = "";
 window.SHIPYARD_FLOW_UI = false;
 window.SHIPYARD_LOTTERY_UI = false;  // лотерея — этап 2 геймификации
 window.SHIPYARD_POINTS_UI = false;   // баллы на станциях — пока не считаем

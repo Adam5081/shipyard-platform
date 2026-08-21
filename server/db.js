@@ -178,6 +178,7 @@ const NEW_COLUMNS = [
   ["gh_cache",   "TEXT NOT NULL DEFAULT ''"],      // кэш ответа GitHub (JSON)
   ["gh_at",      "INTEGER NOT NULL DEFAULT 0"],    // время последней синхронизации
   ["battle_pts",  "INTEGER NOT NULL DEFAULT 0"],   // очки лиги, заработанные в баттлах
+  ["phone",      "TEXT NOT NULL DEFAULT ''"],      // номер телефона (профиль)
   ["bonus_spins", "INTEGER NOT NULL DEFAULT 0"],   // «счастливые билеты» лотереи (макс. 2 за поток)
   ["mentor_id",   "INTEGER NOT NULL DEFAULT 0"],   // ответственный ментор (0 — не назначен)
   ["contract_accepted_at", "INTEGER NOT NULL DEFAULT 0"],  // акцепт упрощённого договора (нулевой этап)

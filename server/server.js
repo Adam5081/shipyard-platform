@@ -65,7 +65,7 @@ const q = {
   userByEmail: db.prepare("SELECT * FROM users WHERE email = ?"),
   insertUser: db.prepare("INSERT INTO users (email, pass_hash, salt, name, project, tariff, created_at) VALUES (?,?,?,?,?,?,?)"),
   updateUser: db.prepare(`
-    UPDATE users SET name = ?, project = ?, tariff = ?, about = ?, link = ?, repo = ?, is_public = ?
+    UPDATE users SET name = ?, project = ?, tariff = ?, about = ?, link = ?, repo = ?, is_public = ?, phone = ?
     WHERE id = ?`),
   updateAvatar: db.prepare("UPDATE users SET avatar = ? WHERE id = ?"),
   updateDock: db.prepare("UPDATE users SET dock = ?, complexity = ? WHERE id = ?"),
@@ -315,7 +315,7 @@ function meState(u) {
   return {
     user: {
       id: u.id, email: u.email, name: u.name, project: u.project,
-      tariff: normTariff(u.tariff), avatar: u.avatar || "", about: u.about || "",
+      tariff: normTariff(u.tariff), avatar: u.avatar || "", about: u.about || "", phone: u.phone || "",
       link: u.link || "", repo: u.repo || "", isPublic: !!u.is_public,
       dock: u.dock || "", complexity: u.complexity || 0,
       startDate: u.created_at,
@@ -555,7 +555,8 @@ const routes = {
     if (repoRaw && !REPO_RE.test(repoRaw)) return err(res, 400, "Репозиторий указывается как owner/name");
     const repo = repoRaw ? repoRaw.replace(REPO_RE, "$1/$2") : "";
     const isPublic = b.isPublic === undefined ? u.is_public : (b.isPublic ? 1 : 0);
-    q.updateUser.run(name, project, tariff, about, link, repo, isPublic, u.id);
+    const phone = String(b.phone ?? u.phone ?? "").trim().slice(0, 40);
+    q.updateUser.run(name, project, tariff, about, link, repo, isPublic, phone, u.id);
     send(res, 200, meState(q.userById.get(u.id)));
   },
 
@@ -649,7 +650,7 @@ const routes = {
     const week = Math.max(0, Math.min(8, Number(b.week) || 0));
     const r = q.addDemo.run(u.id, week, text, link, Date.now());
     // ссылка из демо заодно становится публичной ссылкой продукта
-    if (link && !u.link) q.updateUser.run(u.name, u.project, u.tariff, u.about, link, u.repo, u.is_public, u.id);
+    if (link && !u.link) q.updateUser.run(u.name, u.project, u.tariff, u.about, link, u.repo, u.is_public, u.phone || "", u.id);
     send(res, 201, { id: Number(r.lastInsertRowid), ...userStats(q.userById.get(u.id)) });
   },
 
@@ -728,7 +729,7 @@ const routes = {
     try { stats = await githubStats(repoRaw); }
     catch (e) { return err(res, 502, e.message || "Не удалось связаться с GitHub"); }
     q.updateGh.run(JSON.stringify(stats), Date.now(), u.id);
-    if (stats.repo !== u.repo) q.updateUser.run(u.name, u.project, u.tariff, u.about, u.link, stats.repo, u.is_public, u.id);
+    if (stats.repo !== u.repo) q.updateUser.run(u.name, u.project, u.tariff, u.about, u.link, stats.repo, u.is_public, u.phone || "", u.id);
     send(res, 200, { github: stats, cached: false });
   },
 

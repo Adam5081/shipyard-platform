@@ -409,6 +409,7 @@ function applyMe(d) {
   S.project = u.project;
   S.tariff = u.tariff;
   S.email = u.email;
+  S.phone = u.phone || "";
   S.avatar = u.avatar || "";
   S.about = u.about || "";
   S.link = u.link || "";
@@ -721,6 +722,10 @@ const FLOW_UI = window.SHIPYARD_FLOW_UI === true;
 /* лотерея и баллы скрыты до второго этапа геймификации (код не удаляем) */
 const LOTTERY_UI = window.SHIPYARD_LOTTERY_UI === true;
 const POINTS_UI = window.SHIPYARD_POINTS_UI === true;
+/* временно скрыто по решению ПМ 21.08 — вернуть переключением флага */
+const SCREENING_UI = false;     // скрининг сложности (баннер, кнопка в профиле)
+const AVATAR_PHOTO_UI = false;  // персонаж из фото — неактуален из-за игровой механики
+const DEMODAY_DATE_UI = false;  // дата и каунтдаун Demo Day → Coming soon
 const FLOW_VIEWS = new Set(["flow", "demos", "league", "battles"]);
 if (!FLOW_UI) { const g = document.getElementById("flowGroup"); if (g) g.remove(); }
 
@@ -753,7 +758,7 @@ async function go(name) {
       if (name === "league") { CACHE.league = (await apiCall("/league")).rows; fetched = true; }
       if (FLOW_UI && (name === "flow" || name === "map")) { CACHE.flow = (await apiCall("/flow")).rows; fetched = true; }
       if (LOTTERY_UI && name === "map" && !CACHE.lottery) { CACHE.lottery = await apiCall("/lottery"); fetched = true; }
-      if (name === "experts") { CACHE.sessions = await apiCall("/sessions"); fetched = true; }
+      if (name === "experts" || name === "calendar") { CACHE.sessions = await apiCall("/sessions"); fetched = true; }
       if (name === "battles" && !CACHE.battles) { CACHE.battles = await apiCall("/battles"); fetched = true; }
     }
     if (fetched && activeView === name) render();   // раздел мог смениться, пока грузили
@@ -873,13 +878,13 @@ const VIEWS = {
           потока нет, участники рядом — из демонстрационного набора. Всё остальное работает по-настоящему:
           карта, миссии, инструменты, персонаж из вашего фото.
         </div>` : ""}
-      ${!S.avatar ? `
+      ${AVATAR_PHOTO_UI && !S.avatar ? `
         <div class="notice">
           <b>🎨 Соберите своего персонажа.</b> Загрузите фото — платформа соберёт пиксельного героя по его цветам,
           — или соберите вручную в конструкторе. Персонаж будет идти по картам станций и радоваться на праздниках.
           <button class="btn btn-primary btn-sm" data-go="profile" style="margin-left:auto">Создать персонажа</button>
         </div>` : ""}
-      ${!S.dock ? `
+      ${SCREENING_UI && !S.dock ? `
         <div class="notice">
           <b>Пройдите скрининг сложности проекта.</b> Он определяет ваш док — группу проектов схожей
           сложности. Сравнивать сложный проект с простым по скорости нечестно, поэтому лига считается внутри дока.
@@ -895,7 +900,7 @@ const VIEWS = {
           <div><b>${lvl.emoji} ${lvl.name}</b><span>уровень ${lvl.n} из 8</span></div>
           ${POINTS_UI ? `<div><b>${fmt(points())}</b><span>очков</span></div>` : ""}
           <div><b>${got.length}/9</b><span>в рюкзаке</span></div>
-          <div><b>${daysLeft} дн.</b><span>до защиты</span></div>
+          ${DEMODAY_DATE_UI ? `<div><b>${daysLeft} дн.</b><span>до защиты</span></div>` : `<div><b>Coming soon</b><span>Demo Day</span></div>`}
         </div>
       </div>
 
@@ -904,7 +909,7 @@ const VIEWS = {
         <span>⏳ ${timePct > 0 ? `Осталось <b>${timePct}%</b> времени потока` : "Время потока вышло"}</span>
       </div>
       <div class="map-stage" style="padding:0;overflow:hidden;border-radius:var(--radius-m)">
-        <iframe id="ascentFrame" src="index-game.html?intro=0&v=39" style="width:100%;height:430px;border:0;display:block" title="TAULAU ASCENT"></iframe>
+        <iframe id="ascentFrame" src="index-game.html?intro=0&v=40" style="width:100%;height:430px;border:0;display:block" title="TAULAU ASCENT"></iframe>
       </div>
       <div class="scene-dots">
         ${STATIONS.map((p, i) => `
@@ -1321,6 +1326,32 @@ const VIEWS = {
       ${body}`;
   },
 
+  /* ---- календарь: все сессии и мои записи ---- */
+  calendar() {
+    const S9 = API !== null ? CACHE.sessions : null;
+    const mine = S9 ? (S9.list || []).filter(s => s.my) : [];
+    const fmtD = ts => new Date(ts).toLocaleString("ru-RU", { weekday: "short", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
+    return `
+      <div class="page-head">
+        <h1>Календарь</h1>
+        <p>Расписание лайв-сессий и групповых созвонов с экспертами: время, тема, кто ведёт. Лайвы открыты всем, созвоны — по часам тарифа.</p>
+      </div>
+      ${mine.length ? `
+      <div class="panel">
+        <h2>Мои записи</h2>
+        ${mine.map(s => `
+          <div class="task" style="align-items:center">
+            <div style="flex:1;min-width:0">
+              <b>${s.type === "live" ? "🎥" : "👥"} ${esc(s.title)}</b>
+              <small style="display:block;color:var(--ink-3)">${fmtD(s.startsAt)}${s.host ? " · ведёт " + esc(s.host) : ""}</small>
+              ${s.meetUrl ? `<small style="display:block"><a href="${esc(s.meetUrl)}" target="_blank" rel="noopener">Ссылка на Google Meet →</a></small>` : ""}
+            </div>
+            <button class="btn btn-ghost btn-sm" data-unbook="${s.id}">Отписаться</button>
+          </div>`).join("")}
+      </div>` : ""}
+      ${S9 ? sessionsBlock() : `<div class="panel"><p class="muted">Календарь загружается…</p></div>`}`;
+  },
+
   /* ---- сервисный пул ---- */
   experts() {
     const hours = S.tariff === "Solo" ? "4 ч/нед" : S.tariff === "Pro" ? "6 ч/нед" : "без лимита";
@@ -1432,11 +1463,11 @@ const VIEWS = {
         <h1>Demo Day</h1>
         <p>Разбор, сессия вопросов и обратная связь каждому. В зале — эксперты и, при необходимости, внешние люди из вашей индустрии. Оценка по осям: проблема, решение, результат, план развития.</p>
       </div>
-      <div class="dd-count">
+      ${DEMODAY_DATE_UI ? `<div class="dd-count">
         <div class="dd-unit"><b>${days}</b><span>дней</span></div>
         <div class="dd-unit"><b>${hours}</b><span>часов</span></div>
         <div class="dd-unit"><b>${dd.toLocaleDateString("ru-RU", { day: "numeric", month: "long" })}</b><span>${S.demoday && S.demoday.date ? "ближайший Demo Day" : "дата защиты"}</span></div>
-      </div>
+      </div>` : `<div class="dd-count"><div class="dd-unit"><b>Coming soon</b><span>дата объявится позже</span></div></div>`}
 
       ${API !== null && S.demoday ? `
         <div class="panel">
@@ -1524,19 +1555,19 @@ const VIEWS = {
     return `
       <div class="page-head">
         <h1>Профиль основателя</h1>
-        <p>Аватар, проект и настройки видимости. Аватар превращается в вашего персонажа на карте пути.</p>
+        <p>Личные данные, проект и настройки видимости.</p>
       </div>
 
       <div class="panel-row cols-2">
         <div class="panel">
           <h2>Персонаж</h2>
-          <p class="muted" style="margin-bottom:14px">Загрузите фото — платформа снимет с него цвета (причёска, кожа, костюм, галстук) и соберёт пиксельного персонажа. Само фото никуда не отправляется: обработка идёт в браузере, на сервер уходит только спрайт 16×16.</p>
+          <p class="muted" style="margin-bottom:14px">Пиксельный аватар показывается в вашем профиле и списках потока. Соберите его в конструкторе или сгенерируйте случайного.</p>
           <div class="avatar-editor">
             <div class="avatar-preview"><img id="avPreview" src="${myAvatar()}" alt=""></div>
             <div class="avatar-actions">
-              <label class="btn btn-primary btn-sm">
+              ${AVATAR_PHOTO_UI ? `<label class="btn btn-primary btn-sm">
                 Загрузить фото<input type="file" id="avFile" accept="image/*" hidden>
-              </label>
+              </label>` : ""}
               <button class="btn btn-ghost btn-sm" id="avGen">Случайный</button>
               ${S.avatar ? `<button class="btn btn-ghost btn-sm" id="avClear">Убрать</button>` : ""}
             </div>
@@ -1566,21 +1597,21 @@ const VIEWS = {
             </div>
           </div>
           <div class="bar"><i style="width:${lvl.n / 8 * 100}%"></i></div>
-          <div class="divider"></div>
-          <p class="muted"><b style="color:var(--ink)">${fmt(points())}</b> очков · ${S.dock ? esc(DOCKS[S.dock].name) + " · сложность " + S.complexity : "док не определён"}
-            </p>
-          <button class="btn btn-primary btn-sm" data-go="screening" style="margin-top:10px">${S.dock ? "Пересчитать скрининг" : "Пройти скрининг сложности"}</button>
+          ${POINTS_UI || SCREENING_UI ? `<div class="divider"></div>` : ""}
+          ${POINTS_UI ? `<p class="muted"><b style="color:var(--ink)">${fmt(points())}</b> очков${SCREENING_UI ? " · " + (S.dock ? esc(DOCKS[S.dock].name) + " · сложность " + S.complexity : "док не определён") : ""}</p>` : ""}
+          ${SCREENING_UI ? `<button class="btn btn-primary btn-sm" data-go="screening" style="margin-top:10px">${S.dock ? "Пересчитать скрининг" : "Пройти скрининг сложности"}</button>` : ""}
           ${API === null ? `<div class="divider"></div><button class="btn btn-ghost btn-sm" id="resetState">Сбросить прогресс (демо)</button>` : ""}
         </div>
       </div>
 
       <div class="panel">
         <h2>Проект</h2>
-        ${S.email ? `<p class="muted" style="margin-top:4px">${esc(S.email)}</p>` : ""}
         <form id="profileForm" style="margin-top:12px">
           <div class="panel-row cols-2" style="margin-bottom:0">
             <div>
-              <div class="field"><label>Имя</label><input id="pfName" value="${esc(S.name)}"></div>
+              <div class="field"><label>Имя и фамилия</label><input id="pfName" value="${esc(S.name)}"></div>
+              <div class="field"><label>E-mail</label><input value="${esc(S.email || "")}" disabled title="Почта — логин аккаунта, для изменения напишите нам"></div>
+              <div class="field"><label>Номер телефона</label><input id="pfPhone" value="${esc(S.phone || "")}" placeholder="+7 …"></div>
               <div class="field"><label>Название проекта</label><input id="pfProject" value="${esc(S.project)}"></div>
               <div class="field"><label>Тариф</label>
                 <input value="${esc(S.tariff)}" disabled title="Тариф закреплён в договоре — для изменения напишите нам">
@@ -2249,6 +2280,7 @@ function bind() {
     e.preventDefault();
     const patch = {
       name: view.querySelector("#pfName").value.trim() || S.name,
+      phone: view.querySelector("#pfPhone").value.trim(),
       project: view.querySelector("#pfProject").value.trim() || S.project,
       about: view.querySelector("#pfAbout").value.trim(),
       link: view.querySelector("#pfLink").value.trim(),

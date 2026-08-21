@@ -6,8 +6,8 @@
 <meta name="robots" content="noindex">
 <title>Taulau — админка</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230071e3'/><path d='M27 34h46M50 34v32q0 13 13 13 7 0 10-6' stroke='white' stroke-width='11' fill='none' stroke-linecap='round'/></svg>">
-<link rel="stylesheet" href="assets/styles.css?v=39">
-<script src="assets/config.js?v=39"></script>
+<link rel="stylesheet" href="assets/styles.css?v=40">
+<script src="assets/config.js?v=40"></script>
 <style>
   .adm { max-width: 1000px; margin: 0 auto; padding: 40px 24px 80px; }
   .adm-head { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin-bottom: 18px; }
@@ -123,7 +123,7 @@ async function call(path, method = 'GET', body) {
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   const data = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(data.error || 'Ошибка сервера');
+  if (!r.ok) { const err = new Error(data.error || 'Ошибка сервера'); err.status = r.status; throw err; }
   return data;
 }
 
@@ -640,7 +640,16 @@ async function loadMetrics() {
   }).join('');
   const clickRows = (d.clicks || []).map(c =>
     `<tr><td>${c.label.replace(/</g, '&lt;')}</td><td style="text-align:right"><b>${c.n}</b></td></tr>`).join('');
+  const gaId = String(window.SHIPYARD_GA_ID || '').trim();
   list.innerHTML = `
+    ${gaId ? `
+    <div class="app-card" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+      <div style="flex:1;min-width:220px"><b>Google Analytics подключён</b>
+        <div class="u-sub">Лендинг шлёт в GA заходы, просмотры блоков и клики (property ${esc(gaId)})</div></div>
+      <a class="btn btn-primary btn-sm" href="https://analytics.google.com/" target="_blank" rel="noopener">Открыть Google Analytics</a>
+    </div>` : `
+    <div class="app-card"><b>Google Analytics не подключён</b>
+      <div class="u-sub">Чтобы включить: создайте ресурс GA4 на analytics.google.com, скопируйте Measurement ID (G-…) и впишите его в assets/config.js → SHIPYARD_GA_ID. После этого лендинг начнёт слать события в GA автоматически.</div></div>`}
     <div class="app-card"><h3 style="margin-bottom:12px">Доскроллы: сколько заходов увидело каждый блок</h3>
       <table style="width:100%;border-collapse:collapse;font-size:14px" class="m-table"><tbody>${viewRows}</tbody></table>
       <p style="color:var(--ink-3);font-size:13px;margin-top:10px">Блок засчитан, когда виден на 40% экрана. Если процент резко падает — до блока не доходят или он не цепляет.</p>
@@ -671,14 +680,21 @@ async function load() {
     gate.hidden = true;
     tabsEl.hidden = false;
   } catch (e) {
-    gate.hidden = false;
-    tabsEl.hidden = true;
-    list.innerHTML = '';
-    countEl.textContent = '';
-    gateErr.textContent = e.message;
-    KEY = '';
-    ROLE = null;
-    sessionStorage.removeItem('shipyard_admin_key');
+    // на форму ключа выкидываем только при отказе в доступе — сетевые и серверные
+    // ошибки не должны сбрасывать сессию (вкладка просто показывает ошибку)
+    if (e.status === 401 || !ROLE) {
+      gate.hidden = false;
+      tabsEl.hidden = true;
+      list.innerHTML = '';
+      countEl.textContent = '';
+      gateErr.textContent = e.message;
+      KEY = '';
+      ROLE = null;
+      sessionStorage.removeItem('shipyard_admin_key');
+    } else {
+      list.innerHTML = '<p class="empty">Не удалось загрузить: ' + esc(e.message) + ' — попробуйте обновить страницу.</p>';
+      toast(e.message);
+    }
   }
 }
 

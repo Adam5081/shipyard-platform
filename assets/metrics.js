@@ -9,6 +9,24 @@
 (() => {
 "use strict";
 
+/* Google Analytics 4: подключается, только если в config.js задан SHIPYARD_GA_ID.
+   Наши события (просмотры блоков, клики) дублируются в GA как кастомные. */
+const GA = String(window.SHIPYARD_GA_ID || "").trim();
+if (GA) {
+  const s = document.createElement("script");
+  s.async = true;
+  s.src = "https://www.googletagmanager.com/gtag/js?id=" + encodeURIComponent(GA);
+  document.head.appendChild(s);
+  window.dataLayer = window.dataLayer || [];
+  window.gtag = function () { window.dataLayer.push(arguments); };
+  gtag("js", new Date());
+  gtag("config", GA);
+}
+const gaEvent = (event, label) => {
+  if (GA && typeof window.gtag === "function")
+    try { window.gtag("event", event === "view" ? "section_view" : event === "click" ? "cta_click" : "page_view_custom", { label }); } catch {}
+};
+
 const API = (() => {
   const r = window.SHIPYARD_REMOTE_API;
   if (r) return String(r).replace(/\/$/, "");
@@ -32,6 +50,7 @@ function flush() {
 }
 
 function push(event, label) {
+  gaEvent(event, String(label || "").slice(0, 90));
   Q.push({ e: event, l: String(label || "").slice(0, 90) });
   clearTimeout(flushTimer);
   if (Q.length >= 12) flush();
