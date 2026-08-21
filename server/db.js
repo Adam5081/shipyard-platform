@@ -136,6 +136,17 @@ db.exec(`
     approved_at  INTEGER NOT NULL DEFAULT 0
   );
 
+  /* восстановление пароля: одноразовая ссылка с коротким сроком жизни.
+     Храним только хэш токена - утечка базы не даёт войти по ссылке. */
+  CREATE TABLE IF NOT EXISTS password_resets (
+    token_hash TEXT PRIMARY KEY,
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at INTEGER NOT NULL,
+    expires_at INTEGER NOT NULL,
+    used_at    INTEGER NOT NULL DEFAULT 0
+  );
+  CREATE INDEX IF NOT EXISTS idx_reset_user ON password_resets (user_id);
+
   /* настройки программы (дата Demo Day и т.п.) */
   CREATE TABLE IF NOT EXISTS settings (
     key   TEXT PRIMARY KEY,
@@ -179,6 +190,7 @@ const NEW_COLUMNS = [
   ["gh_at",      "INTEGER NOT NULL DEFAULT 0"],    // время последней синхронизации
   ["battle_pts",  "INTEGER NOT NULL DEFAULT 0"],   // очки лиги, заработанные в баттлах
   ["phone",      "TEXT NOT NULL DEFAULT ''"],      // номер телефона (профиль)
+  ["pwd_changed_at", "INTEGER NOT NULL DEFAULT 0"], // смена пароля закрывает старые сессии
   ["bonus_spins", "INTEGER NOT NULL DEFAULT 0"],   // «счастливые билеты» лотереи (макс. 2 за поток)
   ["mentor_id",   "INTEGER NOT NULL DEFAULT 0"],   // ответственный ментор (0 — не назначен)
   ["contract_accepted_at", "INTEGER NOT NULL DEFAULT 0"],  // акцепт упрощённого договора (нулевой этап)

@@ -724,6 +724,8 @@ let activeView = "map";
 
 /* ссылка-приглашение: app.html#reg=TAU-XXXXXX сразу открывает регистрацию с кодом */
 const REG_CODE = (decodeURIComponent(location.hash || "").match(/^#reg=([A-Za-z0-9-]{4,})$/i) || [])[1] || "";
+/* ссылка из письма: #reset=<токен> открывает форму нового пароля */
+const RESET_TOKEN = (location.hash.match(/^#reset=([A-Za-z0-9_-]{20,})$/) || [])[1] || "";
 
 /* Социальные разделы потока: скрыты, пока в config.js SHIPYARD_FLOW_UI не true.
    Прячем и пункты меню, и прямые ссылки #flow/#league - редирект на карту. */
@@ -770,6 +772,7 @@ function showLockModal() {
 
 async function go(name) {
   // гость и неподтверждённый участник гуляют по карте; остальные разделы - под замком
+  if (name === "reset") { activeView = name; render(); window.scrollTo({ top: 0 }); return; }
   if (LOCKED() && name !== "auth" && name !== "map") name = "map";
   // нулевой этап: без акцепта договора кабинет не открывается (после подтверждения)
   if (API !== null && TOKEN && !PENDING() && S.contractAt === 0 && name !== "auth") name = "contract";
@@ -834,6 +837,43 @@ function flowRows() {
 
 const VIEWS = {
 
+  /* ---- восстановление пароля: запрос письма и установка нового ---- */
+  reset() {
+    const box = inner => `
+      <div style="max-width:440px;margin:8vh auto 0">
+        <div style="text-align:center;margin-bottom:26px">
+          <div style="margin:0 auto;width:52px"><svg viewBox="0 0 100 100" width="52" height="52"><rect width="100" height="100" rx="22" fill="#0071e3"/><path d="M27 34h46M50 34v32q0 13 13 13 7 0 10-6" stroke="#fff" stroke-width="11" fill="none" stroke-linecap="round"/></svg></div>
+          <h1 style="font-size:28px;font-weight:700;letter-spacing:-.02em;margin-top:8px">TAULAU</h1>
+        </div>
+        <div class="panel">${inner}</div>
+        <p style="text-align:center;margin-top:14px"><a href="#" data-go="auth" style="font-size:14px">← Вернуться ко входу</a></p>
+      </div>`;
+    if (S._resetSent) return box(`
+      <h2>Проверьте почту</h2>
+      <p class="muted" style="margin-top:10px">Если такая почта зарегистрирована, мы отправили на неё письмо со ссылкой для смены пароля.
+        Ссылка действует один час. Не пришло за пару минут - проверьте папку «Спам».</p>`);
+    if (RESET_TOKEN) return box(`
+      <h2>Новый пароль</h2>
+      <p class="muted" style="margin:8px 0 16px">Придумайте пароль - он заменит старый, и все открытые сессии закроются.</p>
+      <form id="newPassForm">
+        <div class="field"><label>Новый пароль</label>
+          <input id="rpPass" type="password" required minlength="6" placeholder="Минимум 6 символов" autocomplete="new-password"></div>
+        <div class="field"><label>Подтвердите пароль</label>
+          <input id="rpPass2" type="password" required minlength="6" placeholder="Ещё раз тот же пароль" autocomplete="new-password"></div>
+        <div id="rpErr" style="color:var(--red);font-size:14px;margin-bottom:12px;display:none"></div>
+        <button class="btn btn-primary" type="submit" style="width:100%">Сохранить пароль</button>
+      </form>`);
+    return box(`
+      <h2>Забыли пароль?</h2>
+      <p class="muted" style="margin:8px 0 16px">Введите почту, с которой регистрировались - пришлём ссылку для смены пароля.</p>
+      <form id="forgotForm">
+        <div class="field"><label>Почта</label>
+          <input id="fpEmail" type="email" required placeholder="you@mail.kz" autocomplete="username"></div>
+        <div id="fpErr" style="color:var(--red);font-size:14px;margin-bottom:12px;display:none"></div>
+        <button class="btn btn-primary" type="submit" style="width:100%">Прислать ссылку</button>
+      </form>`);
+  },
+
   /* ---- вход / регистрация ---- */
   auth() {
     return `
@@ -870,6 +910,7 @@ const VIEWS = {
               <div class="field"><label>Пароль</label><input id="aPass" type="password" required minlength="6" placeholder="Минимум 6 символов"></div>`}
             <div id="authErr" style="color:var(--red);font-size:14px;margin-bottom:12px;display:none"></div>
             <button class="btn btn-primary" type="submit" style="width:100%">${S._reg ? "Записаться на поток" : "Войти"}</button>
+            ${!S._reg ? `<p style="text-align:center;margin-top:12px"><a href="#" data-go="reset" style="font-size:13.5px">Забыли пароль?</a></p>` : ""}
           </form>
         </div>
         <p class="muted" style="text-align:center;font-size:13px">Пилотный поток №1 · права на ваш продукт всегда остаются у вас</p>
@@ -967,7 +1008,7 @@ const VIEWS = {
         <span>⏳ ${timePct > 0 ? `Осталось <b>${timePct}%</b> времени потока` : "Время потока вышло"}</span>
       </div>
       <div class="map-stage" style="padding:0;overflow:hidden;border-radius:var(--radius-m)">
-        <iframe id="ascentFrame" src="index-game.html?${GUEST() ? "demo=1" : "intro=0"}&v=47" style="width:100%;height:430px;border:0;display:block" title="TAULAU ASCENT"></iframe>
+        <iframe id="ascentFrame" src="index-game.html?${GUEST() ? "demo=1" : "intro=0"}&v=48" style="width:100%;height:430px;border:0;display:block" title="TAULAU ASCENT"></iframe>
       </div>
       <div class="scene-dots">
         ${STATIONS.map((p, i) => `
@@ -1953,6 +1994,37 @@ function bind() {
   const guestReg = view.querySelector("#guestReg");
   if (guestReg) guestReg.addEventListener("click", () => { S._reg = true; go("auth"); });
 
+  /* восстановление пароля */
+  const forgotForm = view.querySelector("#forgotForm");
+  if (forgotForm) forgotForm.addEventListener("submit", async e => {
+    e.preventDefault();
+    const errEl = view.querySelector("#fpErr");
+    errEl.style.display = "none";
+    try {
+      await apiCall("/password/forgot", "POST", { email: view.querySelector("#fpEmail").value.trim() });
+      S._resetSent = true;
+      render();
+    } catch (er) { errEl.textContent = er.message; errEl.style.display = "block"; }
+  });
+
+  const newPassForm = view.querySelector("#newPassForm");
+  if (newPassForm) newPassForm.addEventListener("submit", async e => {
+    e.preventDefault();
+    const errEl = view.querySelector("#rpErr");
+    errEl.style.display = "none";
+    const pass = view.querySelector("#rpPass").value;
+    try {
+      if (pass !== view.querySelector("#rpPass2").value) throw new Error("Пароли не совпадают - проверьте оба поля");
+      const data = await apiCall("/password/reset", "POST", { token: RESET_TOKEN, password: pass });
+      TOKEN = data.token;
+      localStorage.setItem("shipyard_token", TOKEN);
+      applyMe(data);
+      history.replaceState(null, "", location.pathname);
+      toast("Пароль изменён - добро пожаловать!");
+      go("map");
+    } catch (er) { errEl.textContent = er.message; errEl.style.display = "block"; }
+  });
+
   view.querySelectorAll("[data-authtab]").forEach(b =>
     b.addEventListener("click", () => { S._reg = b.dataset.authtab === "reg"; render(); }));
 
@@ -2418,6 +2490,7 @@ async function saveAvatar(dataUrl) {
   }
   if (API === null) save();
   if (REG_CODE && !TOKEN) S._reg = true;   // пришли по ссылке-приглашению
+  if (RESET_TOKEN) return go("reset");     // пришли по ссылке из письма
   const start = decodeURIComponent(location.hash || "").replace("#", "");
   go(VIEWS[start] && start !== "auth" ? start : "map");
 })();

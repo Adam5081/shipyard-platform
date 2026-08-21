@@ -40,7 +40,7 @@ if (!SECRET) {
 const b64u = buf => Buffer.from(buf).toString("base64url");
 
 function signToken(uid) {
-  const payload = b64u(JSON.stringify({ uid, exp: Date.now() + TOKEN_TTL }));
+  const payload = b64u(JSON.stringify({ uid, iat: Date.now(), exp: Date.now() + TOKEN_TTL }));
   const sig = crypto.createHmac("sha256", SECRET).update(payload).digest("base64url");
   return `${payload}.${sig}`;
 }
@@ -54,7 +54,7 @@ function verifyToken(token) {
   try {
     const data = JSON.parse(Buffer.from(payload, "base64url").toString());
     if (data.exp < Date.now()) return null;
-    return data.uid;
+    return { uid: data.uid, iat: data.iat || 0 };
   } catch { return null; }
 }
 
@@ -82,6 +82,12 @@ const q = {
   acceptContract: db.prepare("UPDATE users SET contract_accepted_at = ? WHERE id = ?"),
   setPhone: db.prepare("UPDATE users SET phone = ? WHERE id = ?"),
   setApproved: db.prepare("UPDATE users SET approved_at = ? WHERE id = ?"),
+  addReset: db.prepare("INSERT INTO password_resets (token_hash, user_id, created_at, expires_at) VALUES (?,?,?,?)"),
+  getReset: db.prepare("SELECT * FROM password_resets WHERE token_hash = ?"),
+  useReset: db.prepare("UPDATE password_resets SET used_at = ? WHERE token_hash = ?"),
+  dropUserResets: db.prepare("DELETE FROM password_resets WHERE user_id = ?"),
+  recentResets: db.prepare("SELECT COUNT(*) AS n FROM password_resets WHERE user_id = ? AND created_at > ?"),
+  markPwdChanged: db.prepare("UPDATE users SET pwd_changed_at = ? WHERE id = ?"),
   sessionsUpcoming: db.prepare("SELECT * FROM sessions WHERE starts_at > ? ORDER BY starts_at LIMIT 60"),
   sessionById: db.prepare("SELECT * FROM sessions WHERE id = ?"),
   insertSession: db.prepare("INSERT INTO sessions (title, dir, type, starts_at, duration_min, meet_url, capacity, created_at, host, host_id) VALUES (?,?,?,?,?,?,?,?,?,?)"),
@@ -172,6 +178,25 @@ const q = {
    Включаются переменными окружения SHIPYARD_TG_TOKEN (токен бота от
    @BotFather) и SHIPYARD_TG_CHAT (id чата/группы ментора). Без них — тихо
    выключены. Отправка не блокирует ответ клиенту и не роняет запрос. */
+/* ---------- почта: Resend HTTP API (без зависимостей и SMTP-портов) ---------- */
+const RESEND_KEY = process.env.RESEND_API_KEY || "";
+const MAIL_FROM = process.env.SHIPYARD_MAIL_FROM || "Taulau <noreply@taulau.com>";
+const SITE_URL = (process.env.SHIPYARD_SITE_URL || "https://taulau.com").replace(/\/$/, "");
+
+async function sendMail(to, subject, html) {
+  if (!RESEND_KEY) { console.warn("[mail] RESEND_API_KEY не задан - письмо не отправлено:", subject); return false; }
+  try {
+    const r = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${RESEND_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ from: MAIL_FROM, to: [to], subject, html }),
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!r.ok) { console.error("[mail] Resend ответил", r.status, (await r.text()).slice(0, 300)); return false; }
+    return true;
+  } catch (e) { console.error("[mail] сбой отправки:", e.message); return false; }
+}
+
 const TG_TOKEN = process.env.SHIPYARD_TG_TOKEN || "";
 const TG_CHAT = process.env.SHIPYARD_TG_CHAT || "";
 
@@ -394,9 +419,39 @@ function readBody(req, limit = 512 * 1024) {
 
 function auth(req) {
   const h = req.headers.authorization || "";
-  const uid = verifyToken(h.startsWith("Bearer ") ? h.slice(7) : null);
-  return uid ? q.userById.get(uid) : null;
+  const t = verifyToken(h.startsWith("Bearer ") ? h.slice(7) : null);
+  if (!t) return null;
+  const u = q.userById.get(t.uid);
+  // смена пароля закрывает сессии, выданные до неё
+  if (!u || (u.pwd_changed_at || 0) > t.iat) return null;
+  return u;
 }
+
+/* ---------- восстановление пароля: токен и письмо ---------- */
+
+const resetHash = t => crypto.createHmac("sha256", SECRET).update(String(t)).digest("hex");
+const RESET_TTL = 60 * 60000;   // ссылка живёт час
+
+async function issueReset(u) {
+  const token = crypto.randomBytes(32).toString("base64url");
+  const now = Date.now();
+  q.addReset.run(resetHash(token), u.id, now, now + RESET_TTL);
+  const link = `${SITE_URL}/app.html#reset=${token}`;
+  const html = `
+    <div style="font-family:-apple-system,Segoe UI,sans-serif;max-width:520px;margin:0 auto;color:#1d1d1f">
+      <h2 style="font-size:20px;margin:0 0 10px">Смена пароля в Taulau</h2>
+      <p style="font-size:15px;line-height:1.55;color:#4b4b50">Здравствуйте, ${escHtml(u.name)}! Мы получили запрос на смену пароля.
+        Нажмите кнопку - ссылка действует один час и только один раз.</p>
+      <p style="margin:22px 0"><a href="${link}" style="background:#0071e3;color:#fff;text-decoration:none;padding:12px 22px;border-radius:10px;font-size:15px;display:inline-block">Задать новый пароль</a></p>
+      <p style="font-size:13px;color:#6e6e73;line-height:1.5">Если кнопка не работает, откройте ссылку: <br><span style="word-break:break-all">${link}</span></p>
+      <p style="font-size:13px;color:#6e6e73;line-height:1.5">Если вы не запрашивали смену пароля - просто удалите это письмо, пароль останется прежним.</p>
+    </div>`;
+  const sent = await sendMail(u.email, "Смена пароля в Taulau", html);
+  notifyTg(`🔑 Запрос смены пароля: ${u.name} (${u.email})${sent ? "" : " - ПИСЬМО НЕ УШЛО, проверьте RESEND_API_KEY"}`);
+  return sent;
+}
+
+const escHtml = s => String(s ?? "").replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
 
 /* ---------- заявки с лендинга ---------- */
 
@@ -566,6 +621,40 @@ const routes = {
     if (app) q.useInvite.run(Date.now(), u.id, app.id);
     notifyTg(`✅ Регистрация в Taulau: ${name} (${email}) · тариф ${tariff}`);
     send(res, 201, { token: signToken(u.id), ...meState(u) });
+  },
+
+  /* ---------- восстановление пароля ---------- */
+
+  /* Ответ всегда одинаковый: по нему нельзя узнать, есть ли такая почта. */
+  "POST /api/password/forgot": async (req, res) => {
+    const b = await readBody(req);
+    const email = String(b.email || "").trim().toLowerCase();
+    const ok = { ok: true, message: "Если такая почта зарегистрирована, мы отправили на неё письмо со ссылкой." };
+    const u = EMAIL_RE.test(email) ? q.userByEmail.get(email) : null;
+    if (!u || u.seed_pts > 0) return send(res, 200, ok);
+    // не больше 3 писем в час на аккаунт
+    if (q.recentResets.get(u.id, Date.now() - 3600000).n >= 3) return send(res, 200, ok);
+    await issueReset(u);
+    send(res, 200, ok);
+  },
+
+  "POST /api/password/reset": async (req, res) => {
+    const b = await readBody(req);
+    const token = String(b.token || "").trim();
+    const password = String(b.password || "");
+    if (password.length < 6) return err(res, 400, "Пароль - минимум 6 символов");
+    const row = token ? q.getReset.get(resetHash(token)) : null;
+    if (!row || row.used_at || row.expires_at < Date.now())
+      return err(res, 400, "Ссылка недействительна или истекла. Запросите новую.");
+    const u = q.userById.get(row.user_id);
+    if (!u) return err(res, 400, "Аккаунт не найден");
+    const salt = crypto.randomBytes(16).toString("hex");
+    q.setPassword.run(await hashPasswordAsync(password, salt), salt, u.id);
+    q.markPwdChanged.run(Date.now(), u.id);   // старые сессии закрываются
+    q.useReset.run(Date.now(), row.token_hash);
+    q.dropUserResets.run(u.id);
+    const fresh = q.userById.get(u.id);
+    send(res, 200, { token: signToken(u.id), ...meState(fresh) });
   },
 
   "POST /api/login": async (req, res) => {
@@ -1108,6 +1197,20 @@ const routes = {
     if (!user || user.seed_pts > 0) return err(res, 400, "Участник не найден");
     q.setApproved.run(b.approved === false ? 0 : Date.now(), user.id);
     memo.clear();
+    send(res, 200, { ok: true });
+  },
+
+  /* админ отправляет участнику письмо со ссылкой на смену пароля */
+  "POST /api/admin/send-reset": async (req, res) => {
+    const r = roleOf(req);
+    if (!r) return err(res, 401, "Нужен ключ доступа");
+    const b = await readBody(req);
+    const user = q.userById.get(Number(b.userId || 0));
+    if (!user || user.seed_pts > 0) return err(res, 400, "Участник не найден");
+    if (r.role === "mentor" && user.mentor_id !== r.mentor.id)
+      return err(res, 403, "Это участник другого ментора");
+    const sent = await issueReset(user);
+    if (!sent) return err(res, 502, "Письмо не отправлено: почтовый сервис не настроен или недоступен");
     send(res, 200, { ok: true });
   },
 
