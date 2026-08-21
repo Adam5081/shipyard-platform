@@ -833,7 +833,7 @@ const VIEWS = {
         <div style="text-align:center;margin-bottom:26px">
           <div style="margin:0 auto;width:52px"><svg viewBox="0 0 100 100" width="52" height="52"><rect width="100" height="100" rx="22" fill="#0071e3"/><path d="M27 34h46M50 34v32q0 13 13 13 7 0 10-6" stroke="#fff" stroke-width="11" fill="none" stroke-linecap="round"/></svg></div>
           <h1 style="font-size:28px;font-weight:700;letter-spacing:-.02em;margin-top:8px">TAULAU</h1>
-          <p class="muted" style="margin-top:6px">Войдите, чтобы путь, демо и лига жили на сервере</p>
+          <p class="muted" style="margin-top:6px">Войдите, чтобы увидеть свой путь</p>
         </div>
         <div class="panel">
           <div class="kb-tabs" style="margin-bottom:18px">
@@ -842,12 +842,9 @@ const VIEWS = {
           </div>
           <form id="authForm">
             ${S._reg ? `
-              <div class="field"><label>Код приглашения</label>
-                <input id="aInvite" required placeholder="TAU-XXXXXX" autocomplete="off"
-                  style="text-transform:uppercase" value="${esc(REG_CODE)}">
-              </div>
-              <p class="muted" style="font-size:13px;margin:-6px 0 14px">Имя и тариф подставятся из вашей заявки.
-                Ещё не подавали? <a href="index.html#apply">Подать заявку</a></p>` : ""}
+              <div class="field"><label>Имя и фамилия</label>
+                <input id="aName" placeholder="Как к вам обращаться" autocomplete="name">
+              </div>` : ""}
             <div class="field"><label>E-mail</label><input id="aEmail" type="email" required placeholder="you@example.com"></div>
             <div class="field"><label>Пароль</label><input id="aPass" type="password" required minlength="6" placeholder="Минимум 6 символов"></div>
             ${S._reg ? `
@@ -1952,7 +1949,9 @@ function bind() {
       };
       let data;
       if (S._reg) {
-        body.invite = view.querySelector("#aInvite").value.trim().toUpperCase();
+        body.name = view.querySelector("#aName")?.value.trim() || "";
+        // код приглашения пока не используется; ссылка-приглашение из заявки продолжает работать
+        if (REG_CODE) body.invite = REG_CODE;
         data = await apiCall("/register", "POST", body);
       } else {
         data = await apiCall("/login", "POST", body);

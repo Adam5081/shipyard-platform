@@ -194,8 +194,9 @@ const normTariff = t => (t === "Venture" ? "Partner" : t);
 
 /* ---------- инвайты: регистрация только по коду из одобренной заявки ---------- */
 
-// SHIPYARD_OPEN_REG=1 открывает свободную регистрацию (локальная разработка, демо)
-const OPEN_REG = process.env.SHIPYARD_OPEN_REG === "1";
+// Регистрация открыта по умолчанию (кодов приглашения пока нет).
+// SHIPYARD_OPEN_REG=0 вернёт режим «только по инвайт-коду из одобренной заявки».
+const OPEN_REG = process.env.SHIPYARD_OPEN_REG !== "0";
 
 // без похожих символов (0/O, 1/I/L), чтобы код легко диктовался голосом
 const INVITE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
