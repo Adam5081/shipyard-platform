@@ -238,6 +238,34 @@ body.cyber .proj-card .p-tag { background: rgba(94, 106, 210, .15); color: #a7ae
 body.cyber .team-card .t-role { color: #8a8f98; text-transform: uppercase; font-size: 11px; letter-spacing: .08em; }
 
 /* ---------- лента «Как это работает» ---------- */
+/* ---------- модальная заявка: форма доступна с любой кнопки «Занять место» ---------- */
+.apply-modal { position: fixed; inset: 0; z-index: 300; display: flex; align-items: center; justify-content: center; padding: 18px; }
+.apply-modal[hidden] { display: none; }
+.am-backdrop { position: absolute; inset: 0; background: rgba(5, 6, 8, .72); backdrop-filter: blur(6px); }
+.am-box {
+  position: relative;
+  width: min(560px, 100%);
+  max-height: 92vh;
+  overflow-y: auto;
+  background: #101114;
+  border: 1px solid rgba(255, 255, 255, .1);
+  border-radius: 14px;
+  padding: 28px 26px 24px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, .5);
+}
+.am-box h3 { font-size: 22px; font-weight: 600; letter-spacing: -.02em; color: #f7f8f8; }
+.am-sub { color: var(--ink-2); font-size: 14px; margin: 8px 0 18px; }
+.am-close {
+  position: absolute; top: 14px; right: 14px;
+  width: 34px; height: 34px;
+  background: rgba(255, 255, 255, .06); border: 0; border-radius: 9px;
+  color: var(--ink-2); font-size: 15px; cursor: pointer;
+}
+.am-close:hover { color: #fff; background: rgba(255, 255, 255, .12); }
+/* в модалке форма видима сразу — reveal-анимация секции здесь не действует */
+.am-box .reveal { opacity: 1 !important; transform: none !important; }
+.am-box .apply-form { margin-top: 0; }
+
 /* полоса вкладок НЕ прилипает при скролле — требование ПМ от 20.08 */
 body.cyber .stats {
   background: #0B0C0E;
