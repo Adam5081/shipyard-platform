@@ -80,6 +80,7 @@ const q = {
   openStationDirect: db.prepare("INSERT OR IGNORE INTO station_ready (user_id, station, link, note, requested_at, approved_at) VALUES (?,?,'','',?,?)"),
   revokeStation: db.prepare("UPDATE station_ready SET approved_at = 0 WHERE user_id = ? AND station = ?"),
   acceptContract: db.prepare("UPDATE users SET contract_accepted_at = ? WHERE id = ?"),
+  setPhone: db.prepare("UPDATE users SET phone = ? WHERE id = ?"),
   sessionsUpcoming: db.prepare("SELECT * FROM sessions WHERE starts_at > ? ORDER BY starts_at LIMIT 60"),
   sessionById: db.prepare("SELECT * FROM sessions WHERE id = ?"),
   insertSession: db.prepare("INSERT INTO sessions (title, dir, type, starts_at, duration_min, meet_url, capacity, created_at, host, host_id) VALUES (?,?,?,?,?,?,?,?,?,?)"),
@@ -518,6 +519,8 @@ const routes = {
     const salt = crypto.randomBytes(16).toString("hex");
     const project = String(b.project || "Мой продукт").trim().slice(0, 120) || "Мой продукт";
     const r = q.insertUser.run(email, await hashPasswordAsync(password, salt), salt, name, project, tariff, Date.now());
+    const phone = String(b.phone || "").trim().slice(0, 40);
+    if (phone) q.setPhone.run(phone, Number(r.lastInsertRowid));
     const u = q.userById.get(Number(r.lastInsertRowid));
     if (app) q.useInvite.run(Date.now(), u.id, app.id);
     notifyTg(`✅ Регистрация в Taulau: ${name} (${email}) · тариф ${tariff}`);

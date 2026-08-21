@@ -842,19 +842,26 @@ const VIEWS = {
           </div>
           <form id="authForm">
             ${S._reg ? `
-              <div class="field"><label>Имя и фамилия</label>
-                <input id="aName" placeholder="Как к вам обращаться" autocomplete="name">
+              <div class="field"><label>Как к вам обращаться?</label>
+                <input id="aName" required placeholder="Имя и фамилия" autocomplete="name">
               </div>` : ""}
-            <div class="field"><label>E-mail</label><input id="aEmail" type="email" required placeholder="you@example.com"></div>
-            <div class="field"><label>Пароль</label><input id="aPass" type="password" required minlength="6" placeholder="Минимум 6 символов"></div>
+            <div class="field"><label>Почта</label><input id="aEmail" type="email" required placeholder="you@example.com"></div>
             ${S._reg ? `
+              <div class="field"><label>Номер телефона</label>
+                <input id="aPhone" type="tel" required placeholder="+7 777 123 45 67" autocomplete="tel">
+              </div>
+              <div class="field"><label>Создайте пароль</label>
+                <input id="aPass" type="password" required minlength="6" placeholder="Минимум 6 символов" autocomplete="new-password"></div>
+              <div class="field"><label>Подтвердите пароль</label>
+                <input id="aPass2" type="password" required minlength="6" placeholder="Ещё раз тот же пароль" autocomplete="new-password"></div>
               <label style="display:flex;gap:9px;align-items:flex-start;margin:2px 0 14px;cursor:pointer;font-size:13.5px;color:var(--ink-2);line-height:1.45">
                 <input type="checkbox" id="aNda" required style="margin-top:2px">
                 <span>Продолжая, вы полностью соглашаетесь с условиями
                   <a href="nda.html" target="_blank" rel="noopener">Соглашения о конфиденциальности (NDA)</a></span>
-              </label>` : ""}
+              </label>` : `
+              <div class="field"><label>Пароль</label><input id="aPass" type="password" required minlength="6" placeholder="Минимум 6 символов"></div>`}
             <div id="authErr" style="color:var(--red);font-size:14px;margin-bottom:12px;display:none"></div>
-            <button class="btn btn-primary" type="submit" style="width:100%">${S._reg ? "Создать аккаунт" : "Войти"}</button>
+            <button class="btn btn-primary" type="submit" style="width:100%">${S._reg ? "Записаться на поток" : "Войти"}</button>
           </form>
         </div>
         <p class="muted" style="text-align:center;font-size:13px">Пилотный поток №1 · права на ваш продукт всегда остаются у вас</p>
@@ -948,7 +955,7 @@ const VIEWS = {
         <span>⏳ ${timePct > 0 ? `Осталось <b>${timePct}%</b> времени потока` : "Время потока вышло"}</span>
       </div>
       <div class="map-stage" style="padding:0;overflow:hidden;border-radius:var(--radius-m)">
-        <iframe id="ascentFrame" src="index-game.html?${GUEST() ? "demo=1" : "intro=0"}&v=44" style="width:100%;height:430px;border:0;display:block" title="TAULAU ASCENT"></iframe>
+        <iframe id="ascentFrame" src="index-game.html?${GUEST() ? "demo=1" : "intro=0"}&v=45" style="width:100%;height:430px;border:0;display:block" title="TAULAU ASCENT"></iframe>
       </div>
       <div class="scene-dots">
         ${STATIONS.map((p, i) => `
@@ -1949,7 +1956,10 @@ function bind() {
       };
       let data;
       if (S._reg) {
+        if (view.querySelector("#aPass2").value !== body.password)
+          throw new Error("Пароли не совпадают - проверьте оба поля");
         body.name = view.querySelector("#aName")?.value.trim() || "";
+        body.phone = view.querySelector("#aPhone")?.value.trim() || "";
         // код приглашения пока не используется; ссылка-приглашение из заявки продолжает работать
         if (REG_CODE) body.invite = REG_CODE;
         data = await apiCall("/register", "POST", body);
