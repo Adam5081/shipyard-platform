@@ -434,6 +434,35 @@ function noteLoginFail(req, failed) {
 
 const ADMIN_KEY = process.env.SHIPYARD_ADMIN_KEY || "";
 
+/* Админы по почте: SHIPYARD_ADMIN_EMAILS="a@mail.kz, b@mail.kz".
+   Такой человек входит в админку своей почтой и паролем аккаунта платформы -
+   ключ из окружения копировать больше не нужно. */
+const ADMIN_EMAILS = new Set(String(process.env.SHIPYARD_ADMIN_EMAILS || "")
+  .split(/[,;\s]+/).map(s => s.trim().toLowerCase()).filter(Boolean));
+const isAdminEmail = email => ADMIN_EMAILS.has(String(email || "").trim().toLowerCase());
+
+/* Токен админ-сессии: тот же HMAC, но с пометкой роли и коротким сроком. */
+const ADMIN_TTL = 12 * 3600000;
+function signAdminToken(uid) {
+  const payload = b64u(JSON.stringify({ uid, adm: 1, exp: Date.now() + ADMIN_TTL }));
+  const sig = crypto.createHmac("sha256", SECRET).update(payload).digest("base64url");
+  return `adm.${payload}.${sig}`;
+}
+function adminTokenUser(given) {
+  if (!given.startsWith("adm.")) return null;
+  const [, payload, sig] = given.split(".");
+  if (!payload || !sig) return null;
+  const expect = crypto.createHmac("sha256", SECRET).update(payload).digest("base64url");
+  if (sig.length !== expect.length ||
+      !crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expect))) return null;
+  try {
+    const d = JSON.parse(Buffer.from(payload, "base64url").toString());
+    if (!d.adm || d.exp < Date.now()) return null;
+    const u = q.userById.get(d.uid);
+    return u && isAdminEmail(u.email) ? u : null;   // почту убрали из списка - доступ закрылся
+  } catch { return null; }
+}
+
 /* Роли доступа в админку по одному полю ключа:
    мастер-ключ из env → админ (всё); ключ из таблицы mentors → ментор
    (только свои участники). Хэш ключа — HMAC на серверном секрете. */
@@ -442,6 +471,7 @@ const mentorKeyHash = key => crypto.createHmac("sha256", SECRET).update(String(k
 function roleOf(req) {
   const given = String(req.headers["x-admin-key"] || "");
   if (!given) return null;
+  if (adminTokenUser(given)) return { role: "admin" };
   if (ADMIN_KEY) {
     const a = Buffer.from(given), b = Buffer.from(ADMIN_KEY);
     if (a.length === b.length && crypto.timingSafeEqual(a, b)) return { role: "admin" };
@@ -452,7 +482,9 @@ function roleOf(req) {
 
 function isAdmin(req) {
   const given = String(req.headers["x-admin-key"] || "");
-  if (!ADMIN_KEY || !given) return false;
+  if (!given) return false;
+  if (adminTokenUser(given)) return true;
+  if (!ADMIN_KEY) return false;
   const a = Buffer.from(given), b = Buffer.from(ADMIN_KEY);
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
@@ -546,6 +578,20 @@ const routes = {
     noteLoginFail(req, bad);
     if (bad) return err(res, 401, "Неверный e-mail или пароль");
     send(res, 200, { token: signToken(u.id), ...meState(u) });
+  },
+
+  /* вход в админку по почте и паролю аккаунта - почта должна быть в SHIPYARD_ADMIN_EMAILS */
+  "POST /api/admin/login": async (req, res) => {
+    if (loginBlocked(req))
+      return err(res, 429, "Слишком много попыток входа - подождите 10 минут");
+    const b = await readBody(req);
+    const email = String(b.email || "").trim().toLowerCase();
+    const u = q.userByEmail.get(email);
+    const bad = !u || await hashPasswordAsync(String(b.password || ""), u.salt) !== u.pass_hash;
+    noteLoginFail(req, bad);
+    if (bad) return err(res, 401, "Неверный e-mail или пароль");
+    if (!isAdminEmail(email)) return err(res, 403, "У этой почты нет доступа к админке");
+    send(res, 200, { key: signAdminToken(u.id), name: u.name, role: "admin" });
   },
 
   "GET /api/me": async (req, res) => {
