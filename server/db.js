@@ -202,6 +202,14 @@ if (!sessionCols.has("host_id")) db.exec("ALTER TABLE sessions ADD COLUMN host_i
 const bookingCols = new Set(db.prepare("PRAGMA table_info(bookings)").all().map(c => c.name));
 if (!bookingCols.has("attended")) db.exec("ALTER TABLE bookings ADD COLUMN attended INTEGER NOT NULL DEFAULT -1");
 
+/* подтверждение участника админом (после оплаты): 0 — ждёт, иначе timestamp.
+   Существующие аккаунты на момент миграции считаются подтверждёнными. */
+const userCols2 = new Set(db.prepare("PRAGMA table_info(users)").all().map(c => c.name));
+if (!userCols2.has("approved_at")) {
+  db.exec("ALTER TABLE users ADD COLUMN approved_at INTEGER NOT NULL DEFAULT 0");
+  db.exec("UPDATE users SET approved_at = created_at");
+}
+
 /* Инвайты: код выдаётся заявке при статусе «взяли», регистрация — только по коду. */
 const APP_COLUMNS = [
   ["invite_code",     "TEXT NOT NULL DEFAULT ''"],    // код приглашения (пустой — не выдан)

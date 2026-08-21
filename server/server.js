@@ -81,6 +81,7 @@ const q = {
   revokeStation: db.prepare("UPDATE station_ready SET approved_at = 0 WHERE user_id = ? AND station = ?"),
   acceptContract: db.prepare("UPDATE users SET contract_accepted_at = ? WHERE id = ?"),
   setPhone: db.prepare("UPDATE users SET phone = ? WHERE id = ?"),
+  setApproved: db.prepare("UPDATE users SET approved_at = ? WHERE id = ?"),
   sessionsUpcoming: db.prepare("SELECT * FROM sessions WHERE starts_at > ? ORDER BY starts_at LIMIT 60"),
   sessionById: db.prepare("SELECT * FROM sessions WHERE id = ?"),
   insertSession: db.prepare("INSERT INTO sessions (title, dir, type, starts_at, duration_min, meet_url, capacity, created_at, host, host_id) VALUES (?,?,?,?,?,?,?,?,?,?)"),
@@ -240,6 +241,13 @@ function userStats(u) {
   };
 }
 
+/* доступ к работе в кабинете - только после подтверждения админом (оплата) */
+function needApproved(u, res) {
+  if (u.approved_at) return false;
+  err(res, 403, "Доступ откроется после подтверждения командой - мы напишем вам после оплаты");
+  return true;
+}
+
 /* ---------- жёсткий гейт КТ ---------- */
 
 const approvedGates = uid => new Set(q.userGates.all(uid).map(r => r.gate));
@@ -329,6 +337,7 @@ function meState(u) {
     gates: gateStates(u.id),
     ready: readyStates(u.id),
     contractAt: u.contract_accepted_at || 0,
+    approvedAt: u.approved_at || 0,
     demoday: (() => {
       const r = q.ddReg.get(u.id);
       return {
@@ -589,6 +598,7 @@ const routes = {
   "POST /api/toggle": async (req, res) => {
     const u = auth(req);
     if (!u) return err(res, 401, "Нужен вход");
+    if (needApproved(u, res)) return;
     const b = await readBody(req);
     const kind = b.kind;
     const id = String(b.id || "");
@@ -867,7 +877,7 @@ const routes = {
       return {
         id: x.id, name: x.name, email: x.email, project: x.project,
         tariff: normTariff(x.tariff), dock: x.dock || "",
-        seed, mentorId: x.mentor_id || 0,
+        seed, mentorId: x.mentor_id || 0, approvedAt: x.approved_at || 0,
         points: s.points, level: s.level, station: s.station, walk: s.walk,
         demos: q.demoCount.get(x.id).n,
         createdAt: x.created_at,
@@ -1044,6 +1054,17 @@ const routes = {
     send(res, 200, { ok: true });
   },
 
+  /* подтверждение участника (после оплаты) - открывает полный доступ */
+  "POST /api/admin/approve-user": async (req, res) => {
+    if (!isAdmin(req)) return err(res, 401, "Нужен ключ администратора");
+    const b = await readBody(req);
+    const user = q.userById.get(Number(b.userId || 0));
+    if (!user || user.seed_pts > 0) return err(res, 400, "Участник не найден");
+    q.setApproved.run(b.approved === false ? 0 : Date.now(), user.id);
+    memo.clear();
+    send(res, 200, { ok: true });
+  },
+
   "POST /api/admin/reset-password": async (req, res) => {
     const r = roleOf(req);
     if (!r) return err(res, 401, "Нужен ключ доступа");
@@ -1079,6 +1100,7 @@ const routes = {
   "POST /api/contract/accept": async (req, res) => {
     const u = auth(req);
     if (!u) return err(res, 401, "Нужен вход");
+    if (needApproved(u, res)) return;
     if (!u.contract_accepted_at) q.acceptContract.run(Date.now(), u.id);
     send(res, 200, { ok: true, contractAt: q.userById.get(u.id).contract_accepted_at });
   },
@@ -1087,6 +1109,7 @@ const routes = {
   "POST /api/station/submit": async (req, res) => {
     const u = auth(req);
     if (!u) return err(res, 401, "Нужен вход");
+    if (needApproved(u, res)) return;
     const b = await readBody(req);
     const st = Number(b.station);
     if (!Number.isInteger(st) || st < 0 || st >= PHASE_TASKS.length)
@@ -1157,6 +1180,7 @@ const routes = {
   "POST /api/sessions/book": async (req, res) => {
     const u = auth(req);
     if (!u) return err(res, 401, "Нужен вход");
+    if (needApproved(u, res)) return;
     const b = await readBody(req);
     const s = q.sessionById.get(Number(b.id));
     if (!s || s.starts_at < Date.now()) return err(res, 404, "Сессия не найдена или уже прошла");
@@ -1283,6 +1307,7 @@ const routes = {
   "POST /api/demoday/register": async (req, res) => {
     const u = auth(req);
     if (!u) return err(res, 401, "Нужен вход");
+    if (needApproved(u, res)) return;
     if (closedStations(u.id) !== PHASE_TASKS.length)
       return err(res, 403, "Вы ещё не дошли до MVP — записаться нельзя");
     const b = await readBody(req);

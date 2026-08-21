@@ -410,6 +410,7 @@ function applyMe(d) {
   S.tariff = u.tariff;
   S.email = u.email;
   S.phone = u.phone || "";
+  S.approvedAt = u.approvedAt ?? d.approvedAt ?? 0;
   S.avatar = u.avatar || "";
   S.about = u.about || "";
   S.link = u.link || "";
@@ -432,7 +433,7 @@ function applyMe(d) {
 
 /* первая станция, ещё не открытая ментором; работать можно только на ней */
 function openStationIdx() {
-  if (GUEST()) return 0;               // гостю открыта только станция 1
+  if (LOCKED()) return 0;              // гостю и неподтверждённому открыта только станция 1
   if (API === null) return Infinity;   // демо-режим - без гейта
   for (let i = 0; i < STATIONS.length; i++) if (S.ready[i] !== "approved") return i;
   return Infinity;
@@ -700,7 +701,7 @@ function refreshChrome() {
   // гостю пункты меню помечены замком
   document.querySelectorAll(".side-link").forEach(b => {
     const lock = b.querySelector(".lock-ic");
-    if (GUEST() && b.dataset.view !== "map") {
+    if (LOCKED() && b.dataset.view !== "map") {
       if (!lock) b.insertAdjacentHTML("beforeend", '<span class="lock-ic" style="margin-left:auto;opacity:.6">🔒</span>');
     } else if (lock) lock.remove();
   });
@@ -740,6 +741,9 @@ if (!FLOW_UI) { const g = document.getElementById("flowGroup"); if (g) g.remove(
 /* гостевой режим: платформа без входа - витрина. Открыта карта пути (станция 1 +
    демо игры), остальное под замком до регистрации и одобрения командой */
 const GUEST = () => API !== null && !TOKEN;
+/* зарегистрирован, но ещё не подтверждён админом (оплата) - те же замки, свой текст */
+const PENDING = () => API !== null && !!TOKEN && !S.approvedAt;
+const LOCKED = () => GUEST() || PENDING();
 function showLockModal() {
   const old = document.getElementById("lockModal");
   if (old) old.remove();
@@ -750,21 +754,25 @@ function showLockModal() {
     <div style="background:var(--bg);border-radius:16px;max-width:440px;width:100%;padding:30px 28px;text-align:center;box-shadow:0 24px 80px rgba(0,0,0,.3)">
       <div style="font-size:42px">🔒</div>
       <h2 style="margin:10px 0 8px">Раздел под замком</h2>
+      ${PENDING() ? `
+      <p class="muted" style="margin-bottom:18px">Ваш аккаунт создан и ждёт подтверждения командой - обычно это происходит сразу после оплаты. Мы напишем вам, и все разделы откроются.</p>
+      <button class="btn btn-primary" id="lockClose" style="width:100%">Понятно</button>` : `
       <p class="muted" style="margin-bottom:18px">Полный доступ открывается после записи на поток и оплаты: зарегистрируйтесь - и когда команда одобрит вашу заявку, все разделы откроются.</p>
       <button class="btn btn-primary" id="lockReg" style="width:100%">Записаться на поток</button>
-      <button class="btn btn-ghost btn-sm" id="lockClose" style="margin-top:10px">Продолжить просмотр</button>
+      <button class="btn btn-ghost btn-sm" id="lockClose" style="margin-top:10px">Продолжить просмотр</button>`}
     </div>`;
   document.body.appendChild(d);
   d.addEventListener("click", e => { if (e.target === d) d.remove(); });
   d.querySelector("#lockClose").addEventListener("click", () => d.remove());
-  d.querySelector("#lockReg").addEventListener("click", () => { d.remove(); S._reg = true; go("auth"); });
+  const lr = d.querySelector("#lockReg");
+  if (lr) lr.addEventListener("click", () => { d.remove(); S._reg = true; go("auth"); });
 }
 
 async function go(name) {
-  // гость гуляет по карте и может открыть вход; остальные разделы - под замком
-  if (GUEST() && name !== "auth" && name !== "map") name = "map";
-  // нулевой этап: без акцепта договора кабинет не открывается
-  if (API !== null && TOKEN && S.contractAt === 0 && name !== "auth") name = "contract";
+  // гость и неподтверждённый участник гуляют по карте; остальные разделы - под замком
+  if (LOCKED() && name !== "auth" && name !== "map") name = "map";
+  // нулевой этап: без акцепта договора кабинет не открывается (после подтверждения)
+  if (API !== null && TOKEN && !PENDING() && S.contractAt === 0 && name !== "auth") name = "contract";
   if (!FLOW_UI && FLOW_VIEWS.has(name)) name = "map";
   if (activeView !== name) S.kbDoc = null;   // переход по разделам закрывает открытый материал
   if (name !== "battles") { BATTLE.play = null; BATTLE.review = null; }
@@ -799,7 +807,7 @@ async function go(name) {
 
 document.querySelectorAll(".side-link").forEach(b =>
   b.addEventListener("click", () => {
-    if (GUEST() && b.dataset.view !== "map") return showLockModal();
+    if (LOCKED() && b.dataset.view !== "map") return showLockModal();
     go(b.dataset.view);
   }));
 
@@ -924,6 +932,10 @@ const VIEWS = {
           <button class="btn btn-primary btn-sm" id="guestReg" style="margin-left:auto">Записаться на поток</button>
           <button class="btn btn-ghost btn-sm" data-go="auth">Войти</button>
         </div>` : ""}
+      ${PENDING() ? `
+        <div class="notice">
+          <b>⏳ Аккаунт создан и ждёт подтверждения.</b> Команда откроет полный доступ после оплаты - мы напишем вам. Пока открыты карта пути и станция 1.
+        </div>` : ""}
       ${AVATAR_PHOTO_UI && !S.avatar ? `
         <div class="notice">
           <b>🎨 Соберите своего персонажа.</b> Загрузите фото - платформа соберёт пиксельного героя по его цветам,
@@ -955,7 +967,7 @@ const VIEWS = {
         <span>⏳ ${timePct > 0 ? `Осталось <b>${timePct}%</b> времени потока` : "Время потока вышло"}</span>
       </div>
       <div class="map-stage" style="padding:0;overflow:hidden;border-radius:var(--radius-m)">
-        <iframe id="ascentFrame" src="index-game.html?${GUEST() ? "demo=1" : "intro=0"}&v=45" style="width:100%;height:430px;border:0;display:block" title="TAULAU ASCENT"></iframe>
+        <iframe id="ascentFrame" src="index-game.html?${GUEST() ? "demo=1" : "intro=0"}&v=46" style="width:100%;height:430px;border:0;display:block" title="TAULAU ASCENT"></iframe>
       </div>
       <div class="scene-dots">
         ${STATIONS.map((p, i) => `
@@ -1933,7 +1945,7 @@ function bind() {
 
   view.querySelectorAll("[data-station]").forEach(b =>
     b.addEventListener("click", () => {
-      if (GUEST() && Number(b.dataset.station) > 0) return showLockModal();
+      if (LOCKED() && Number(b.dataset.station) > 0) return showLockModal();
       S.selStation = Number(b.dataset.station); save(); render();
     }));
 
@@ -1996,7 +2008,7 @@ function bind() {
   /* сдача станции ментору */
   const srBtn = view.querySelector("[data-submit-station]");
   if (srBtn) srBtn.addEventListener("click", async () => {
-    if (GUEST()) return showLockModal();
+    if (LOCKED()) return showLockModal();
     try {
       const r = await apiCall("/station/submit", "POST", {
         station: Number(srBtn.dataset.submitStation),
@@ -2098,7 +2110,7 @@ function bind() {
   /* задачи станций */
   view.querySelectorAll("[data-task]").forEach(cb =>
     cb.addEventListener("change", async () => {
-      if (GUEST()) { cb.checked = false; return showLockModal(); }
+      if (LOCKED()) { cb.checked = false; return showLockModal(); }
       const id = cb.dataset.task;
       const wasLvl = level().n;
       const wasTools = tools().length;

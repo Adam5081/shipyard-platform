@@ -6,8 +6,8 @@
 <meta name="robots" content="noindex">
 <title>Taulau — админка</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230071e3'/><path d='M27 34h46M50 34v32q0 13 13 13 7 0 10-6' stroke='white' stroke-width='11' fill='none' stroke-linecap='round'/></svg>">
-<link rel="stylesheet" href="assets/styles.css?v=45">
-<script src="assets/config.js?v=45"></script>
+<link rel="stylesheet" href="assets/styles.css?v=46">
+<script src="assets/config.js?v=46"></script>
 <style>
   .adm { max-width: 1000px; margin: 0 auto; padding: 40px 24px 80px; }
   .adm-head { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin-bottom: 18px; }
@@ -250,10 +250,13 @@ function userRow(u) {
   return `
     <tr>
       <td>
-        <b>${esc(u.name)}</b>${u.seed ? ' <span class="tag t-declined">сид</span>' : ''}
+        <b>${esc(u.name)}</b>${u.seed ? ' <span class="tag t-declined">сид</span>' : ''}${!u.seed && !u.approvedAt ? ' <span class="tag t-contacted">⏳ ждёт подтверждения</span>' : ''}
         <div class="u-sub">${esc(u.project)}</div>${fast}${gates}${progPanel}
       </td>
       <td>${esc(u.email)}<div class="u-sub">${esc(u.tariff)}${u.dock ? ' · док ' + esc(u.dock) : ''}</div>
+        ${!u.seed && ROLE?.role === 'admin' ? (u.approvedAt
+          ? '<div class="u-sub">✅ подтверждён</div>'
+          : ('<button class="btn btn-primary btn-sm" data-approve="' + u.id + '" style="margin-top:6px">Подтвердить (оплатил)</button>')) : ''}
         ${u.prizes && u.prizes.length ? `<div class="u-sub">🎁 ${u.prizes.map(esc).join(' · ')}</div>` : ''}</td>
       <td>
         станция ${u.station + 1} из 9 · ур. ${u.level}
@@ -353,6 +356,12 @@ async function loadUsers() {
       toast('Сохранено'); load();
     } catch (e) { toast(e.message); }
   }));
+  // подтверждение участника после оплаты - открывает ему полный доступ
+  list.querySelectorAll('[data-approve]').forEach(el => el.addEventListener('click', async () => {
+    try { await call('/api/admin/approve-user', 'POST', { userId: Number(el.dataset.approve), approved: true }); toast('Участник подтверждён - доступ открыт'); load(); }
+    catch (e) { toast(e.message); }
+  }));
+
   list.querySelectorAll('[data-userdel]').forEach(el => el.addEventListener('click', async () => {
     if (!confirm('Удалить участника НАВСЕГДА? Прогресс, брони и записи будут стёрты. Это действие необратимо.')) return;
     try { await call('/api/admin/user-delete', 'POST', { userId: Number(el.dataset.userdel) }); toast('Участник удалён'); load(); }
