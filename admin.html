@@ -203,7 +203,7 @@ function userRow(u) {
   const approved = e ? Object.entries(e.gates).filter(([, s]) => s === 'approved') : [];
   const mentorSel = e && ROLE?.role === 'admin' ? `
       <select data-assign="${u.id}" title="Ответственный ментор">
-        <option value="0">без ментора</option>
+        <option value="0">ментор не назначен</option>
         ${MENTORS.map(m => `<option value="${m.id}" ${u.mentorId === m.id ? 'selected' : ''}>${esc(m.name)}</option>`).join('')}
       </select>` : '';
   const mentorTag = e && ROLE?.role !== 'admin' ? '' :
