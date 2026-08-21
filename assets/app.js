@@ -1987,7 +1987,7 @@ function bind() {
       try {
         const r = await apiCall("/contract/accept", "POST", {});
         S.contractAt = r.contractAt || Date.now();
-        toast("Договор принят - добро пожаловать на станцию 0!");
+        toast("Договор принят - добро пожаловать на станцию 1!");
         go("map");
       } catch (e2) { toast(e2.message); }
     });
