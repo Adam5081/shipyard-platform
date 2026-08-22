@@ -779,7 +779,9 @@
       const r = await fetch(base + '/api/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, phone, password, tariff: form.tariff.value }),
+        // website — поле-ловушка: у человека оно пустое, скрипты его заполняют
+        body: JSON.stringify({ name, email, phone, password, tariff: form.tariff.value,
+          website: form.website ? form.website.value : '' }),
       });
       const out = await r.json().catch(() => ({}));
       if (!r.ok) {

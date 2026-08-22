@@ -550,7 +550,6 @@ const send = (res, code, data) => {
   const body = JSON.stringify(data);
   const head = {
     "Content-Type": "application/json; charset=utf-8",
-    "Access-Control-Allow-Origin": "*",
   };
   // большие ответы (flow, лига, база) сжимаются — заметно на мобильном интернете
   const ae = String(res.req?.headers["accept-encoding"] || "");
@@ -756,6 +755,29 @@ function loginBlocked(req) {
   return rec && rec.n >= LOGIN_TRIES && Date.now() - rec.t < LOGIN_WINDOW;
 }
 
+/* Регистрация открыта всем, поэтому её надо защищать так же, как заявку:
+   без лимита скрипт заводит тысячи аккаунтов, а каждый из них - письмо через
+   Resend (квота и репутация домена), уведомление в Telegram и строка в
+   «Заявках». Считаем по хэшу адреса, в памяти: переживать рестарт не нужно. */
+const REG_PER_IP = 5, REG_WINDOW = 60 * 60000;
+const regRate = new Map();
+
+function regBlocked(req) {
+  const key = ipHash(req);
+  const rec = regRate.get(key);
+  if (!rec || Date.now() - rec.t > REG_WINDOW) return false;
+  return rec.n >= REG_PER_IP;
+}
+
+function noteRegister(req) {
+  const key = ipHash(req);
+  const rec = regRate.get(key);
+  if (!rec || Date.now() - rec.t > REG_WINDOW) regRate.set(key, { n: 1, t: Date.now() });
+  else rec.n++;
+  // карта не должна расти бесконечно на долгоживущем процессе
+  if (regRate.size > 5000) for (const [k, v] of regRate) if (Date.now() - v.t > REG_WINDOW) regRate.delete(k);
+}
+
 function noteLoginFail(req, failed) {
   const key = ipHash(req);
   if (!failed) { loginFails.delete(key); return; }
@@ -882,6 +904,10 @@ const routes = {
     const email = String(b.email || "").trim().toLowerCase();
     const password = String(b.password || "");
     let name = String(b.name || "").trim().slice(0, 60);
+    // поле-ловушка: человек его не видит, скрипты заполняют всё подряд
+    if (String(b.website || "").trim()) return err(res, 400, "Некорректный e-mail");
+    if (regBlocked(req))
+      return err(res, 429, "Слишком много регистраций с этого адреса - попробуйте позже");
     if (!EMAIL_RE.test(email)) return err(res, 400, "Некорректный e-mail");
     if (password.length < 6) return err(res, 400, "Пароль — минимум 6 символов");
     if (q.userByEmail.get(email)) return err(res, 409, "Этот e-mail уже зарегистрирован");
@@ -910,6 +936,7 @@ const routes = {
     if (phone) q.setPhone.run(phone, Number(r.lastInsertRowid));
     const u = q.userById.get(Number(r.lastInsertRowid));
     if (app) q.useInvite.run(Date.now(), u.id, app.id);
+    noteRegister(req);
     notifyTg(`✅ Регистрация в Taulau: ${name} (${email}) · тариф ${tariff}`);
     send(res, 201, { token: signToken(u.id), ...meState(u) });
     sendWelcome(u);
@@ -1343,7 +1370,6 @@ const routes = {
       res.writeHead(200, {
         "Content-Type": "application/octet-stream",
         "Content-Disposition": `attachment; filename="shipyard-${new Date().toISOString().slice(0, 10)}.db"`,
-        "Access-Control-Allow-Origin": "*",
       });
       res.end(buf);
     } catch (e) {
@@ -2062,8 +2088,30 @@ const MIME = {
 const staticCache = new Map();
 const GZIP_EXT = new Set([".html", ".css", ".js", ".svg", ".md", ".json"]);
 
+/* Наружу отдаём только то, что нужно браузеру. Каталог репозитория содержит
+   ещё и .git, исходники бэкенда и конфиги деплоя - раздавать их незачем:
+   по .git восстанавливается вся история, включая локальные ветки и рефлог. */
+const BLOCKED_DIRS = new Set(["server", "deploy", "node_modules"]);
+const BLOCKED_FILES = new Set(["render.yaml", "package.json", "package-lock.json", "readme.md"]);
+const WEB_EXT = new Set([".html", ".css", ".js", ".svg", ".png", ".jpg", ".jpeg",
+  ".gif", ".webp", ".ico", ".woff", ".woff2", ".txt", ".json", ".map"]);
+
+function isServable(pathname) {
+  const parts = pathname.split("/").filter(Boolean);
+  // любой сегмент, начинающийся с точки: .git, .github, .env и прочее
+  if (parts.some(p => p.startsWith("."))) return false;
+  if (parts.length && BLOCKED_DIRS.has(parts[0].toLowerCase())) return false;
+  if (parts.length === 1 && BLOCKED_FILES.has(parts[0].toLowerCase())) return false;
+  const ext = path.extname(pathname).toLowerCase();
+  return WEB_EXT.has(ext);
+}
+
 function serveStatic(req, res, pathname) {
   if (pathname === "/") pathname = "/index.html";
+  if (!isServable(pathname)) {
+    res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
+    return res.end("Не найдено");
+  }
   const file = path.normalize(path.join(ROOT, pathname));
   if (!file.startsWith(ROOT)) { res.writeHead(403); return res.end("forbidden"); }
 
@@ -2101,14 +2149,42 @@ function serveStatic(req, res, pathname) {
 
 /* ---------- сервер ---------- */
 
+/* Кто имеет право обращаться к API из браузера. Раньше стоял `*` - тогда любой
+   сайт мог дёргать наши публичные ручки от имени своего посетителя. Токен лежит
+   в localStorage нашего домена, так что увести сессию через это было нельзя,
+   но сужаем на всякий случай. Не-браузерные клиенты заголовок Origin не шлют
+   и работают как раньше. */
+const ALLOWED_ORIGINS = new Set([
+  "https://taulau.com", "https://www.taulau.com",
+  "https://adam5081.github.io",
+]);
+const originOk = o => !!o && (ALLOWED_ORIGINS.has(o) || /^http:\/\/localhost(:\d+)?$/.test(o));
+
+/* Базовые заголовки: запрет угадывания типа, запрет вставки в чужой iframe,
+   отказ передавать полный адрес страницы на сторонние сайты, HSTS. */
+function baseHeaders(req) {
+  const h = {
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "SAMEORIGIN",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+  };
+  const o = req.headers.origin;
+  if (originOk(o)) { h["Access-Control-Allow-Origin"] = o; h["Vary"] = "Origin"; }
+  return h;
+}
+
 const server = http.createServer(async (req, res) => {
   const { pathname } = new URL(req.url, "http://x");
 
+  // заголовки ставим один раз на любой ответ, включая ошибки и статику
+  for (const [k, v] of Object.entries(baseHeaders(req))) res.setHeader(k, v);
+
   if (req.method === "OPTIONS") {
-    res.writeHead(204, {
-      "Access-Control-Allow-Origin": "*",
+    res.writeHead(originOk(req.headers.origin) ? 204 : 403, {
       "Access-Control-Allow-Methods": "GET,POST,PUT,OPTIONS",
       "Access-Control-Allow-Headers": "Content-Type,Authorization,X-Admin-Key",
+      "Access-Control-Max-Age": "86400",
     });
     return res.end();
   }
