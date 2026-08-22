@@ -1152,6 +1152,7 @@ const routes = {
       const seed = x.seed_pts > 0;
       return {
         id: x.id, name: x.name, email: x.email, project: x.project,
+        phone: x.phone || "",
         tariff: normTariff(x.tariff), dock: x.dock || "",
         seed, mentorId: x.mentor_id || 0, approvedAt: x.approved_at || 0,
         points: s.points, level: s.level, station: s.station, walk: s.walk,

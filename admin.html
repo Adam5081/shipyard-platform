@@ -172,15 +172,74 @@ function card(a) {
     </div>`;
 }
 
+/* Карточка новичка: он уже зарегистрировался сам, но доступ закрыт до
+   подтверждения оплаты. Пока не подтвердили - живёт здесь, а не в участниках. */
+function pendingCard(u) {
+  return `
+    <div class="app-card" data-pending="${u.id}">
+      <div class="app-top">
+        <b>${esc(u.name)}</b>
+        <span class="tag t-contacted">⏳ ждёт подтверждения</span>
+      </div>
+      <div class="app-meta">
+        ${esc(u.email)} · ${u.phone ? esc(u.phone) : 'телефон не указан'} ·
+        тариф ${esc(u.tariff)} · записался ${fmtDate(u.createdAt)}
+      </div>
+      <div class="app-idea">${esc(u.project || 'проект не указан')}</div>
+      <div class="app-row">
+        <button class="btn btn-primary btn-sm" data-approve="${u.id}">Подтвердить (оплатил)</button>
+        <button class="btn btn-ghost btn-sm" data-sendreset="${u.id}">Письмо для смены пароля</button>
+        <button class="btn btn-ghost btn-sm" data-userdel="${u.id}" style="color:#d70015">Удалить</button>
+      </div>
+    </div>`;
+}
+
 async function loadApps() {
-  const { applications } = await call('/api/applications');
-  countEl.textContent = applications.length
-    ? `${applications.length} · новых: ${applications.filter(a => a.status === 'new').length}`
-    : '';
-  list.innerHTML = applications.length
-    ? applications.map(card).join('')
-    : '<div class="panel"><p class="empty">Заявок пока нет.</p></div>';
+  /* Два источника: самостоятельные регистрации, ждущие подтверждения оплаты,
+     и старые заявки с лендинга (форма больше их не создаёт - оставлены как архив). */
+  const [{ users }, apps] = await Promise.all([
+    call('/api/admin/users'),
+    call('/api/applications').catch(() => ({ applications: [] })),
+  ]);
+  const applications = apps.applications || [];
+  const pending = users.filter(u => !u.seed && !u.approvedAt);
+
+  countEl.textContent = pending.length
+    ? `ждут подтверждения: ${pending.length}`
+    : (applications.length ? `архив заявок: ${applications.length}` : '');
+
+  list.innerHTML = (pending.length
+      ? `<p class="u-sub" style="margin:0 0 10px">Записались на поток и ждут подтверждения оплаты. После кнопки «Подтвердить» аккаунт откроется и переедет во вкладку «Участники».</p>`
+        + pending.map(pendingCard).join('')
+      : '<div class="panel"><p class="empty">Новых записей нет - все подтверждены.</p></div>')
+    + (applications.length
+      ? `<p class="u-sub" style="margin:26px 0 10px"><b>Архив заявок с лендинга</b> - форма их больше не создаёт, оставлены для истории.</p>`
+        + applications.map(card).join('')
+      : '');
+
   bindApps();
+  bindPending();
+}
+
+/* Кнопки на карточках новичков - то же, что и в участниках. */
+function bindPending() {
+  list.querySelectorAll('[data-approve]').forEach(el => el.addEventListener('click', async () => {
+    el.disabled = true;
+    try { await call('/api/admin/approve-user', 'POST', { userId: Number(el.dataset.approve), approved: true });
+      toast('Подтверждён - доступ открыт, карточка уехала в «Участники»'); load(); }
+    catch (e) { toast(e.message); el.disabled = false; }
+  }));
+  list.querySelectorAll('[data-sendreset]').forEach(el => el.addEventListener('click', async () => {
+    el.disabled = true;
+    try { await call('/api/admin/send-reset', 'POST', { userId: Number(el.dataset.sendreset) }); toast('Письмо отправлено'); }
+    catch (e) { toast(e.message); }
+    el.disabled = false;
+  }));
+  list.querySelectorAll('[data-userdel]').forEach(el => el.addEventListener('click', async () => {
+    if (!confirm('Удалить запись НАВСЕГДА? Аккаунт и всё, что с ним связано, будет стёрто. Это действие необратимо.')) return;
+    try { await call('/api/admin/user-delete', 'POST', { userId: Number(el.dataset.userdel) }); toast('Запись удалена'); load(); }
+    catch (e) { toast(e.message); }
+  }));
 }
 
 function bindApps() {
@@ -281,17 +340,21 @@ function userRow(u) {
 }
 
 async function loadUsers() {
-  const { users } = await call('/api/admin/users');
+  const all = (await call('/api/admin/users')).users;
   if (ROLE?.role === 'admin' && !MENTORS.length) {
     try { MENTORS = (await call('/api/admin/mentors')).mentors; } catch {}
   }
+  /* Неподтверждённые живут во вкладке «Заявки» - здесь только те, кому открыт доступ. */
+  const waitingCount = all.filter(u => !u.seed && !u.approvedAt).length;
+  const users = all.filter(u => u.seed || u.approvedAt);
   const real = users.filter(u => !u.seed).length;
   const waiting = users.reduce((n, u) => n + (u.economy ? Object.values(u.economy.gates).filter(s => s === 'pending').length : 0), 0);
   countEl.textContent = (ROLE?.role === 'mentor' ? `мои участники: ${real}` : `участников: ${real}`)
     + (users.length > real ? ` · сидов: ${users.length - real}` : '')
     + (waiting ? ` · ⏳ КТ на проверке: ${waiting}` : '')
     + (() => { const n = users.reduce((s, u) => s + (u.stationReady || []).filter(x => !x.approvedAt).length, 0);
-        return n ? ` · 📬 станций на проверке: ${n}` : ''; })();
+        return n ? ` · 📬 станций на проверке: ${n}` : ''; })()
+    + (waitingCount ? ` · 📥 в заявках: ${waitingCount}` : '');
   const isAdminRole = ROLE?.role === 'admin';
   list.innerHTML = `
     ${isAdminRole ? `
@@ -316,7 +379,8 @@ async function loadUsers() {
         </tr></thead>
         <tbody>${users.map(userRow).join('')}</tbody>
       </table>
-    </div>` : '<div class="panel"><p class="empty">Участников пока нет.</p></div>'}`;
+    </div>` : `<div class="panel"><p class="empty">Подтверждённых участников пока нет.${
+      waitingCount ? ` ${waitingCount} чел. ждут подтверждения во вкладке «Заявки».` : ''}</p></div>`}`;
 
   const nuAdd = document.getElementById('nuAdd');
   if (nuAdd) nuAdd.addEventListener('click', async () => {
