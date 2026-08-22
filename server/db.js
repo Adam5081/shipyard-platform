@@ -283,7 +283,23 @@ const SEED_PEERS = [
     demo: null },
 ];
 
+/* Демо-«попутчики» нужны были, пока платформа стояла пустой: они наполняли
+   лигу, стену демо и карту. На боевом потоке они только мешают - в админке
+   идут вперемешку с настоящими участниками. Поэтому по умолчанию сиды
+   выключены и удаляются, а вернуть их можно переменной SHIPYARD_SEED=1. */
+const WANT_SEED = process.env.SHIPYARD_SEED === "1";
+
+/* Удаляем разом: внешние ключи с ON DELETE CASCADE (и PRAGMA foreign_keys = ON
+   выше) сами уносят прогресс, демо, голоса, брони и баттлы этих аккаунтов. */
+function dropSeeds() {
+  const n = db.prepare("SELECT COUNT(*) AS n FROM users WHERE seed_pts > 0").get().n;
+  if (!n) return;
+  db.prepare("DELETE FROM users WHERE seed_pts > 0").run();
+  console.log(`[db] демо-участники удалены: ${n} (вернуть - SHIPYARD_SEED=1)`);
+}
+
 function seed() {
+  if (!WANT_SEED) return dropSeeds();
   const count = db.prepare("SELECT COUNT(*) AS n FROM users WHERE seed_pts > 0").get().n;
   if (count > 0) {
     // добор полей для сидов, созданных до появления лиг и описаний
