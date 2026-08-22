@@ -1,3 +1,18 @@
 server/data/
 node_modules/
 *.log
+
+# секреты и ключи — чтобы случайный файл не уехал в публичный репозиторий
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*-key.json
+credentials*.json
+
+# локальные базы и бэкапы
+*.db
+*.sqlite
+*.sqlite3
+backup-*.db
