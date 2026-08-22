@@ -1455,19 +1455,22 @@ const VIEWS = {
     return `
       <div class="page-head">
         <h1>Календарь</h1>
-        <p>Расписание лайв-сессий и групповых созвонов с экспертами: время, тема, кто ведёт. Лайвы открыты всем, созвоны - по часам тарифа.</p>
+        <p>Лайв-сессии открыты всем и часы не тратят. Групповые созвоны и слоты один на один идут из часов вашего тарифа.</p>
       </div>
       ${mine.length ? `
       <div class="panel">
         <h2>Мои записи</h2>
         ${mine.map(s => `
-          <div class="task" style="align-items:center">
-            <div style="flex:1;min-width:0">
-              <b>${s.type === "live" ? "🎥" : "👥"} ${esc(s.title)}</b>
-              <small style="display:block;color:var(--ink-3)">${fmtD(s.startsAt)}${s.host ? " · ведёт " + esc(s.host) : ""}</small>
-              ${s.meetUrl ? `<small style="display:block"><a href="${esc(s.meetUrl)}" target="_blank" rel="noopener">Ссылка на Google Meet →</a></small>` : ""}
+          <div class="sess ${s.canceled ? "sess-canceled" : "sess-my"}">
+            <div class="sess-main">
+              <b>${SESS_ICON[s.type] || "👥"} ${esc(s.title)}</b>
+              <small>${fmtD(s.startsAt)}${s.host ? " · ведёт " + esc(s.host) : ""} · ${SESS_NAME[s.type] || ""}</small>
+              ${s.canceled ? `<small class="sess-why">Сессия отменена - на неё никто не записался.</small>` : ""}
+              ${s.meetUrl ? `<small><a href="${esc(s.meetUrl)}" target="_blank" rel="noopener">Ссылка на Google Meet →</a></small>` : ""}
+              ${s.canceled ? "" : `<small><a href="${gcalLink(s)}" target="_blank" rel="noopener">Добавить в Google Календарь →</a></small>`}
             </div>
-            <button class="btn btn-ghost btn-sm" data-unbook="${s.id}">Отписаться</button>
+            ${s.canceled ? `<span class="status-chip">отменена</span>`
+              : `<button class="btn btn-ghost btn-sm" data-unbook="${s.id}">Отписаться</button>`}
           </div>`).join("")}
       </div>` : ""}
       ${S9 ? sessionsBlock() : `<div class="panel"><p class="muted">Календарь загружается…</p></div>`}`;
@@ -1475,11 +1478,10 @@ const VIEWS = {
 
   /* ---- сервисный пул ---- */
   experts() {
-    const hours = S.tariff === "Solo" ? "4 ч/нед" : S.tariff === "Pro" ? "6 ч/нед" : "без лимита";
     return `
       <div class="page-head">
         <h1>Сервисный пул</h1>
-        <p>Групповой контур и ментор в Telegram - всем. Все созвоны с экспертами групповые и идут через календарь: Solo - 4 часа в неделю, Pro - 6, Partner - без лимита.</p>
+        <p>Групповой контур и ментор в Telegram - всем. Созвоны с экспертами идут через календарь: Solo - 4 часа групповых в неделю, Pro - те же 4 плюс 2 часа один на один, Partner - без лимита.</p>
       </div>
       ${API !== null && CACHE.sessions ? sessionsBlock() : ""}
       <div class="svc-grid">
@@ -1796,39 +1798,123 @@ const VIEWS = {
 /* ---------------- фрагменты ---------------- */
 
 /* календарь сессий: лайвы для всех, созвоны - по часам тарифа */
+const SESS_ICON = { live: "🎥", group: "👥", one: "🎧" };
+const SESS_NAME = { live: "лайв-сессия, для всех", group: "групповой созвон", one: "один на один с экспертом" };
+const hoursTxt = m => `${Math.round(m / 6) / 10} ч`;
+
+/* Ссылка «добавить в Google Календарь» - разовое событие, без доступа к аккаунту.
+   Для постоянной синхронизации есть подписка на ленту (кнопка ниже списка). */
+function gcalLink(s) {
+  const z = ts => new Date(ts).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+  const p = new URLSearchParams({
+    action: "TEMPLATE",
+    text: `Taulau · ${s.title}`,
+    dates: `${z(s.startsAt)}/${z(s.startsAt + s.duration * 60000)}`,
+    details: [s.host ? "Ведёт " + s.host : "", s.dir, s.meetUrl].filter(Boolean).join("\n"),
+    location: s.meetUrl || "Taulau",
+  });
+  return `https://calendar.google.com/calendar/render?${p}`;
+}
+
+/* Карточки остатка часов: разбивка по видам, а не одна общая цифра -
+   участник должен видеть, что групповые и личные часы не смешиваются. */
+function hoursCards(H) {
+  const card = (key, label, hint) => {
+    const h = H[key] || {};
+    const lim = h.limitMin;
+    if (lim === null) return `
+      <div class="hr-card"><span class="hr-k">${label}</span><b class="hr-v">без лимита</b><small>${hint}</small></div>`;
+    if (lim === 0) return `
+      <div class="hr-card hr-off"><span class="hr-k">${label}</span><b class="hr-v">Недоступно</b>
+        <small>на тарифе Pro - 2 ч в неделю</small></div>`;
+    const left = Math.max(0, lim - (h.usedMin || 0));
+    const pct = Math.min(100, Math.round(((h.usedMin || 0) / lim) * 100));
+    return `
+      <div class="hr-card${left === 0 ? " hr-out" : ""}">
+        <span class="hr-k">${label}</span>
+        <b class="hr-v">${hoursTxt(left)} из ${lim / 60} ч</b>
+        <div class="hr-bar"><i style="width:${pct}%"></i></div>
+        <small>${left === 0 ? "часы кончились, обновятся в понедельник" : hint}</small>
+      </div>`;
+  };
+  return `<div class="hr-grid">
+    ${card("group", "Групповые", "созвоны с экспертами в группе")}
+    ${card("one", "Один на один", "личный слот с экспертом")}
+  </div>`;
+}
+
 function sessionsBlock() {
-  const S9 = CACHE.sessions;
+  const S9 = CACHE.sessions || {};
+  const H = S9.hours || {};
   const fmtT = ts => new Date(ts).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
   const fmtDay = ts => new Date(ts).toLocaleDateString("ru-RU", { weekday: "long", day: "numeric", month: "long" });
   /* слоты сгруппированы по дням - читается как календарь */
+  /* Начало недели слота: по нему подставляем счётчик часов именно этой недели */
+  const weekOf = ts => { const d = new Date(ts); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d.getTime(); };
+  const weekInfo = ws => (S9.weeks || []).find(w => w.weekStart === ws);
+  const weekLine = ws => {
+    const w = weekInfo(ws);
+    if (!w) return "";
+    const part = (h, name) => h.limitMin === null ? `${name}: без лимита`
+      : h.limitMin === 0 ? `${name}: на тарифе Pro`
+      : `${name}: ${hoursTxt(Math.max(0, h.limitMin - h.usedMin))} из ${h.limitMin / 60} ч`;
+    const end = new Date(ws + 6 * 86400000);
+    const label = w.current ? "Эта неделя" :
+      `Неделя ${new Date(ws).getDate()}-${end.getDate()} ${end.toLocaleDateString("ru-RU", { month: "long" })}`;
+    return `<div class="week-line"><b>${label}</b><span>${part(w.group, "групповые")} · ${part(w.one, "один на один")}</span></div>`;
+  };
   let lastDay = "";
+  let lastWeek = 0;
   const rows = (S9.list || []).map(s => {
+    const wk = weekOf(s.startsAt);
+    const wHead = wk !== lastWeek ? weekLine(wk) : "";
+    lastWeek = wk;
     const day = fmtDay(s.startsAt);
-    const head = day !== lastDay ? `<p class="eyebrow" style="margin:14px 0 4px;text-transform:capitalize">${day}</p>` : "";
+    const head = day !== lastDay ? `${wHead}<p class="eyebrow" style="margin:16px 0 6px;text-transform:capitalize">${day}</p>` : "";
     lastDay = day;
-    return `${head}
-    <div class="task" style="align-items:center">
-      <div style="flex:1;min-width:0">
-        <b>${s.type === "live" ? "🎥" : "👥"} ${fmtT(s.startsAt)} · ${esc(s.title)}</b>
-        <small style="display:block;color:var(--ink-3)">${s.host ? "ведёт " + esc(s.host) + " · " : ""}${s.duration} мин${s.dir ? " · " + esc(s.dir) : ""} ·
-          ${s.type === "live" ? "лайв-сессия, для всех" : `созвон · записано ${s.booked}/${s.capacity}`}</small>
-        ${s.my && s.meetUrl ? `<small style="display:block"><a href="${esc(s.meetUrl)}" target="_blank" rel="noopener">Ссылка на Google Meet →</a></small>` : ""}
-      </div>
-      ${s.my
+    const b = s.block;
+    const cls = s.canceled ? "sess-canceled" : s.my ? "sess-my" : b && b.code === "tariff" ? "sess-locked" : "";
+    const action = s.canceled
+      ? `<span class="status-chip">отменена</span>`
+      : s.my
         ? `<button class="btn btn-ghost btn-sm" data-unbook="${s.id}">Отписаться</button>`
-        : s.booked >= s.capacity
-          ? `<span class="status-chip wait">мест нет</span>`
-          : `<button class="btn btn-primary btn-sm" data-book-session="${s.id}">Записаться</button>`}
+        : b
+          ? `<span class="status-chip wait"${b.why ? ` title="${esc(b.why)}"` : ""}>${esc(b.text)}</span>`
+          : `<button class="btn btn-primary btn-sm" data-book-session="${s.id}">Записаться</button>`;
+    return `${head}
+    <div class="sess ${cls}">
+      <div class="sess-main">
+        <b>${SESS_ICON[s.type] || "👥"} ${fmtT(s.startsAt)} · ${esc(s.title)}${s.my ? ' <span class="sess-tag">вы записаны</span>' : ""}</b>
+        <small>${s.host ? "ведёт " + esc(s.host) + " · " : ""}${s.duration} мин${s.dir ? " · " + esc(s.dir) : ""} ·
+          ${s.type === "live" ? SESS_NAME.live : `${SESS_NAME[s.type]} · записано ${s.booked}/${s.capacity}`}</small>
+        ${s.canceled ? `<small class="sess-why">Слот снят: за ${S9.autoCancelMin || 30} мин до начала на него никто не записался.</small>` : ""}
+        ${!s.my && b && b.why ? `<small class="sess-why">${esc(b.why)}</small>` : ""}
+        ${s.my && s.meetUrl ? `<small><a href="${esc(s.meetUrl)}" target="_blank" rel="noopener">Ссылка на Google Meet →</a></small>` : ""}
+        ${s.my && !s.canceled ? `<small><a href="${gcalLink(s)}" target="_blank" rel="noopener">Добавить в Google Календарь →</a></small>` : ""}
+      </div>
+      ${action}
     </div>`;
   }).join("");
-  const used = Math.round((S9.usedMin || 0) / 6) / 10;
-  const limit = S9.limitMin ? S9.limitMin / 60 : null;
+  const soloLocked = (H.one || {}).limitMin === 0;
   return `
     <div class="panel">
-      <h2>Календарь сессий</h2>
-      <p class="muted" style="margin-bottom:6px">Лайв-сессии открыты всем. Групповые созвоны с экспертами - по часам тарифа${limit ? `: использовано <b>${used} из ${limit} ч</b> на этой неделе` : " - на вашем тарифе без лимита"}.</p>
-      ${limit && used >= limit ? `<div class="notice" style="margin-bottom:10px"><b>Лимит часов на этой неделе исчерпан.</b> Часы обновятся в понедельник${S.tariff === "Solo" ? " - или расширьте лимит на тарифе выше" : ""}. ${S.tariff !== "Partner" ? `<a class="btn btn-primary btn-sm" href="index.html#pricing" target="_blank" rel="noopener" style="margin-left:6px">Улучшить тариф</a>` : ""}</div>` : ""}
+      <h2>Часы этой недели</h2>
+      <p class="muted" style="margin-bottom:12px">Тариф ${esc(S.tariff || "Solo")}. Часы обнуляются каждый понедельник; лайв-сессии открыты всем и часы не тратят.</p>
+      ${hoursCards(H)}
+      ${soloLocked ? `
+        <div class="notice" style="margin-top:12px">
+          <b>Слоты один на один - на тарифе Pro.</b> Это 2 часа в неделю личного времени эксперта, без других участников.
+          <a class="btn btn-primary btn-sm" href="index.html#pricing" target="_blank" rel="noopener" style="margin-left:6px">Улучшить тариф</a>
+        </div>` : ""}
+    </div>
+    <div class="panel">
+      <h2>Расписание</h2>
       ${rows || `<p class="muted" style="padding:12px 0">Ближайших сессий пока нет. Расписание пополняет ментор потока - напишите ему в Telegram и предложите удобное время.</p>`}
+      <div class="cal-sync">
+        <button class="btn btn-ghost btn-sm" id="calSubBtn">Подписаться в Google Календаре</button>
+        <span class="muted" id="calSubOut">Все ваши записи будут приходить в личный календарь автоматически.</span>
+      </div>
+      <p class="muted cal-note">Если за ${S9.autoCancelMin || 30} минут до начала сессии на неё не запишется ни один участник, мы оставляем за собой право её отменить.</p>
     </div>`;
 }
 
@@ -2203,21 +2289,48 @@ function bind() {
   });
 
   /* календарь: запись и отмена */
+  /* Запись и отписка: сервер возвращает пересчитанный календарь вместе с
+     остатком часов - второй запрос не нужен, счётчики меняются сразу. */
   view.querySelectorAll("[data-book-session]").forEach(b => b.addEventListener("click", async () => {
+    b.disabled = true;
     try {
-      await apiCall("/sessions/book", "POST", { id: Number(b.dataset.bookSession) });
-      CACHE.sessions = await apiCall("/sessions");
+      const r = await apiCall("/sessions/book", "POST", { id: Number(b.dataset.bookSession) });
+      if (r && r.list) CACHE.sessions = r;
       toast("Вы записаны - ссылка на Meet появилась в карточке");
       render();
-    } catch (e2) { toast(e2.message); }
+    } catch (e2) { toast(e2.message); b.disabled = false; }
   }));
   view.querySelectorAll("[data-unbook]").forEach(b => b.addEventListener("click", async () => {
+    b.disabled = true;
     try {
-      await apiCall("/sessions/unbook", "POST", { id: Number(b.dataset.unbook) });
-      CACHE.sessions = await apiCall("/sessions");
+      const r = await apiCall("/sessions/unbook", "POST", { id: Number(b.dataset.unbook) });
+      if (r && r.list) CACHE.sessions = r;
+      toast("Запись отменена - часы вернулись");
       render();
-    } catch (e2) { toast(e2.message); }
+    } catch (e2) { toast(e2.message); b.disabled = false; }
   }));
+
+  /* Подписка на календарь: ссылку с секретом выдаём по кнопке, а не храним в вёрстке */
+  const calBtn = view.querySelector("#calSubBtn");
+  if (calBtn) calBtn.addEventListener("click", async () => {
+    calBtn.disabled = true;
+    try {
+      const { url } = await apiCall("/calendar/link", "POST", {});
+      const out = view.querySelector("#calSubOut");
+      const gcal = `https://calendar.google.com/calendar/r/settings/addbyurl?cid=${encodeURIComponent(url)}`;
+      out.innerHTML = `
+        <a href="${esc(gcal)}" target="_blank" rel="noopener"><b>Открыть Google Календарь и подписаться →</b></a>
+        <br>Или добавьте ссылку вручную (Другие календари → Добавить по URL):
+        <br><code class="cal-url">${esc(url)}</code>
+        <button class="btn btn-ghost btn-sm" data-copy-cal="${esc(url)}">Скопировать</button>
+        <br><small>Ссылка личная - не передавайте её. Google обновляет подписку не мгновенно, поэтому для ближайшей сессии надёжнее «Добавить в Google Календарь» в её карточке.</small>`;
+      out.querySelector("[data-copy-cal]").addEventListener("click", async ev => {
+        try { await navigator.clipboard.writeText(ev.currentTarget.dataset.copyCal); toast("Ссылка скопирована"); }
+        catch { toast("Скопируйте ссылку вручную"); }
+      });
+    } catch (e2) { toast(e2.message); }
+    calBtn.disabled = false;
+  });
 
   /* запись на Demo Day */
   const ddBtn = view.querySelector("[data-dd-register]");

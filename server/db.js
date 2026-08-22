@@ -194,6 +194,7 @@ const NEW_COLUMNS = [
   ["bonus_spins", "INTEGER NOT NULL DEFAULT 0"],   // «счастливые билеты» лотереи (макс. 2 за поток)
   ["mentor_id",   "INTEGER NOT NULL DEFAULT 0"],   // ответственный ментор (0 — не назначен)
   ["contract_accepted_at", "INTEGER NOT NULL DEFAULT 0"],  // акцепт упрощённого договора (нулевой этап)
+  ["cal_token",   "TEXT NOT NULL DEFAULT ''"],     // секрет ссылки-подписки на календарь (ICS)
 ];
 
 const existing = new Set(db.prepare("PRAGMA table_info(users)").all().map(c => c.name));
@@ -209,6 +210,10 @@ if (!mentorCols.has("role")) db.exec("ALTER TABLE mentors ADD COLUMN role TEXT N
 const sessionCols = new Set(db.prepare("PRAGMA table_info(sessions)").all().map(c => c.name));
 if (!sessionCols.has("host")) db.exec("ALTER TABLE sessions ADD COLUMN host TEXT NOT NULL DEFAULT ''");
 if (!sessionCols.has("host_id")) db.exec("ALTER TABLE sessions ADD COLUMN host_id INTEGER NOT NULL DEFAULT 0");
+
+/* автоотмена: групповую сессию без единой записи снимаем за 30 минут до начала.
+   Строку не удаляем - участник должен увидеть, что слот отменён, а не гадать. */
+if (!sessionCols.has("canceled_at")) db.exec("ALTER TABLE sessions ADD COLUMN canceled_at INTEGER NOT NULL DEFAULT 0");
 
 /* посещаемость: -1 не отмечено, 0 не пришёл, 1 был */
 const bookingCols = new Set(db.prepare("PRAGMA table_info(bookings)").all().map(c => c.name));

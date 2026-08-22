@@ -1823,3 +1823,52 @@ pre.code .h { color: #7fd4e4; font-weight: 600; }
   .acc-btns { flex-direction: column-reverse; }
   .acc-btns .btn { width: 100%; }
 }
+
+/* ---------- календарь участника ---------- */
+/* Остаток часов - отдельными карточками по видам созвонов: групповые и
+   один на один не смешиваются, поэтому и показываем их раздельно. */
+.hr-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
+.hr-card { background: var(--bg-alt); border-radius: 12px; padding: 14px 16px; }
+.hr-k { display: block; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); }
+.hr-v { display: block; font-size: 19px; font-weight: 700; margin: 4px 0 6px; letter-spacing: -.01em; }
+.hr-card small { display: block; font-size: 12.5px; color: var(--ink-3); line-height: 1.4; }
+.hr-bar { height: 5px; background: rgba(0,0,0,.08); border-radius: 999px; overflow: hidden; margin-bottom: 7px; }
+.hr-bar i { display: block; height: 100%; background: var(--green); border-radius: 999px; transition: width .3s; }
+.hr-out .hr-v { color: var(--red); }
+.hr-out .hr-bar i { background: var(--red); }
+.hr-off { opacity: .62; }
+.hr-off .hr-v { font-size: 15px; color: var(--ink-3); }
+
+/* Строка сессии: три состояния - записан (зелёный), закрыт тарифом (серый), отменён */
+.sess { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 12px;
+  border: 1px solid transparent; border-bottom: 1px solid var(--line); }
+.sess:last-of-type { border-bottom: 1px solid transparent; }
+.sess-main { flex: 1; min-width: 0; }
+.sess-main b { display: block; font-weight: 600; }
+.sess-main small { display: block; margin-top: 2px; font-size: 12.5px; color: var(--ink-3); line-height: 1.45; }
+.sess-why { color: var(--ink-3); font-style: italic; }
+.sess-tag { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em;
+  color: var(--green); margin-left: 6px; vertical-align: 1px; }
+.sess-my { background: color-mix(in srgb, var(--green) 9%, transparent); border-color: var(--green); }
+.sess-locked { opacity: .55; }
+.sess-locked b { color: var(--ink-3); }
+.sess-canceled { opacity: .5; }
+.sess-canceled .sess-main b { text-decoration: line-through; }
+
+.cal-sync { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line);
+  display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap; }
+.cal-sync .muted { flex: 1; min-width: 220px; font-size: 13px; line-height: 1.5; }
+.cal-url { display: inline-block; margin: 4px 6px 4px 0; padding: 3px 7px; font-size: 12px;
+  background: var(--bg-alt); border-radius: 6px; word-break: break-all; }
+.cal-note { margin-top: 12px; font-size: 12.5px; line-height: 1.5; }
+@media (max-width: 560px) {
+  .sess { flex-direction: column; align-items: stretch; gap: 8px; }
+  .sess .btn, .sess .status-chip { align-self: flex-start; }
+}
+/* Полоса недели в расписании: часы лимитируются понедельником, поэтому
+   остаток показываем у той недели, к которой относятся слоты ниже. */
+.week-line { display: flex; gap: 10px; flex-wrap: wrap; align-items: baseline;
+  margin: 22px 0 2px; padding: 8px 12px; border-radius: 10px; background: var(--bg-alt); }
+.week-line b { font-size: 13.5px; }
+.week-line span { font-size: 12.5px; color: var(--ink-3); }
+.week-line:first-child { margin-top: 4px; }

@@ -99,10 +99,24 @@ const q = {
   myBookings: db.prepare("SELECT session_id FROM bookings WHERE user_id = ?"),
   addBooking: db.prepare("INSERT OR IGNORE INTO bookings (session_id, user_id, created_at) VALUES (?,?,?)"),
   delBooking: db.prepare("DELETE FROM bookings WHERE session_id = ? AND user_id = ?"),
-  myGroupMinutes: db.prepare(`
+  /* минуты, занятые записями участника за неделю, по виду сессии (group | one).
+     Отменённые слоты часы не съедают. */
+  myMinutes: db.prepare(`
     SELECT COALESCE(SUM(s.duration_min), 0) AS m FROM bookings b
     JOIN sessions s ON s.id = b.session_id
-    WHERE b.user_id = ? AND s.type = 'group' AND s.starts_at >= ? AND s.starts_at < ?`),
+    WHERE b.user_id = ? AND s.type = ? AND s.canceled_at = 0
+      AND s.starts_at >= ? AND s.starts_at < ?`),
+  /* автоотмена: групповые слоты, до которых меньше N минут и куда никто не записался */
+  emptySoon: db.prepare(`
+    SELECT * FROM sessions
+    WHERE canceled_at = 0 AND type IN ('group','one') AND starts_at > ? AND starts_at <= ?
+      AND NOT EXISTS (SELECT 1 FROM bookings b WHERE b.session_id = sessions.id)`),
+  cancelSession: db.prepare("UPDATE sessions SET canceled_at = ? WHERE id = ?"),
+  myFutureBookings: db.prepare(`
+    SELECT s.* FROM bookings b JOIN sessions s ON s.id = b.session_id
+    WHERE b.user_id = ? AND s.starts_at > ? ORDER BY s.starts_at LIMIT 200`),
+  userByCalToken: db.prepare("SELECT * FROM users WHERE cal_token = ? AND cal_token <> ''"),
+  setCalToken: db.prepare("UPDATE users SET cal_token = ? WHERE id = ?"),
   ddReg: db.prepare("SELECT * FROM demoday_regs WHERE user_id = ?"),
   ddRegister: db.prepare("INSERT OR REPLACE INTO demoday_regs (user_id, link, note, requested_at, approved_at) VALUES (?,?,?,?,0)"),
   ddApprove: db.prepare("UPDATE demoday_regs SET approved_at = ? WHERE user_id = ?"),
@@ -345,7 +359,144 @@ function weekBounds(ts) {
   return [start, start + 7 * 86400000];
 }
 
-const GROUP_LIMIT_MIN = { Solo: 240, Pro: 360, Partner: 0 };  // единые часы тарифа: Solo 4 ч, Pro 6 ч; 0 = без лимита
+/* Часы тарифа по видам созвонов, минут в неделю.
+   Solo - 4 ч, все групповые. Pro - те же 4 ч групповых плюс 2 ч один на один
+   с экспертом (итого 6). null = без лимита, 0 = вид недоступен на тарифе. */
+const HOUR_LIMITS = {
+  Solo:    { group: 240, one: 0 },
+  Pro:     { group: 240, one: 120 },
+  Partner: { group: null, one: null },
+};
+const tariffLimits = t => HOUR_LIMITS[normTariff(t)] || HOUR_LIMITS.Solo;
+/* live - открытые сессии для всех, часы за них не списываются */
+const SESSION_TYPES = ["live", "group", "one"];
+const limitKind = type => (type === "one" ? "one" : type === "group" ? "group" : null);
+
+/* ---------- календарь участника ---------- */
+
+const API_BASE = req => {
+  const proto = String(req.headers["x-forwarded-proto"] || "http").split(",")[0];
+  return `${proto}://${req.headers.host}`;
+};
+
+/* Сколько минут вида kind участник уже занял на неделе слота и сколько ему положено. */
+function hoursFor(u, kind, ts = Date.now()) {
+  const [ws, we] = weekBounds(ts);
+  const limit = tariffLimits(u.tariff)[kind];
+  return { usedMin: q.myMinutes.get(u.id, kind === "one" ? "one" : "group", ws, we).m, limitMin: limit };
+}
+
+/* Почему слот нельзя занять. null = можно. Тот же расчёт использует и запись,
+   и отрисовка - иначе кнопка и сервер разошлись бы в оценке. */
+function bookBlock(u, s, mine) {
+  if (mine) return null;
+  if (s.canceled_at) return { code: "canceled", text: "Отменена" };
+  if (s.starts_at < Date.now()) return { code: "past", text: "Уже прошла" };
+  const kind = limitKind(s.type);
+  if (!kind) return q.bookingCount.get(s.id).n >= s.capacity
+    ? { code: "full", text: "Мест нет" } : null;   // live - для всех, без списания часов
+  const { usedMin, limitMin } = hoursFor(u, kind, s.starts_at);
+  if (limitMin === null) return null;             // Partner - без лимита
+  /* Закрытость по тарифу важнее занятости: Solo должен видеть «Недоступно»
+     и понимать, что опция существует, а не «мест нет» у занятого слота. */
+  if (limitMin === 0)
+    return { code: "tariff", text: "Недоступно", why: "Слоты один на один доступны на тарифе Pro" };
+  if (q.bookingCount.get(s.id).n >= s.capacity) return { code: "full", text: "Мест нет" };
+  if (usedMin + s.duration_min > limitMin)
+    return { code: "limit", text: "Часы кончились",
+      why: `Лимит недели: ${limitMin / 60} ч ${kind === "one" ? "один на один" : "групповых"}. Занято ${Math.round(usedMin / 6) / 10} ч` };
+  return null;
+}
+
+function calendarState(u) {
+  const now = Date.now();
+  const mine = new Set(q.myBookings.all(u.id).map(r => r.session_id));
+  const list = q.sessionsUpcoming.all(now - 2 * 3600000).map(s => {
+    const my = mine.has(s.id);
+    const block = bookBlock(u, s, my);
+    return {
+      id: s.id, title: s.title, dir: s.dir, type: s.type, host: s.host || "",
+      startsAt: s.starts_at, duration: s.duration_min, capacity: s.capacity,
+      booked: q.bookingCount.get(s.id).n,
+      canceled: !!s.canceled_at,
+      my,
+      meetUrl: my ? s.meet_url : "",
+      block: block ? { code: block.code, text: block.text, why: block.why || "" } : null,
+    };
+  });
+  /* Часы недельные, а расписание почти всегда захватывает несколько недель.
+     Поэтому считаем остаток для каждой недели, в которой есть слоты, - иначе
+     участник смотрит на сессии следующей недели, а видит счётчик текущей. */
+  const weekStarts = [...new Set([weekBounds(now)[0], ...list.map(s => weekBounds(s.startsAt)[0])])].sort();
+  const weeks = weekStarts.map(ws => ({
+    weekStart: ws,
+    current: ws === weekBounds(now)[0],
+    group: hoursFor(u, "group", ws),
+    one: hoursFor(u, "one", ws),
+  }));
+  return {
+    list,
+    weeks,
+    hours: { group: hoursFor(u, "group", now), one: hoursFor(u, "one", now) },  // текущая неделя
+    autoCancelMin: AUTO_CANCEL_MIN,
+  };
+}
+
+/* ---------- лента ICS: подписка Google Calendar ---------- */
+
+/* Переносы строк и запятые в ICS экранируются, длинные строки складываются. */
+const icsEsc = s => String(s || "").replace(/[\\;,]/g, m => "\\" + m).replace(/\r?\n/g, "\\n");
+const icsDate = ts => new Date(ts).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+
+function serveIcs(res, token) {
+  const u = q.userByCalToken.get(token);
+  if (!u) return err(res, 404, "Календарь не найден");
+  const rows = q.myFutureBookings.all(u.id, Date.now() - 30 * 86400000);
+  const lines = [
+    "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Taulau//Calendar//RU",
+    "CALSCALE:GREGORIAN", "METHOD:PUBLISH", "X-WR-CALNAME:Taulau - мои сессии",
+    "X-WR-TIMEZONE:Asia/Almaty",
+  ];
+  for (const s of rows) {
+    lines.push("BEGIN:VEVENT",
+      `UID:taulau-${s.id}-${u.id}@taulau.com`,
+      `DTSTAMP:${icsDate(Date.now())}`,
+      `DTSTART:${icsDate(s.starts_at)}`,
+      `DTEND:${icsDate(s.starts_at + s.duration_min * 60000)}`,
+      `SUMMARY:${icsEsc((s.canceled_at ? "ОТМЕНЕНО: " : "") + s.title)}`,
+      `DESCRIPTION:${icsEsc([s.dir, s.host ? "Ведёт " + s.host : "", s.meet_url].filter(Boolean).join(" · "))}`,
+      s.meet_url ? `LOCATION:${icsEsc(s.meet_url)}` : "LOCATION:Taulau",
+      `STATUS:${s.canceled_at ? "CANCELLED" : "CONFIRMED"}`,
+      "END:VEVENT");
+  }
+  lines.push("END:VCALENDAR");
+  const body = lines.join("\r\n") + "\r\n";
+  res.writeHead(200, {
+    "Content-Type": "text/calendar; charset=utf-8",
+    "Content-Disposition": 'inline; filename="taulau.ics"',
+    "Cache-Control": "no-cache",
+    "Access-Control-Allow-Origin": "*",
+  });
+  res.end(body);
+}
+
+/* ---------- автоотмена пустых слотов ---------- */
+
+const AUTO_CANCEL_MIN = 30;
+
+/* Слот без единой записи снимаем за 30 минут до начала: эксперт не ждёт зря.
+   Идёт по таймеру, поэтому переживает и простой сервера - при старте тоже. */
+function sweepEmptySessions() {
+  const now = Date.now();
+  const rows = q.emptySoon.all(now, now + AUTO_CANCEL_MIN * 60000);
+  for (const s of rows) {
+    q.cancelSession.run(now, s.id);
+    notifyTg(`🚫 Сессия отменена автоматически: «${s.title}» ${new Date(s.starts_at).toLocaleString("ru-RU")} - никто не записался`);
+  }
+  if (rows.length) console.log(`[календарь] автоотмена пустых слотов: ${rows.length}`);
+}
+setInterval(sweepEmptySessions, 5 * 60000).unref?.();
+setTimeout(sweepEmptySessions, 10000).unref?.();
 
 function publicUser(u) {
   return {
@@ -1450,22 +1601,20 @@ const routes = {
   "GET /api/sessions": async (req, res) => {
     const u = auth(req);
     if (!u) return err(res, 401, "Нужен вход");
-    const now = Date.now();
-    const mine = new Set(q.myBookings.all(u.id).map(r => r.session_id));
-    const list = q.sessionsUpcoming.all(now - 2 * 3600000).map(s => ({
-      id: s.id, title: s.title, dir: s.dir, type: s.type, host: s.host || "",
-      startsAt: s.starts_at, duration: s.duration_min, capacity: s.capacity,
-      booked: q.bookingCount.get(s.id).n,
-      my: mine.has(s.id),
-      meetUrl: mine.has(s.id) ? s.meet_url : "",
-    }));
-    const [ws, we] = weekBounds(now);
-    const limit = GROUP_LIMIT_MIN[normTariff(u.tariff)] ?? 120;
-    send(res, 200, {
-      list,
-      usedMin: q.myGroupMinutes.get(u.id, ws, we).m,
-      limitMin: limit,   // 0 = без лимита (Partner)
-    });
+    send(res, 200, calendarState(u));
+  },
+
+  /* Ссылка-подписка на календарь: отдаём существующую или заводим новую.
+     Секрет живёт в самой ссылке - Google подписывается на неё без входа. */
+  "POST /api/calendar/link": async (req, res) => {
+    const u = auth(req);
+    if (!u) return err(res, 401, "Нужен вход");
+    let token = u.cal_token;
+    if (!token) {
+      token = crypto.randomBytes(24).toString("base64url");
+      q.setCalToken.run(token, u.id);
+    }
+    send(res, 200, { url: `${API_BASE(req)}/api/calendar/${token}.ics` });
   },
 
   "POST /api/sessions/book": async (req, res) => {
@@ -1474,19 +1623,15 @@ const routes = {
     if (needApproved(u, res)) return;
     const b = await readBody(req);
     const s = q.sessionById.get(Number(b.id));
-    if (!s || s.starts_at < Date.now()) return err(res, 404, "Сессия не найдена или уже прошла");
-    if (q.bookingCount.get(s.id).n >= s.capacity) return err(res, 409, "Мест больше нет");
-    if (s.type === "group") {
-      const limit = GROUP_LIMIT_MIN[normTariff(u.tariff)] ?? 120;
-      if (limit > 0) {
-        const [ws, we] = weekBounds(s.starts_at);
-        const used = q.myGroupMinutes.get(u.id, ws, we).m;
-        if (used + s.duration_min > limit)
-          return err(res, 403, `Лимит тарифа: ${limit / 60} ч созвонов в неделю. Использовано ${Math.round(used / 6) / 10} ч`);
-      }
+    if (!s) return err(res, 404, "Сессия не найдена");
+    const block = bookBlock(u, s, false);
+    if (block) {
+      const code = block.code === "full" ? 409 : block.code === "past" ? 404 : 403;
+      return err(res, code, block.why || block.text);
     }
     q.addBooking.run(s.id, u.id, Date.now());
-    send(res, 200, { ok: true, meetUrl: s.meet_url });
+    // отдаём пересчитанный календарь: остаток часов на клиенте меняется без перезагрузки
+    send(res, 200, { ok: true, meetUrl: s.meet_url, ...calendarState(u) });
   },
 
   "POST /api/sessions/unbook": async (req, res) => {
@@ -1494,7 +1639,7 @@ const routes = {
     if (!u) return err(res, 401, "Нужен вход");
     const b = await readBody(req);
     q.delBooking.run(Number(b.id), u.id);
-    send(res, 200, { ok: true });
+    send(res, 200, { ok: true, ...calendarState(u) });
   },
 
   /* админ/ментор: управление календарём и Demo Day */
@@ -1504,6 +1649,7 @@ const routes = {
     const list = q.sessionsUpcoming.all(Date.now() - 7 * 86400000).map(s => ({
       id: s.id, title: s.title, dir: s.dir, type: s.type, host: s.host || "", hostId: s.host_id || 0,
       startsAt: s.starts_at, duration: s.duration_min, capacity: s.capacity, meetUrl: s.meet_url,
+      canceled: !!s.canceled_at,
       bookings: q.sessionBookings.all(s.id).map(x => ({ userId: x.user_id, name: x.name, attended: x.attended })),
     }));
     send(res, 200, {
@@ -1524,9 +1670,11 @@ const routes = {
     const startsAt = Number(b.startsAt);
     if (!title || !Number.isFinite(startsAt) || startsAt < Date.now() - 3600000)
       return err(res, 400, "Нужны название и будущая дата");
-    const type = b.type === "live" ? "live" : "group";
+    const type = SESSION_TYPES.includes(b.type) ? b.type : "group";
     const dur = Math.max(15, Math.min(240, Number(b.duration) || 60));
-    const cap = Math.max(1, Math.min(50, Number(b.capacity) || (type === "live" ? 50 : 4)));
+    // один на один - это ровно одно место, иначе слот перестаёт быть личным
+    const cap = type === "one" ? 1
+      : Math.max(1, Math.min(50, Number(b.capacity) || (type === "live" ? 50 : 4)));
     // ведущий: по id из команды (для статистики) — имя денормализуем для показа
     const hostId = Number(b.hostId) || 0;
     const hostRow = hostId ? q.mentorById.get(hostId) : null;
@@ -1942,6 +2090,11 @@ const server = http.createServer(async (req, res) => {
     });
     return res.end();
   }
+
+  /* Лента календаря: путь содержит секрет, поэтому разбираем его отдельно
+     от таблицы точных маршрутов. */
+  const ics = req.method === "GET" && pathname.match(/^\/api\/calendar\/([A-Za-z0-9_-]{20,})\.ics$/);
+  if (ics) return serveIcs(res, ics[1]);
 
   const handler = routes[`${req.method} ${pathname}`];
   if (handler) {
