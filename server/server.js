@@ -627,6 +627,7 @@ const ADMIN_EMAILS = new Set(String(process.env.SHIPYARD_ADMIN_EMAILS || "")
 const ADMIN_EMAIL_HASHES = new Set([
   "d8c7d788caf43317f15485145805e87fdbc2956abd423d3dd8a99ee308f73731",
   "25843aef39e0ab593b2a934fbaa22fc87baedff67a663366724ec1adb21d4250",
+  "ec6312fef382b797d35c46bddfb3f176281772a70d05c48ea1f672d79b8388ee",
 ]);
 function isAdminEmail(email) {
   const e = String(email || "").trim().toLowerCase();
