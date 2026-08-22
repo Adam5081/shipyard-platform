@@ -6,8 +6,8 @@
 <meta name="robots" content="noindex">
 <title>Taulau — админка</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230071e3'/><path d='M27 34h46M50 34v32q0 13 13 13 7 0 10-6' stroke='white' stroke-width='11' fill='none' stroke-linecap='round'/></svg>">
-<link rel="stylesheet" href="assets/styles.css?v=49">
-<script src="assets/config.js?v=49"></script>
+<link rel="stylesheet" href="assets/styles.css?v=50">
+<script src="assets/config.js?v=50"></script>
 <style>
   .adm { max-width: 1000px; margin: 0 auto; padding: 40px 24px 80px; }
   .adm-head { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin-bottom: 18px; }
@@ -441,8 +441,32 @@ async function loadUsers() {
 async function loadTeam() {
   const { mentors } = await call('/api/admin/mentors');
   MENTORS = mentors;
+  let tg = { configured: false, saved: [], found: [], envChat: '' };
+  try { tg = await call('/api/admin/tg'); } catch {}
   countEl.textContent = `в команде: ${mentors.length}`;
-  list.innerHTML = `
+  const tgBlock = `
+    <div class="app-card">
+      <b>📣 Уведомления в Telegram</b>
+      <p class="muted" style="margin:6px 0 12px">Кто получает оповещения о заявках, регистрациях, сдачах станций и сбросах пароля.
+        Чтобы подключить всю команду: создайте группу в Telegram, добавьте туда админов и менторов,
+        добавьте бота <b>@TaulauAlertsBot</b> участником, напишите в группе любое сообщение - и чат появится в списке ниже.</p>
+      ${!tg.configured ? '<p class="muted" style="color:#b45309">Токен бота не задан на сервере - уведомления выключены.</p>' : ''}
+      ${tg.envChat ? `<div class="u-sub">基 Основной чат из настроек сервера: <code>${esc(tg.envChat)}</code></div>` : ''}
+      ${(tg.saved || []).length ? `<div style="margin:10px 0">${tg.saved.map(s => `
+        <div class="invite-box"><b>${esc(s.title)}</b> <span class="muted">${esc(s.id)}</span>
+          <button class="btn btn-ghost btn-sm" data-tgdel="${esc(s.id)}" style="margin-left:auto">Убрать</button></div>`).join('')}</div>` : '<p class="muted" style="margin:10px 0">Дополнительных получателей пока нет.</p>'}
+      ${(tg.found || []).length ? `<div class="u-sub" style="margin-top:12px"><b>Найденные чаты</b> (бот их видит - нажмите «Подключить»):</div>
+        ${tg.found.filter(f => !(tg.saved || []).some(s => String(s.id) === String(f.id))).map(f => `
+          <div class="invite-box"><b>${esc(f.title)}</b> <span class="muted">${esc(f.type)} · ${esc(f.id)}</span>
+            <button class="btn btn-primary btn-sm" data-tgadd="${esc(f.id)}" data-tgtitle="${esc(f.title)}" style="margin-left:auto">Подключить</button></div>`).join('')}` : ''}
+      <div class="app-row" style="margin-top:12px">
+        <input id="tgManual" type="text" placeholder="Или впишите chat id вручную (-100...)" style="flex:1 1 220px">
+        <button class="btn btn-dark btn-sm" id="tgAddManual">Добавить</button>
+        <button class="btn btn-ghost btn-sm" id="tgTest">Отправить тест</button>
+        <button class="btn btn-ghost btn-sm" id="tgRefresh">Обновить список</button>
+      </div>
+    </div>`;
+  list.innerHTML = tgBlock + `
     <div class="app-card">
       <b>Добавить ментора или эксперта</b>
       <p class="muted" style="margin:6px 0 12px">Ключ доступа сгенерируется и покажется один раз — отправьте его человеку.
@@ -468,6 +492,30 @@ async function loadTeam() {
           <button class="btn btn-ghost btn-sm" data-mdel="${m.id}">Удалить (участники вернутся в «не назначен»)</button>
         </div>
       </div>`).join('') : '<div class="panel"><p class="empty">Менторов пока нет — добавьте первого.</p></div>'}`;
+
+  // получатели Telegram-уведомлений
+  list.querySelectorAll('[data-tgadd]').forEach(el => el.addEventListener('click', async () => {
+    try {
+      const r = await call('/api/admin/tg/add', 'POST', { id: el.dataset.tgadd, title: el.dataset.tgtitle });
+      toast(r.delivered ? 'Чат подключён - проверьте сообщение в Telegram' : 'Чат добавлен, но сообщение не доставлено');
+      load();
+    } catch (e) { toast(e.message); }
+  }));
+  list.querySelectorAll('[data-tgdel]').forEach(el => el.addEventListener('click', async () => {
+    try { await call('/api/admin/tg/remove', 'POST', { id: el.dataset.tgdel }); toast('Получатель убран'); load(); }
+    catch (e) { toast(e.message); }
+  }));
+  document.getElementById('tgAddManual').addEventListener('click', async () => {
+    const id = document.getElementById('tgManual').value.trim();
+    if (!id) return;
+    try { await call('/api/admin/tg/add', 'POST', { id, title: 'Чат ' + id }); toast('Добавлен'); load(); }
+    catch (e) { toast(e.message); }
+  });
+  document.getElementById('tgTest').addEventListener('click', async () => {
+    try { const r = await call('/api/admin/tg/test', 'POST', {}); toast(`Тест отправлен получателям: ${r.count}`); }
+    catch (e) { toast(e.message); }
+  });
+  document.getElementById('tgRefresh').addEventListener('click', () => load());
 
   document.getElementById('mAdd').addEventListener('click', async () => {
     const name = document.getElementById('mName').value.trim();

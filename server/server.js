@@ -200,20 +200,37 @@ async function sendMail(to, subject, html) {
 const TG_TOKEN = process.env.SHIPYARD_TG_TOKEN || "";
 const TG_CHAT = process.env.SHIPYARD_TG_CHAT || "";
 
-function notifyTg(text, chat = TG_CHAT) {
-  if (!TG_TOKEN || !chat) return;
-  fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage`, {
+/* Получатели уведомлений: чат из окружения плюс список, который админ
+   ведёт прямо в панели (общая группа команды, личка ментора и т.п.). */
+function tgTargets() {
+  let saved = [];
+  try { saved = JSON.parse(q.getSetting.get("tg_chats")?.value || "[]"); } catch { saved = []; }
+  const ids = [TG_CHAT, ...saved.map(x => String(x.id))].filter(Boolean);
+  return [...new Set(ids)];
+}
+
+function tgSendTo(chat, text) {
+  return fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ chat_id: chat, text }),
-  }).catch(() => {});
+    signal: AbortSignal.timeout(8000),
+  });
+}
+
+/* chat = null - разослать всем получателям; иначе только в указанный чат */
+function notifyTg(text, chat = null) {
+  if (!TG_TOKEN) return;
+  const targets = chat ? [chat] : tgTargets();
+  for (const t of targets) tgSendTo(t, text).catch(() => {});
 }
 
 /* Событие про участника — таргетированно его ментору (в личку или чат
    группы ментора); без назначенного ментора — в общий чат админов. */
 function notifyAboutUser(u, text) {
   const mentor = u.mentor_id ? q.mentorById.get(u.mentor_id) : null;
-  notifyTg(text, (mentor && mentor.tg_chat) || TG_CHAT);
+  // у ментора свой чат - пишем ему; иначе всем получателям команды
+  notifyTg(text, (mentor && mentor.tg_chat) || null);
 }
 
 const TARIFFS = ["Solo", "Pro", "Partner"];
@@ -1126,7 +1143,7 @@ const routes = {
     memo.clear();
     if (mid) {
       const m = q.mentorById.get(mid);
-      notifyTg(`👥 ${user.name} закреплён за ментором: ${m.name}`, m.tg_chat || TG_CHAT);
+      notifyTg(`👥 ${user.name} закреплён за ментором: ${m.name}`, m.tg_chat || null);
     }
     send(res, 200, { ok: true });
   },
@@ -1423,6 +1440,67 @@ const routes = {
   },
 
   /* статистика записей: сессии за период + все регистрации с посещаемостью */
+  /* ---------- Telegram: получатели уведомлений ---------- */
+
+  "GET /api/admin/tg": async (req, res) => {
+    if (!isAdmin(req)) return err(res, 401, "Нужен ключ администратора");
+    let saved = [];
+    try { saved = JSON.parse(q.getSetting.get("tg_chats")?.value || "[]"); } catch {}
+    // кто недавно писал боту или добавил его в группу - кандидаты в получатели
+    let found = [];
+    if (TG_TOKEN) {
+      try {
+        const r = await fetch(`https://api.telegram.org/bot${TG_TOKEN}/getUpdates?limit=100`, { signal: AbortSignal.timeout(8000) });
+        const d = await r.json();
+        const seen = new Map();
+        for (const upd of d.result || []) {
+          const ch = upd.message?.chat || upd.my_chat_member?.chat || upd.channel_post?.chat;
+          if (!ch) continue;
+          seen.set(String(ch.id), {
+            id: String(ch.id),
+            title: ch.title || [ch.first_name, ch.last_name].filter(Boolean).join(" ") || ch.username || String(ch.id),
+            type: ch.type,
+          });
+        }
+        found = [...seen.values()];
+      } catch (e) { console.error("[tg] getUpdates:", e.message); }
+    }
+    send(res, 200, { configured: !!TG_TOKEN, envChat: TG_CHAT, saved, found });
+  },
+
+  "POST /api/admin/tg/add": async (req, res) => {
+    if (!isAdmin(req)) return err(res, 401, "Нужен ключ администратора");
+    const b = await readBody(req);
+    const id = String(b.id || "").trim();
+    if (!/^-?\d{5,20}$/.test(id)) return err(res, 400, "Некорректный id чата");
+    let saved = [];
+    try { saved = JSON.parse(q.getSetting.get("tg_chats")?.value || "[]"); } catch {}
+    if (!saved.some(x => String(x.id) === id))
+      saved.push({ id, title: String(b.title || id).slice(0, 80) });
+    q.setSetting.run("tg_chats", JSON.stringify(saved));
+    const ok = TG_TOKEN ? await tgSendTo(id, "✅ Этот чат подключён к уведомлениям Taulau").then(r => r.ok).catch(() => false) : false;
+    send(res, 200, { ok: true, delivered: ok, saved });
+  },
+
+  "POST /api/admin/tg/remove": async (req, res) => {
+    if (!isAdmin(req)) return err(res, 401, "Нужен ключ администратора");
+    const b = await readBody(req);
+    let saved = [];
+    try { saved = JSON.parse(q.getSetting.get("tg_chats")?.value || "[]"); } catch {}
+    saved = saved.filter(x => String(x.id) !== String(b.id));
+    q.setSetting.run("tg_chats", JSON.stringify(saved));
+    send(res, 200, { ok: true, saved });
+  },
+
+  "POST /api/admin/tg/test": async (req, res) => {
+    if (!isAdmin(req)) return err(res, 401, "Нужен ключ администратора");
+    const targets = tgTargets();
+    if (!TG_TOKEN) return err(res, 400, "Токен бота не задан на сервере");
+    if (!targets.length) return err(res, 400, "Нет ни одного получателя");
+    notifyTg("🔔 Тестовое уведомление Taulau - если вы это видите, оповещения работают");
+    send(res, 200, { ok: true, count: targets.length });
+  },
+
   "GET /api/admin/stats": async (req, res) => {
     const r = roleOf(req);
     if (!r) return err(res, 401, "Нужен ключ доступа");
