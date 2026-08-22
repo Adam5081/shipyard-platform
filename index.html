@@ -67,7 +67,6 @@
         /* узлы-станции зажигаются по мере прохождения линии */
         .node-1 { animation: nodeIn .45s ease .7s both; }
         .node-2 { animation: nodeIn .45s ease 1.5s both; }
-        .node-3 { animation: nodeIn .45s ease 2.2s both; }
         /* пик: вспышка при касании линии, затем постоянный пульс */
         .peak-node {
           transform-origin: 500px 60px;
@@ -93,7 +92,7 @@
         @media (prefers-reduced-motion: reduce) {
           #ascentBase { animation: none; stroke-dashoffset: 0; }
           #ascentDash { animation: none; opacity: .55; }
-          .node-1, .node-2, .node-3, .peak-node { animation: none; opacity: 1; }
+          .node-1, .node-2, .peak-node { animation: none; opacity: 1; }
         }
       </style>
     </defs>
@@ -117,7 +116,6 @@
     <g fill="#38BDF8" filter="url(#neonGlow)">
       <circle class="node-1" cx="200" cy="530" r="3.5"/>
       <circle class="node-2" cx="340" cy="370" r="3.5"/>
-      <circle class="node-3" cx="446" cy="185" r="3.5"/>
       <circle cx="500" cy="60" r="6" fill="#FFFFFF" class="peak-node"/>
     </g>
   </svg>
