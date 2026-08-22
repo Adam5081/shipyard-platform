@@ -903,6 +903,15 @@ const VIEWS = {
                 <input id="aPass" type="password" required minlength="6" placeholder="Минимум 6 символов" autocomplete="new-password"></div>
               <div class="field"><label>Подтвердите пароль</label>
                 <input id="aPass2" type="password" required minlength="6" placeholder="Ещё раз тот же пароль" autocomplete="new-password"></div>
+              <!-- Регистрация изнутри платформы: тариф не с карточки, поэтому спрашиваем -->
+              <div class="field"><label>Какой тариф предпочитаете?</label>
+                <select id="aTariff" required>
+                  <option value="">Выберите тариф</option>
+                  <option value="Solo">Solo - 290 000 ₸ / месяц</option>
+                  <option value="Pro">Pro - 590 000 ₸ / месяц</option>
+                  <option value="Partner">Partner - по договорённости</option>
+                </select>
+              </div>
               <label style="display:flex;gap:9px;align-items:flex-start;margin:2px 0 14px;cursor:pointer;font-size:13.5px;color:var(--ink-2);line-height:1.45">
                 <input type="checkbox" id="aNda" required style="margin-top:2px">
                 <span>Продолжая, вы соглашаетесь с условиями
@@ -2239,6 +2248,7 @@ function bind() {
           throw new Error("Пароли не совпадают - проверьте оба поля");
         body.name = view.querySelector("#aName")?.value.trim() || "";
         body.phone = view.querySelector("#aPhone")?.value.trim() || "";
+        body.tariff = view.querySelector("#aTariff")?.value || "";
         // код приглашения пока не используется; ссылка-приглашение из заявки продолжает работать
         if (REG_CODE) body.invite = REG_CODE;
         data = await apiCall("/register", "POST", body);

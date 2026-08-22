@@ -408,3 +408,17 @@ body.cyber .footer {
   .hero-mountain { animation: none; }
   .hero-mountain #ascentPath, .hero-mountain .peak-node { animation: none !important; }
 }
+
+/* Тариф в форме заявки: пришёл с карточки - показываем строкой, а не селектом,
+   чтобы не переспрашивать человека о том, что он только что выбрал. */
+body.cyber .af-tariff-set {
+  margin: 4px 0 2px; padding: 10px 14px; border-radius: 10px;
+  background: rgba(94, 106, 210, .12); border: 1px solid rgba(94, 106, 210, .35);
+  font-size: 14px; color: #cfd3e6;
+}
+body.cyber .af-tariff-set b { color: #fff; }
+body.cyber .af-tariff-change {
+  margin-left: 10px; padding: 0; border: none; background: none; cursor: pointer;
+  font: inherit; font-size: 13px; color: #8e94ff; text-decoration: underline;
+}
+body.cyber .af-tariff-change:hover { color: #b3b8ff; }

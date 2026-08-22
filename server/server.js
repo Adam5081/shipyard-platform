@@ -670,7 +670,7 @@ function welcomeHtml(u) {
     <div style="height:14px;font-size:0;line-height:0">&nbsp;</div>
     <div style="font:700 26px/1.25 ${F};color:#ffffff;letter-spacing:-.02em">Восхождение началось</div>
     <div style="height:8px;font-size:0;line-height:0">&nbsp;</div>
-    <div style="font:400 15px/1.5 ${F};color:#9aa0ae">${escHtml(u.name)}, вы в потоке. Впереди девять станций - от идеи до продукта, который работает у клиента.</div>
+    <div style="font:400 15px/1.5 ${F};color:#9aa0ae">${escHtml(u.name)}, вы в потоке. Впереди девять станций - от идеи до запущенного IT-продукта.</div>
     <div style="height:22px;font-size:0;line-height:0">&nbsp;</div>
     ${ascentArt()}
   </td></tr>
@@ -1360,6 +1360,28 @@ const routes = {
     send(res, 200, r.role === "admin"
       ? { role: "admin" }
       : { role: "mentor", name: r.mentor.name, mentorId: r.mentor.id });
+  },
+
+  /* Пульс админки: дешёвая «подпись» состояния для автообновления.
+     Только COUNT-ы, без выборок и без персональных данных - такой запрос можно
+     дёргать часто. Админка сравнивает подпись и перезагружает вкладку, только
+     если что-то реально изменилось. */
+  "GET /api/admin/pulse": async (req, res) => {
+    const r = roleOf(req);
+    if (!r) return err(res, 401, "Нужен ключ доступа");
+    const n = sql => db.prepare(sql).get().n;
+    send(res, 200, {
+      apps: n("SELECT COUNT(*) AS n FROM applications"),
+      appsNew: n("SELECT COUNT(*) AS n FROM applications WHERE status = 'new'"),
+      users: n("SELECT COUNT(*) AS n FROM users WHERE seed_pts = 0"),
+      pending: n("SELECT COUNT(*) AS n FROM users WHERE seed_pts = 0 AND approved_at = 0"),
+      sessions: n("SELECT COUNT(*) AS n FROM sessions"),
+      canceled: n("SELECT COUNT(*) AS n FROM sessions WHERE canceled_at > 0"),
+      bookings: n("SELECT COUNT(*) AS n FROM bookings"),
+      ready: n("SELECT COUNT(*) AS n FROM station_ready WHERE approved_at = 0"),
+      gates: n("SELECT COUNT(*) AS n FROM gate_approvals"),
+      dd: n("SELECT COUNT(*) AS n FROM demoday_regs"),
+    });
   },
 
   /* команда: список менторов/экспертов (только админ) */

@@ -6,8 +6,8 @@
 <meta name="robots" content="noindex">
 <title>Taulau — админка</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230071e3'/><path d='M27 34h46M50 34v32q0 13 13 13 7 0 10-6' stroke='white' stroke-width='11' fill='none' stroke-linecap='round'/></svg>">
-<link rel="stylesheet" href="assets/styles.css?v=52">
-<script src="assets/config.js?v=52"></script>
+<link rel="stylesheet" href="assets/styles.css?v=53">
+<script src="assets/config.js?v=53"></script>
 <style>
   .adm { max-width: 1000px; margin: 0 auto; padding: 40px 24px 80px; }
   .adm-head { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin-bottom: 18px; }
@@ -48,6 +48,11 @@
   .u-gates { margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
   .u-bar { width: 90px; height: 6px; background: var(--bg-alt); border-radius: 999px; overflow: hidden; margin-top: 6px; }
   .u-bar i { display: block; height: 100%; background: var(--ink); border-radius: 999px; }
+  /* отметка автообновления: вспыхивает и медленно гаснет, внимание не отвлекает */
+  .pulse-flash { font-size: 13px; color: #17703a; opacity: 0; }
+  .pulse-flash.show { animation: pulseFade 6s ease forwards; }
+  @keyframes pulseFade { 0% { opacity: 0; } 8% { opacity: 1; } 60% { opacity: 1; } 100% { opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { .pulse-flash.show { animation: none; opacity: 1; } }
 </style>
 </head>
 <body class="app-body">
@@ -98,6 +103,36 @@ const gateErr = document.getElementById('gateErr');
 const countEl = document.getElementById('count');
 const toastEl = document.getElementById('toast');
 const tabsEl = document.getElementById('tabs');
+
+/* Google Analytics 4 в админке: включается тем же SHIPYARD_GA_ID, что и лендинг.
+   Админка - одностраничная, поэтому переходы между вкладками сами по себе
+   просмотрами не считаются: шлём page_view руками при каждом переключении.
+   В события не попадают ни почты, ни имена участников - только имя вкладки. */
+const GA = String(window.SHIPYARD_GA_ID || '').trim();
+if (GA) {
+  const s = document.createElement('script');
+  s.async = true;
+  s.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(GA);
+  document.head.appendChild(s);
+  window.dataLayer = window.dataLayer || [];
+  window.gtag = function () { window.dataLayer.push(arguments); };
+  gtag('js', new Date());
+  gtag('config', GA, { send_page_view: false });
+}
+function gaTab(tab) {
+  if (!GA || typeof window.gtag !== 'function') return;
+  try {
+    window.gtag('event', 'page_view', {
+      page_title: 'Админка · ' + tab,
+      page_location: location.origin + location.pathname + '#' + tab,
+      page_path: '/admin/' + tab,
+    });
+  } catch {}
+}
+function gaAction(action, label) {
+  if (!GA || typeof window.gtag !== 'function') return;
+  try { window.gtag('event', 'admin_action', { action, label: label || '' }); } catch {}
+}
 
 const API = (window.SHIPYARD_REMOTE_API || '').replace(/\/$/, '');
 const STATUSES = [
@@ -833,6 +868,7 @@ async function load() {
     await (TAB === 'apps' ? loadApps() : TAB === 'team' ? loadTeam() : TAB === 'metrics' ? loadMetrics() : TAB === 'cal' ? loadCal() : TAB === 'stats' ? loadStats() : loadUsers());
     gate.hidden = true;
     tabsEl.hidden = false;
+    startPulse();
   } catch (e) {
     // на форму ключа выкидываем только при отказе в доступе — сетевые и серверные
     // ошибки не должны сбрасывать сессию (вкладка просто показывает ошибку)
@@ -852,12 +888,76 @@ async function load() {
   }
 }
 
+/* ---------- автообновление: новые данные появляются сами ---------- */
+
+/* Опрашиваем дешёвый /pulse и перезагружаем вкладку, только если подпись
+   состояния изменилась. Так новая заявка или запись на сессию появляются без
+   ручного F5, а обычная работа не дёргает тяжёлые эндпоинты вхолостую.
+   Это не про «лаг рендера» при переключении вкладок - там дело в отрисовке
+   уже загруженных данных, и это чинится плейсхолдером «Загрузка…» выше. */
+const PULSE_MS = 10000;
+let pulseTimer = null;
+let pulseSig = null;
+let pulseBusy = false;
+
+const sigOf = p => [p.apps, p.appsNew, p.users, p.pending, p.sessions,
+  p.canceled, p.bookings, p.ready, p.gates, p.dd].join('|');
+
+/* Форма редактирования не должна закрываться под руками: если админ что-то
+   печатает или открыл выпадающий список - откладываем обновление до следующего тика. */
+function userIsTyping() {
+  const el = document.activeElement;
+  return !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT');
+}
+
+async function pulseTick() {
+  if (!KEY || pulseBusy || document.hidden || userIsTyping()) return;
+  pulseBusy = true;
+  try {
+    const p = await call('/api/admin/pulse');
+    const sig = sigOf(p);
+    if (pulseSig === null) { pulseSig = sig; return; }
+    if (sig !== pulseSig) {
+      pulseSig = sig;
+      await load();
+      flashUpdated();
+    }
+  } catch (e) {
+    if (e.status === 401) stopPulse();     // ключ отозвали - молча прекращаем опрос
+  } finally { pulseBusy = false; }
+}
+
+function startPulse() {
+  if (pulseTimer) return;
+  pulseTimer = setInterval(pulseTick, PULSE_MS);
+}
+function stopPulse() { clearInterval(pulseTimer); pulseTimer = null; }
+
+/* Ненавязчивая отметка, что список только что обновился сам */
+function flashUpdated() {
+  let el = document.getElementById('pulseFlash');
+  if (!el) {
+    el = document.createElement('span');
+    el.id = 'pulseFlash';
+    el.className = 'pulse-flash';
+    countEl.after(el);
+  }
+  el.textContent = '● обновлено ' + new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+  el.classList.remove('show');
+  void el.offsetWidth;                      // перезапуск анимации
+  el.classList.add('show');
+}
+
+/* Вернулись на вкладку браузера - проверяем сразу, не дожидаясь таймера */
+document.addEventListener('visibilitychange', () => { if (!document.hidden) pulseTick(); });
+
 tabsEl.querySelectorAll('[data-tab]').forEach(b => b.addEventListener('click', () => {
   TAB = b.dataset.tab;
   tabsEl.querySelectorAll('button').forEach(x => x.classList.toggle('active', x === b));
   // мгновенная реакция: старая вкладка не висит, пока грузится новая
   list.innerHTML = '<p class="empty" style="padding:24px 0">Загрузка…</p>';
   countEl.textContent = '';
+  gaTab(TAB);
   load();
 }));
 

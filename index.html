@@ -6,12 +6,12 @@
 <title>Taulau - от идеи до продукта, который работает у клиента</title>
 <meta name="description" content="Программа для отраслевых экспертов: вы собираете продукт сами - с Claude Code, производственным пайплайном и экспертами отрасли рядом. Контрольные точки, безопасность, вывод в рабочую среду.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230071e3'/><path d='M27 34h46M50 34v32q0 13 13 13 7 0 10-6' stroke='white' stroke-width='11' fill='none' stroke-linecap='round'/></svg>">
-<link rel="stylesheet" href="assets/styles.css?v=52">
-<link rel="stylesheet" href="assets/theme-cyber.css?v=52">
+<link rel="stylesheet" href="assets/styles.css?v=53">
+<link rel="stylesheet" href="assets/theme-cyber.css?v=53">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="assets/config.js?v=52"></script>
+<script src="assets/config.js?v=53"></script>
 </head>
 <body class="cyber">
 
@@ -583,7 +583,19 @@
         </div>
       </div>
 
-      <input type="hidden" name="tariff" id="afTariff" value="">
+      <!-- Тариф: с карточки подставляется сам и показывается строкой,
+           с общей кнопки - спрашиваем селектом. -->
+      <p class="af-tariff-set" id="afTariffSet" hidden>Тариф: <b id="afTariffName"></b>
+        <button type="button" class="af-tariff-change" id="afTariffChange">изменить</button></p>
+      <div class="field" id="afTariffField" hidden>
+        <label for="afTariff">Какой тариф предпочитаете?</label>
+        <select id="afTariff" name="tariff">
+          <option value="">Выберите тариф</option>
+          <option value="Solo">Solo - 290 000 ₸ / месяц</option>
+          <option value="Pro">Pro - 590 000 ₸ / месяц</option>
+          <option value="Partner">Partner - по договорённости</option>
+        </select>
+      </div>
 
       <!-- ловушка для ботов: человек это поле не видит и не заполняет -->
       <input class="hp" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
@@ -612,7 +624,7 @@
   </div>
 </footer>
 
-<script src="assets/metrics.js?v=52" defer></script>
+<script src="assets/metrics.js?v=53" defer></script>
 <script>
   const io = new IntersectionObserver(entries => {
     entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
@@ -677,9 +689,23 @@
   const done = document.getElementById('afDone');
   const submit = document.getElementById('afSubmit');
 
-  /* кнопка тарифа подставляет тариф в форму */
+  /* Тариф в форме. С тарифной карточки он известен - подставляем и просто
+     показываем, лишний вопрос человеку не задаём. С общей кнопки («Занять
+     место в потоке») тариф неизвестен - тогда спрашиваем селектом. */
+  const tariffField = () => document.getElementById('afTariffField');
+  const tariffSet = () => document.getElementById('afTariffSet');
+  function setTariff(value) {
+    const sel = document.getElementById('afTariff');
+    sel.value = value || '';
+    const known = !!value;
+    tariffSet().hidden = !known;
+    tariffField().hidden = known;
+    sel.required = !known;                       // скрытое поле нельзя делать обязательным
+    if (known) document.getElementById('afTariffName').textContent = value;
+  }
   document.querySelectorAll('[data-tariff]').forEach(a =>
-    a.addEventListener('click', () => { form.tariff.value = a.dataset.tariff; }));
+    a.addEventListener('click', () => { a.dataset.picked = '1'; setTariff(a.dataset.tariff); }));
+  document.getElementById('afTariffChange').addEventListener('click', () => setTariff(''));
 
   /* заявка в один клик: все кнопки «Занять место» открывают модалку с формой */
   /* модалка стоит в конце body - элементы ищем лениво, после полного парсинга DOM */
@@ -696,8 +722,14 @@
     document.body.style.overflow = '';
     amEl('afAnchor').after(form, amEl('afDone'));   // форма возвращается в секцию заявки
   }
+  /* Кнопки тарифов тоже ведут на #apply, поэтому здесь важно не затереть уже
+     выбранный тариф: сбрасываем его только у кнопок без data-tariff. */
   document.querySelectorAll('a[href="#apply"]').forEach(a =>
-    a.addEventListener('click', e => { e.preventDefault(); openApply(); }));
+    a.addEventListener('click', e => {
+      e.preventDefault();
+      if (!a.dataset.tariff) setTariff('');
+      openApply();
+    }));
   window.addEventListener('DOMContentLoaded', () => {
     amEl('applyModal').querySelectorAll('[data-amclose]').forEach(el => el.addEventListener('click', closeApply));
   });
