@@ -470,6 +470,116 @@ async function issueReset(u) {
 
 const escHtml = s => String(s ?? "").replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
 
+/* ---------- приветственное письмо после регистрации ---------- */
+
+/* Вёрстка письма - таблицами и инлайновыми стилями: почтовые клиенты не понимают
+   flex/grid, Gmail вырезает <svg>, а Outlook рендерит через движок Word.
+   Поэтому «гора» и дорожка станций собраны из ячеек с высотами и фоном -
+   такой рисунок доезжает везде, а в старом Outlook кружки станут квадратами.
+   Картинок нет вовсе: почтовики режут внешние ресурсы до разрешения получателя. */
+function ascentArt() {
+  const N = 9;
+  let cols = "";
+  for (let i = 0; i < N; i++) {
+    const first = i === 0;
+    const spacer = 84 - i * 8;          // точки поднимаются слева направо
+    const bar = 16 + i * 9;             // склон растёт к вершине
+    const last = i === N - 1;
+    // кружок - отдельной таблицей, иначе он растянется на всю ширину колонки
+    const dot = `<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center"><tr>
+        <td width="20" height="20" bgcolor="${first ? "#5E6AD2" : "#242838"}" align="center" valign="middle"
+            style="width:20px;height:20px;border-radius:10px;color:${first ? "#ffffff" : "#5b6178"};font:700 11px/20px Arial,sans-serif">${i + 1}</td>
+      </tr></table>`;
+    // колонки стыкуются вплотную - из ступенек складывается сплошной склон
+    cols += `<td valign="bottom" style="padding:0">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+        <td height="${spacer}" style="height:${spacer}px;font-size:0;line-height:0">&nbsp;</td></tr>
+        <tr><td align="center" style="padding:0">${dot}</td></tr>
+        <tr><td height="6" style="height:6px;font-size:0;line-height:0">&nbsp;</td></tr>
+        <tr><td height="${bar}" bgcolor="#171a26" style="height:${bar}px;font-size:0;line-height:0;border-top:2px solid ${last ? "#8e94ff" : "#39406b"}">&nbsp;</td></tr>
+      </table></td>`;
+  }
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>${cols}</tr></table>`;
+}
+
+function welcomeHtml(u) {
+  const F = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif";
+  return `<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Добро пожаловать в Taulau</title></head>
+<body style="margin:0;padding:0;background:#f4f5f7">
+<div style="display:none;font-size:1px;color:#f4f5f7;max-height:0;overflow:hidden">Аккаунт создан. Дальше - подтверждение ментора и старт восхождения.</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f4f5f7"><tr>
+<td align="center" style="padding:28px 12px;max-width:100%">
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:560px;border-radius:16px;overflow:hidden;background:#ffffff">
+
+  <tr><td bgcolor="#0B0C0E" style="padding:30px 32px 0;background:#0B0C0E">
+    <div style="font:700 13px/1 ${F};letter-spacing:.32em;color:#8e94ff;text-transform:uppercase">Taulau</div>
+    <div style="height:14px;font-size:0;line-height:0">&nbsp;</div>
+    <div style="font:700 26px/1.25 ${F};color:#ffffff;letter-spacing:-.02em">Восхождение началось</div>
+    <div style="height:8px;font-size:0;line-height:0">&nbsp;</div>
+    <div style="font:400 15px/1.5 ${F};color:#9aa0ae">${escHtml(u.name)}, вы в потоке. Впереди девять станций - от идеи до продукта, который работает у клиента.</div>
+    <div style="height:22px;font-size:0;line-height:0">&nbsp;</div>
+    ${ascentArt()}
+  </td></tr>
+
+  <tr><td bgcolor="#0B0C0E" style="padding:0 32px 4px;background:#0B0C0E">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+      <td style="font:400 12px/1.4 ${F};color:#5b6178">Станция 1 - вы здесь</td>
+      <td align="right" style="font:400 12px/1.4 ${F};color:#5b6178">Вершина - ваш продукт</td>
+    </tr></table>
+    <div style="height:26px;font-size:0;line-height:0">&nbsp;</div>
+  </td></tr>
+
+  <tr><td style="padding:30px 32px 8px">
+    <div style="font:400 16px/1.6 ${F};color:#1d1d1f">Здравствуйте, ${escHtml(u.name)}!</div>
+    <div style="height:12px;font-size:0;line-height:0">&nbsp;</div>
+    <div style="font:400 15px/1.65 ${F};color:#4b4b50">Мы получили вашу запись на поток - аккаунт создан. Скоро вы начнёте превращать свою идею в работающий продукт: код по вашим задачам пишет ИИ-агент, а эксперты ведут вас по маршруту и доводят до результата. Опыт в программировании не нужен.</div>
+  </td></tr>
+
+  <tr><td style="padding:14px 32px 6px">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#eef0ff" style="background:#eef0ff;border-radius:12px"><tr>
+      <td style="padding:16px 18px;border-left:3px solid #5E6AD2;border-radius:12px">
+        <div style="font:700 14px/1.4 ${F};color:#2c3170">Что дальше: ждём подтверждения ментора</div>
+        <div style="height:6px;font-size:0;line-height:0">&nbsp;</div>
+        <div style="font:400 14px/1.6 ${F};color:#4a4f80">Ментор потока активирует ваш аккаунт и свяжется с вами, чтобы обсудить проект и старт. До активации кабинет открыт в режиме просмотра - карта пути и первая станция уже доступны, остальные разделы откроются сразу после подтверждения.</div>
+      </td>
+    </tr></table>
+  </td></tr>
+
+  <tr><td align="center" style="padding:24px 32px 6px">
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
+      <td bgcolor="#5E6AD2" style="border-radius:10px">
+        <a href="${SITE_URL}/app.html" style="display:inline-block;padding:13px 26px;font:600 15px/1 ${F};color:#ffffff;text-decoration:none">Заглянуть в кабинет</a>
+      </td>
+    </tr></table>
+  </td></tr>
+
+  <tr><td style="padding:18px 32px 30px">
+    <div style="font:400 13px/1.6 ${F};color:#6e6e73">Ваш тариф: ${escHtml(u.tariff)}. Вход в кабинет - по этой почте и паролю, который вы задали при записи.</div>
+    <div style="height:16px;font-size:0;line-height:0">&nbsp;</div>
+    <div style="border-top:1px solid #e8e8ed;font-size:0;line-height:0">&nbsp;</div>
+    <div style="height:14px;font-size:0;line-height:0">&nbsp;</div>
+    <div style="font:400 12px/1.6 ${F};color:#9a9aa0">Письмо пришло, потому что на taulau.com оформили запись на поток с этим адресом. Если это были не вы - просто удалите его, аккаунт не будет активирован.</div>
+  </td></tr>
+
+</table>
+
+<div style="height:16px;font-size:0;line-height:0">&nbsp;</div>
+<div style="font:400 12px/1.5 ${F};color:#9a9aa0">Taulau - от идеи до продукта · <a href="${SITE_URL}" style="color:#5E6AD2;text-decoration:none">taulau.com</a></div>
+
+</td></tr></table>
+</body></html>`;
+}
+
+/* Регистрацию не тормозим и не роняем: письмо уходит после ответа клиенту. */
+function sendWelcome(u) {
+  sendMail(u.email, "Добро пожаловать в Taulau - восхождение начинается", welcomeHtml(u))
+    .then(ok => { if (!ok) notifyTg(`⚠️ Приветственное письмо не ушло: ${u.email}`); })
+    .catch(() => {});
+}
+
 /* ---------- заявки с лендинга ---------- */
 
 const APP_STAGES = ["идея", "прототип", "первые пользователи", "работающий продукт"];
@@ -650,6 +760,7 @@ const routes = {
     if (app) q.useInvite.run(Date.now(), u.id, app.id);
     notifyTg(`✅ Регистрация в Taulau: ${name} (${email}) · тариф ${tariff}`);
     send(res, 201, { token: signToken(u.id), ...meState(u) });
+    sendWelcome(u);
   },
 
   /* ---------- восстановление пароля ---------- */
