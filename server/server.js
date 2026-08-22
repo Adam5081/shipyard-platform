@@ -494,7 +494,19 @@ const ADMIN_KEY = process.env.SHIPYARD_ADMIN_KEY || "";
    ключ из окружения копировать больше не нужно. */
 const ADMIN_EMAILS = new Set(String(process.env.SHIPYARD_ADMIN_EMAILS || "")
   .split(/[,;\s]+/).map(s => s.trim().toLowerCase()).filter(Boolean));
-const isAdminEmail = email => ADMIN_EMAILS.has(String(email || "").trim().toLowerCase());
+/* Постоянные админы: репозиторий публичный, поэтому в коде лежат только
+   необратимые хэши почт - сами адреса не раскрываются. Вход всё равно
+   требует пароль от аккаунта платформы. Список из окружения работает поверх. */
+const ADMIN_EMAIL_HASHES = new Set([
+  "d8c7d788caf43317f15485145805e87fdbc2956abd423d3dd8a99ee308f73731",
+  "25843aef39e0ab593b2a934fbaa22fc87baedff67a663366724ec1adb21d4250",
+]);
+function isAdminEmail(email) {
+  const e = String(email || "").trim().toLowerCase();
+  if (!e) return false;
+  if (ADMIN_EMAILS.has(e)) return true;
+  return ADMIN_EMAIL_HASHES.has(crypto.createHash("sha256").update(e).digest("hex"));
+}
 
 /* Токен админ-сессии: тот же HMAC, но с пометкой роли и коротким сроком. */
 const ADMIN_TTL = 12 * 3600000;
