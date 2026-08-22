@@ -221,13 +221,14 @@ const SECURITY = [
 ];
 
 const LEGAL = [
-  { id: "l0a", week: "0",   title: "Договор с программой",              why: "Фиксирует: права на продукт остаются у участника" },
-  { id: "l1",  week: "1",   title: "Соглашение о конфиденциальности",   why: "Защита при разговорах с клиентами и партнёрами" },
-  { id: "l2",  week: "2–3", title: "Регистрация компании",              why: "Основание для счетов и договоров" },
-  { id: "l3",  week: "3",   title: "Соглашение между сооснователями",   why: "Критично, если участник не один" },
-  { id: "l5",  week: "5–6", title: "Политика персональных данных",      why: "Требование законодательства" },
-  { id: "l6",  week: "6",   title: "Публичная оферта и пользовательское соглашение", why: "Основание для приёма платежей. До этой точки деньги не принимаются" },
-  { id: "l7",  week: "6–7", title: "Заявка на товарный знак",           why: "Защита названия продукта" },
+  /* week - человеческий номер станции (1-9), только для показа в списке */
+  { id: "l0a", week: "1",   title: "Договор с программой",              why: "Фиксирует: права на продукт остаются у участника" },
+  { id: "l1",  week: "2",   title: "Соглашение о конфиденциальности",   why: "Защита при разговорах с клиентами и партнёрами" },
+  { id: "l2",  week: "3–4", title: "Регистрация компании",              why: "Основание для счетов и договоров" },
+  { id: "l3",  week: "4",   title: "Соглашение между сооснователями",   why: "Критично, если участник не один" },
+  { id: "l5",  week: "6–7", title: "Политика персональных данных",      why: "Требование законодательства" },
+  { id: "l6",  week: "7",   title: "Публичная оферта и пользовательское соглашение", why: "Основание для приёма платежей. До этой точки деньги не принимаются" },
+  { id: "l7",  week: "7–8", title: "Заявка на товарный знак",           why: "Защита названия продукта" },
 ];
 
 /* ---------------- навыки персонажа ----------------
@@ -320,7 +321,7 @@ const KB = {
 const CLAUDE_MD = `# CLAUDE.md - <название продукта>
 
 ## Контекст
-Продукт для <сегмент>: решает задачу «<из презентации проекта, станция 1>».
+Продукт для <сегмент>: решает задачу «<из презентации проекта, станция 2>».
 Ключевой сценарий (единственный в MVP):
 <пользователь> → <действие> → <ценный результат>.
 
@@ -904,7 +905,9 @@ const VIEWS = {
                 <input id="aPass2" type="password" required minlength="6" placeholder="Ещё раз тот же пароль" autocomplete="new-password"></div>
               <label style="display:flex;gap:9px;align-items:flex-start;margin:2px 0 14px;cursor:pointer;font-size:13.5px;color:var(--ink-2);line-height:1.45">
                 <input type="checkbox" id="aNda" required style="margin-top:2px">
-                <span>Продолжая, вы полностью соглашаетесь с условиями
+                <span>Продолжая, вы соглашаетесь с условиями
+                  <a href="offer.html" target="_blank" rel="noopener">Публичной оферты</a>,
+                  <a href="privacy.html" target="_blank" rel="noopener">Политики обработки персональных данных</a> и
                   <a href="nda.html" target="_blank" rel="noopener">Соглашения о конфиденциальности (NDA)</a></span>
               </label>` : `
               <div class="field"><label>Пароль</label><input id="aPass" type="password" required minlength="6" placeholder="Минимум 6 символов"></div>`}
@@ -1164,7 +1167,7 @@ const VIEWS = {
           <div class="d-head">
             <div class="avatar"><img src="${esc(d.avatar || GAME.PixelAvatar.generated(d.name))}" alt=""></div>
             <div><b>${esc(d.name)} - ${esc(d.project)}</b><small>${d.mine ? "моё демо" : "участник потока"}</small></div>
-            <span class="d-week">ст. ${d.week}</span>
+            <span class="d-week">ст. ${d.week + 1}</span>
           </div>
           <p>${esc(d.text)}</p>
           <div class="d-actions">
@@ -1181,7 +1184,7 @@ const VIEWS = {
           <div class="d-head">
             <div class="avatar"><img src="${myAvatar()}" alt=""></div>
             <div><b>${esc(S.name)} - ${esc(S.project)}</b><small>моё демо</small></div>
-            <span class="d-week">ст. ${d.week}</span>
+            <span class="d-week">ст. ${d.week + 1}</span>
           </div>
           <p>${esc(d.text)}</p>
           ${d.link ? `<a href="${esc(d.link)}" target="_blank" rel="noopener" class="link-arrow" style="font-size:14px">Открыть</a>` : ""}
@@ -1193,7 +1196,7 @@ const VIEWS = {
           <div class="d-head">
             <div class="avatar"><img src="${GAME.PixelAvatar.generated(d.author)}" alt=""></div>
             <div><b>${esc(d.author)} - ${esc(d.project)}</b><small>участник потока</small></div>
-            <span class="d-week">ст. ${d.week}</span>
+            <span class="d-week">ст. ${d.week + 1}</span>
           </div>
           <p>${esc(d.text)}</p>
           <div class="d-actions">
@@ -1313,7 +1316,7 @@ const VIEWS = {
           </div>
           <div>
             <h2>Готовность к контрольной точке КТ-4</h2>
-            <p class="muted" style="max-width:520px">КТ-4 (станция 6) требует полностью закрытых уровней 1 и 2. Уровень 3 - ручной аудит специалистом - входит в тарифы Pro и Partner.</p>
+            <p class="muted" style="max-width:520px">КТ-4 (станция 7) требует полностью закрытых уровней 1 и 2. Уровень 3 - ручной аудит специалистом - входит в тарифы Pro и Partner.</p>
           </div>
         </div>
       </div>
@@ -1338,7 +1341,7 @@ const VIEWS = {
     return `
       <div class="page-head">
         <h1>Юридический трек</h1>
-        <p>Идёт параллельно программе. Приём денег - только после публичной оферты на станции 6, по желанию клиента. Регистрация компании и товарный знак могут продолжиться после программы - это фиксируется в договоре.</p>
+        <p>Идёт параллельно программе. Приём денег - только после публичной оферты на станции 7, по желанию клиента. Регистрация компании и товарный знак могут продолжиться после программы - это фиксируется в договоре.</p>
       </div>
       <div class="panel">
         ${LEGAL.map(l => {
@@ -1354,8 +1357,27 @@ const VIEWS = {
         }).join("")}
       </div>
       <div class="panel">
+        <h2>Документы Taulau</h2>
+        <p class="muted" style="margin-bottom:12px">Действующие редакции - те же, что вы принимаете при регистрации и на станции 1.</p>
+        <div class="legal-step">
+          <div class="wk">📄</div>
+          <div><b>Публичная оферта</b><small>Договор оказания услуг: предмет, тарифы, ответственность, права на продукт</small></div>
+          <a class="status-chip wait" href="offer.html" target="_blank" rel="noopener" style="text-decoration:none">Открыть</a>
+        </div>
+        <div class="legal-step">
+          <div class="wk">🔐</div>
+          <div><b>Политика обработки персональных данных</b><small>Какие данные собираем, зачем, где храним и как ими управлять</small></div>
+          <a class="status-chip wait" href="privacy.html" target="_blank" rel="noopener" style="text-decoration:none">Открыть</a>
+        </div>
+        <div class="legal-step">
+          <div class="wk">🤝</div>
+          <div><b>NDA на ваш продукт</b><small>Обязательства программы и экспертов по неразглашению</small></div>
+          <a class="status-chip wait" href="nda.html" target="_blank" rel="noopener" style="text-decoration:none">Открыть</a>
+        </div>
+      </div>
+      <div class="panel">
         <h2>Права на продукт</h2>
-        <p class="muted">Договор с программой фиксирует со станции 0: полные права на код, дизайн и данные остаются у участника. Условия партнёрского трека публикуются до начала программы и одинаковы для всех; от них можно отказаться без потери прав.</p>
+        <p class="muted">Договор с программой фиксирует со станции 1: полные права на код, дизайн и данные остаются у участника. Условия партнёрского трека публикуются до начала программы и одинаковы для всех; от них можно отказаться без потери прав.</p>
       </div>`;
   },
 
@@ -1373,7 +1395,7 @@ const VIEWS = {
           <button class="btn btn-ghost btn-sm" id="kbBack" style="margin-bottom:18px">← Все материалы</button>
           <div class="page-head">
             <h1>${m.icon} ${esc(m.title)}</h1>
-            <p>Станция ${m.week} · ${esc(m.type)}</p>
+            <p>Станция ${m.week + 1} · ${esc(m.type)}</p>
           </div>
           <div class="panel"><div class="doc">${doc.html}</div>
             ${doc.copy ? `<button class="btn btn-dark btn-sm" data-copy="${esc(doc.copy)}" style="margin-top:20px">Скопировать шаблон</button>` : ""}
@@ -1394,7 +1416,7 @@ const VIEWS = {
         return `
         <div class="kb-item${locked ? "" : " kb-open"}" ${locked ? "" : `data-doc="${m.id}"`} style="${locked ? "opacity:.45" : ""}">
           <div class="k-icon">${m.icon}</div>
-          <div><b>${esc(m.title)}</b><small>Станция ${m.week} · ${esc(m.note)}${locked ? " · откроется по пути" : ""}</small></div>
+          <div><b>${esc(m.title)}</b><small>Станция ${m.week + 1} · ${esc(m.note)}${locked ? " · откроется по пути" : ""}</small></div>
           <span class="k-type">${locked ? "🔒 " : ""}${m.type}</span>
         </div>`;
       }).join("")}</div>`;
@@ -1402,7 +1424,7 @@ const VIEWS = {
       body = `
         <div class="panel">
           <h2>Готовый шаблон CLAUDE.md</h2>
-          <p class="muted">Файл инструкций проекта: контекст, правила и архитектурные решения для агента. Заполняется на станции 2 и живёт с проектом дальше.</p>
+          <p class="muted">Файл инструкций проекта: контекст, правила и архитектурные решения для агента. Заполняется на станции 3 и живёт с проектом дальше.</p>
           <pre class="code">${esc(CLAUDE_MD)}</pre>
           <button class="btn btn-dark btn-sm" id="copyMd" style="margin-top:14px">Скопировать шаблон</button>
         </div>`;
@@ -1832,14 +1854,101 @@ function submitBlock(sel, st, done) {
     </div>`;
 }
 
+/* Задачи-акцепты: закрываются не галочкой, а прочтением документа и согласием.
+   Документ живёт одним файлом (offer.html) - модалка подтягивает его текст,
+   чтобы юридическая формулировка не расходилась между страницей и кабинетом. */
+const ACCEPT_TASKS = {
+  w0_docs: {
+    doc: "offer.html",
+    title: "Публичная оферта Taulau",
+    lead: "Договор оказания услуг платформы. Главное: все права на ваш продукт - код, дизайн, данные - остаются у вас.",
+    agree: "Я прочитал оферту и согласен с её условиями",
+    btn: "Принять оферту",
+  },
+};
+
 function taskRow(t, blocked = false) {
   const done = !!S.done[t.id];
+  const acc = ACCEPT_TASKS[t.id];
+  /* Пункт-акцепт подсвечен зелёным и выглядит кнопкой - чтобы было
+     очевидно, что по нему нужно нажать, а не просто поставить галочку. */
+  if (acc && !blocked) {
+    return `
+      <div class="task task-accept ${done ? "done-task" : ""}">
+        <input type="checkbox" id="${t.id}" data-task="${t.id}" ${done ? "checked" : ""} hidden>
+        <button class="ta-btn" data-accept="${t.id}">
+          <span class="ta-ic">${done ? "✓" : "✍"}</span>
+          <span class="ta-txt">
+            <b>${esc(t.label)}</b>
+            <small>${done ? "Принято - нажмите, чтобы перечитать" : "Нажмите, чтобы прочитать и принять"}</small>
+          </span>
+          ${POINTS_UI && !done ? `<span class="pts">+${t.pts}</span>` : ""}
+        </button>
+      </div>`;
+  }
   return `
     <div class="task ${done ? "done-task" : ""} ${blocked && !done ? "task-blocked" : ""}">
       <input type="checkbox" id="${t.id}" data-task="${t.id}" ${done ? "checked" : ""} ${blocked && !done ? "disabled" : ""}>
       <label for="${t.id}">${esc(t.label)}</label>
       ${POINTS_UI ? `<span class="pts">+${t.pts}</span>` : ""}
     </div>`;
+}
+
+/* Модалка акцепта: текст тянем из статической страницы того же домена.
+   Если не получилось (офлайн-режим, file://) - даём ссылку открыть документ. */
+async function showAcceptModal(taskId) {
+  const acc = ACCEPT_TASKS[taskId];
+  if (!acc) return;
+  const done = !!S.done[taskId];
+  document.getElementById("acceptModal")?.remove();
+
+  const d = document.createElement("div");
+  d.id = "acceptModal";
+  d.className = "acc-modal";
+  d.innerHTML = `
+    <div class="acc-box">
+      <button class="acc-x" id="accClose" aria-label="Закрыть">✕</button>
+      <h2>${esc(acc.title)}</h2>
+      <p class="muted acc-lead">${esc(acc.lead)}</p>
+      <div class="acc-scroll" id="accText"><p class="muted">Загружаем текст документа…</p></div>
+      <div class="acc-foot">
+        ${done ? `
+          <p class="muted" style="margin:0">Вы приняли этот документ. <a href="${acc.doc}" target="_blank" rel="noopener">Открыть отдельной страницей</a></p>
+          <button class="btn btn-ghost" id="accCancel">Закрыть</button>` : `
+          <label class="acc-agree"><input type="checkbox" id="accOk"><span>${esc(acc.agree)}</span></label>
+          <div class="acc-btns">
+            <button class="btn btn-ghost" id="accCancel">Позже</button>
+            <button class="btn btn-primary" id="accGo" disabled>${esc(acc.btn)}</button>
+          </div>`}
+      </div>
+    </div>`;
+  document.body.appendChild(d);
+
+  const close = () => d.remove();
+  d.addEventListener("click", e => { if (e.target === d) close(); });
+  d.querySelector("#accClose").addEventListener("click", close);
+  d.querySelector("#accCancel").addEventListener("click", close);
+
+  const box = d.querySelector("#accText");
+  try {
+    const html = await fetch(acc.doc, { cache: "no-cache" }).then(r => r.ok ? r.text() : Promise.reject());
+    const parsed = new DOMParser().parseFromString(html, "text/html").querySelector(".doc-legal");
+    box.innerHTML = parsed ? parsed.innerHTML
+      : `<p>Документ доступен отдельной страницей: <a href="${acc.doc}" target="_blank" rel="noopener">открыть</a>.</p>`;
+  } catch {
+    box.innerHTML = `<p>Не удалось загрузить текст здесь. Откройте документ отдельной страницей: <a href="${acc.doc}" target="_blank" rel="noopener">${esc(acc.title)}</a>.</p>`;
+  }
+
+  if (done) return;
+  const ok = d.querySelector("#accOk");
+  const go2 = d.querySelector("#accGo");
+  ok.addEventListener("change", () => { go2.disabled = !ok.checked; });
+  go2.addEventListener("click", () => {
+    close();
+    // отдаём закрытие задачи штатному обработчику: очки, праздник и синк уже там
+    const cb = document.getElementById(taskId);
+    if (cb) { cb.checked = true; cb.dispatchEvent(new Event("change", { bubbles: true })); }
+  });
 }
 
 /* транзитное состояние баттла: активная игра и разбор после сдачи */
@@ -1895,7 +2004,7 @@ function flowRow(r, full = false) {
       </div>
       <div class="fr-meta">
         <span class="dock-chip d${esc(r.dock || "x")}">${r.dock ? esc(DOCKS[r.dock].name) : "без дока"}</span>
-        <small>станция ${r.station} · ${fmt(r.points || 0)} очк.</small>
+        <small>станция ${r.station + 1} · ${fmt(r.points || 0)} очк.</small>
         ${full && r.open && r.link ? `<a href="${esc(r.link)}" target="_blank" rel="noopener" class="link-arrow" style="font-size:13px">продукт ↗</a>` : ""}
       </div>
     </div>`;
@@ -2178,6 +2287,13 @@ function bind() {
     const bd = BADGES.find(x => x.id === b.dataset.sharebadge);
     if (bd) shareAchievement(`🏔️ Taulau: бейдж ${bd.emoji} «${bd.name}» - ${bd.desc}!`);
   }));
+
+  /* задачи-акцепты: открываем документ вместо простой галочки */
+  view.querySelectorAll("[data-accept]").forEach(b =>
+    b.addEventListener("click", () => {
+      if (LOCKED()) return showLockModal();
+      showAcceptModal(b.dataset.accept);
+    }));
 
   /* задачи станций */
   view.querySelectorAll("[data-task]").forEach(cb =>
