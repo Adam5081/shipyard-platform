@@ -403,6 +403,128 @@ add("Программа для отраслевых экспертов: вы с�
     "A programme for industry experts: you build the product yourself, with Claude Code, a production pipeline and industry experts alongside. Checkpoints, security, and a move into real-world use.",
     "برنامج لخبراء القطاعات: تبني المنتج بنفسك، مع Claude Code ومسار إنتاج متكامل وخبراء الصناعة إلى جانبك. نقاط تحقق، وأمن، وانتقال إلى الاستخدام الفعلي.");
 
+
+/* ============================================================
+   Кабинет: интерфейс основных экранов (этап 2 перевода)
+   ============================================================ */
+add("Карта пути", "Route map", "خريطة المسار");
+add("Календарь", "Calendar", "التقويم");
+add("Юридический трек", "Legal track", "المسار القانوني");
+add("Сертификат", "Certificate", "الشهادة");
+add("База знаний", "Knowledge base", "قاعدة المعرفة");
+add("Сервисный пул", "Expert pool", "فريق الخبراء");
+add("Профиль", "Profile", "الملف الشخصي");
+add("МОЙ ПУТЬ", "MY ROUTE", "مساري");
+add("ФИНАЛ", "FINALE", "الختام");
+add("РЕСУРСЫ", "RESOURCES", "الموارد");
+add("Мой продукт", "My product", "منتجي");
+add("в рюкзаке", "in the pack", "في الحقيبة");
+add("Демо", "Demos", "العروض");
+add("Гость", "Guest", "زائر");
+add("Не в системе", "Not signed in", "غير مسجّل الدخول");
+add("Тариф Solo", "Solo plan", "باقة Solo");
+add("Тариф Pro", "Pro plan", "باقة Pro");
+
+/* снаряжение и уровни - ядро геймификации */
+add("Рюкзак восхождения", "Climbing pack", "حقيبة التسلق");
+add("Навыки персонажа", "Character skills", "مهارات الشخصية");
+add("Артефакт недели:", "Deliverable of the station:", "مُخرَج المحطة:");
+add("Разведка", "Recon", "الاستطلاع");
+add("Маршрут", "Route", "المسار");
+add("Базовый лагерь", "Base camp", "المخيّم الأساسي");
+add("Восхождение", "Ascent", "التسلق");
+add("Страховка", "Belay", "التأمين");
+add("Вершина", "Summit", "القمة");
+add("Флаг", "Flag", "الراية");
+add("Новая высота", "New altitude", "ارتفاع جديد");
+add("Рюкзак и компас", "Pack and compass", "الحقيبة والبوصلة");
+add("Горн проводника", "Guide's horn", "بوق الدليل");
+add("Маршрутный лист", "Route card", "بطاقة المسار");
+add("Ледоруб", "Ice axe", "فأس الجليد");
+add("Страховочная обвязка", "Climbing harness", "حزام التأمين");
+add("Каска", "Helmet", "الخوذة");
+add("Сигнальная ракета", "Signal flare", "الشعلة الضوئية");
+add("Вымпел вершины", "Summit pennant", "راية القمة");
+add("Рупор", "Megaphone", "مكبّر الصوت");
+add("Дверь MVP", "MVP door", "باب النسخة الأولية");
+add("Питч и контекст", "Pitch and context", "العرض والسياق");
+add("Вайб-кодинг", "AI coding", "البرمجة بالذكاء الاصطناعي");
+add("Архитектура", "Architecture", "البنية");
+add("Сборка", "Build", "التنفيذ");
+add("DevOps", "DevOps", "عمليات التطوير");
+add("Запуск", "Launch", "الإطلاق");
+
+/* календарь и часы */
+add("Часы этой недели", "Hours this week", "ساعات هذا الأسبوع");
+add("Групповые", "Group", "جماعية");
+add("Один на один", "One to one", "فردية");
+add("Расписание", "Schedule", "الجدول");
+add("Мои записи", "My bookings", "حجوزاتي");
+add("Эта неделя", "This week", "هذا الأسبوع");
+add("Записаться", "Book", "احجز");
+add("Отписаться", "Cancel", "إلغاء");
+add("вы записаны", "booked", "محجوز");
+add("Недоступно", "Unavailable", "غير متاح");
+add("Мест нет", "Full", "مكتمل");
+add("Часы кончились", "Hours used up", "نفدت الساعات");
+add("отменена", "cancelled", "أُلغيت");
+add("созвоны с экспертами в группе", "group calls with experts", "جلسات جماعية مع الخبراء");
+add("личный слот с экспертом", "a private slot with an expert", "جلسة فردية مع خبير");
+add("Подписаться в Google Календаре", "Subscribe in Google Calendar", "اشترك في تقويم غوغل");
+add("Добавить в Google Календарь →", "Add to Google Calendar →", "أضف إلى تقويم غوغل ←");
+add("Ссылка на Google Meet →", "Google Meet link →", "رابط Google Meet ←");
+
+
+/* фазы станций и подписи карты */
+add("Старт", "Start", "البداية");
+add("Контекст", "Context", "السياق");
+add("Проектирование", "Design", "التصميم");
+add("Проверка", "Verification", "التحقق");
+add("Защита", "Review", "المراجعة");
+add("Рабочая среда", "Real-world use", "الاستخدام الفعلي");
+add("Рюкзак восхождения", "Climbing pack", "حقيبة التسلق");
+add("- снаряжение, собранное на станциях. Наведите на предмет, чтобы узнать, за что он получен.",
+    "- gear collected station by station. Hover an item to see what earned it.",
+    "- عتاد جُمع محطةً بمحطة. مرّر المؤشر على أي عنصر لتعرف كيف حصلت عليه.");
+add("Растут от задач станций, чек-листов и баттлов. Пять уровней в каждом.",
+    "They grow from station tasks and checklists. Five levels each.",
+    "تنمو من مهام المحطات وقوائم التدقيق. خمسة مستويات لكل مهارة.");
+add("Глава 1 дневника восхождения откроется, когда станция будет закрыта",
+    "Chapter 1 of the climbing journal unlocks once the station is closed",
+    "يُفتح الفصل الأول من يوميات التسلق بعد إغلاق المحطة");
+add("Право", "Legal", "القانون");
+add("Ключевые события", "Key events", "الأحداث الرئيسية");
+
+
+/* карта: боковое меню и шкала времени */
+add("Мой путь", "My route", "مساري");
+add("Финал", "Finale", "الختام");
+add("Ресурсы", "Resources", "الموارد");
+add("Осталось", "Left", "متبقٍ");
+add("времени потока", "of the cohort time", "من مدة الدفعة");
+
+/* карточка станции */
+add("Сборка · награда: Ледоруб", "Build · reward: Ice axe", "التنفيذ · المكافأة: فأس الجليد");
+add("Первый настоящий подъём. Никто не несёт вас - вы сами, шаг за шагом, вырубаете ступени в склоне: сначала опору, потом сам путь наверх. Тяжело и медленно, но именно здесь рюкзак перестаёт быть пустым обещанием и получает вес. За вырубленные ступени вам вручают ледоруб - инструмент, который останется с вами до самой вершины.",
+    "The first real climb. Nobody carries you - step by step you cut footholds into the slope yourself: first the anchor, then the way up. It is slow and heavy work, but this is where the pack stops being an empty promise and starts to have weight. For the steps you cut, you are handed the ice axe - a tool that stays with you all the way to the summit.",
+    "أول تسلّق حقيقي. لا أحد يحملك: خطوةً بخطوة تنحت المواطئ في المنحدر بنفسك، المرساة أولاً ثم الطريق صعوداً. عمل بطيء وشاق، لكن هنا تكفّ الحقيبة عن كونها وعداً فارغاً ويصبح لها وزن. ومقابل الدرجات التي نحتّها، تُمنح فأس الجليد - أداة ترافقك حتى القمة.");
+add("Эта станция не поднимает уровень персонажа - он вырастет на следующей. Так задумано: уровни привязаны к контрольным точкам.",
+    "This station does not raise your level - the next one will. That is deliberate: levels are tied to checkpoints.",
+    "هذه المحطة لا ترفع مستواك - المحطة التالية ستفعل. وهذا مقصود: المستويات مرتبطة بنقاط التحقق.");
+add("Спринт 1: каркас проекта и модель данных через Claude Code",
+    "Sprint 1: project skeleton and data model with Claude Code",
+    "الدورة ١: هيكل المشروع ونموذج البيانات عبر Claude Code");
+add("Спринт 2: ключевой сценарий от входа до результата",
+    "Sprint 2: the core journey from sign-in to result",
+    "الدورة ٢: المسار الأساسي من الدخول إلى النتيجة");
+add("Ревью сгенерированного кода вместе с экспертом",
+    "Review the generated code with an expert",
+    "مراجعة الشيفرة المولّدة مع خبير");
+add("Работающий ключевой сценарий", "A working core journey", "مسار أساسي يعمل");
+add("Сдайте её кнопкой «Готов» - ментор проверит и откроет путь дальше.",
+    "Submit it with the «Ready» button - the mentor reviews and opens the way on.",
+    "أرسلها بزر «جاهز» - يراجعها المرشد ويفتح الطريق التالي.");
+
 /* ============================================================
    Движок
    ============================================================ */
@@ -421,10 +543,41 @@ function currentLang() {
 
 let LANG = currentLang();
 
+/* Шаблонные строки: перевести целиком нельзя - в них подставляются числа.
+   Держим их отдельным списком правил с подстановкой групп. */
+const PATTERNS = [
+  [/^Станция (\d+) из 9 · (.+)$/, { en: m => `Station ${m[1]} of 9 · ${tr(m[2]) ?? m[2]}`, ar: m => `المحطة ${m[1]} من ٩ · ${tr(m[2]) ?? m[2]}` }],
+  [/^уровень (\d+) из 8$/, { en: m => `level ${m[1]} of 8`, ar: m => `المستوى ${m[1]} من ٨` }],
+  [/^Осталось (\d+)% времени потока$/, { en: m => `${m[1]}% of the cohort left`, ar: m => `تبقّى ${m[1]}% من مدة الدفعة` }],
+  [/^станция (\d+) из 9$/, { en: m => `station ${m[1]} of 9`, ar: m => `المحطة ${m[1]} من ٩` }],
+  [/^ст\. (\d+)$/, { en: m => `st. ${m[1]}`, ar: m => `م. ${m[1]}` }],
+  [/^ур\. (\d+)$/, { en: m => `lvl ${m[1]}`, ar: m => `مستوى ${m[1]}` }],
+  [/^Станция откроется после проверки станции (\d+)\.$/, { en: m => `This station opens once station ${m[1]} is approved.`, ar: m => `تُفتح هذه المحطة بعد اعتماد المحطة ${m[1]}.` }],
+  [/^Глава (\d+) дневника восхождения откроется, когда станция будет закрыта$/, { en: m => `Chapter ${m[1]} of the climbing journal unlocks once the station is closed`, ar: m => `يُفتح الفصل ${m[1]} من يوميات التسلق بعد إغلاق المحطة` }],
+  [/^(\d+) мин · (.+)$/, { en: m => `${m[1]} min · ${tr(m[2]) ?? m[2]}`, ar: m => `${m[1]} د · ${tr(m[2]) ?? m[2]}` }],
+];
+
 const tr = s => {
   if (LANG === "ru") return null;
-  const v = DICT[LANG][norm(s)];
-  return v === undefined ? null : v;
+  const k = norm(s);
+  const v = DICT[LANG][k];
+  if (v !== undefined) return v;
+  /* строка часто начинается с эмодзи или значка: переводим остаток, значок оставляем */
+  const byPattern = str => {
+    for (const [re, fns] of PATTERNS) {
+      const g = str.match(re);
+      if (g && fns[LANG]) return fns[LANG](g);
+    }
+    return null;
+  };
+  const m = k.match(/^([^\p{L}\p{N}]+)\s*(.+)$/u);
+  if (m) {
+    const rest = norm(m[2]);
+    // остаток ищем и в словаре, и в шаблонах: «🔒 Станция откроется после проверки станции 1.»
+    const inner = DICT[LANG][rest] ?? byPattern(rest);
+    if (inner != null) return m[1] + " " + inner;
+  }
+  return byPattern(k);
 };
 
 /* Обходим текстовые узлы: так перевод ложится и на статичную разметку,

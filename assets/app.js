@@ -2177,6 +2177,8 @@ function render() {
   if (activeView === "map") mountMap();
   paintToolIcons();
   bind();
+  // перевод свежей разметки: кабинет перерисовывает разделы целиком
+  if (window.TaulauI18n) window.TaulauI18n.apply(document.body);
 }
 
 async function syncToggle(kind, id, done) {
