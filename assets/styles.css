@@ -1081,7 +1081,11 @@ pre.code .h { color: #7fd4e4; font-weight: 600; }
 .apply-note.err { color: #d70015; font-weight: 500; }
 
 /* поле-ловушка: скрыто от людей, доступно ботам */
-.hp { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+/* Поле-ловушка для ботов. Прячем БЕЗ смещения за край: в арабской
+   раскладке left:-9999px уводит элемент вправо и растягивает страницу
+   на десять тысяч пикселей. Схлопывание в точку работает в обе стороны. */
+.hp { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; opacity: 0; }
 
 .apply-done {
   background: var(--bg);
@@ -1872,3 +1876,23 @@ pre.code .h { color: #7fd4e4; font-weight: 600; }
 .week-line b { font-size: 13.5px; }
 .week-line span { font-size: 12.5px; color: var(--ink-3); }
 .week-line:first-child { margin-top: 4px; }
+
+/* ---------- переключатель языка в кабинете ---------- */
+.lang-switch { display: inline-flex; gap: 2px; border: 1px solid var(--line);
+  border-radius: 999px; padding: 2px; margin-top: 10px; }
+.lang-switch button { border: none; background: none; cursor: pointer; font: inherit;
+  font-size: 12.5px; color: var(--ink-3); padding: 4px 10px; border-radius: 999px; }
+.lang-switch button:hover { color: var(--ink); }
+.lang-switch button.on { background: var(--accent); color: #fff; }
+
+/* ---------- арабский в кабинете: зеркальная вёрстка ---------- */
+[dir="rtl"] .app-body, [dir="rtl"] .panel, [dir="rtl"] .page-head { text-align: right; }
+[dir="rtl"] .side { left: auto; right: 0; border-right: none; border-left: 1px solid var(--line); }
+[dir="rtl"] .main { margin-left: 0; margin-right: var(--side-w, 260px); }
+[dir="rtl"] .side-link { flex-direction: row-reverse; text-align: right; }
+[dir="rtl"] .task, [dir="rtl"] .sess, [dir="rtl"] .legal-step { flex-direction: row-reverse; }
+[dir="rtl"] .task label, [dir="rtl"] .sess-main { text-align: right; }
+[dir="rtl"] .hr-card, [dir="rtl"] .week-line { text-align: right; }
+[dir="rtl"] .acc-agree { flex-direction: row-reverse; }
+[dir="rtl"] .ta-btn { flex-direction: row-reverse; text-align: right; }
+[dir="rtl"] ul, [dir="rtl"] ol { padding-left: 0; padding-right: 18px; }

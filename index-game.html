@@ -27,6 +27,25 @@ const easeIO=t=>t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
 const rnd=(i,k)=>((Math.sin(i*127.1+k*311.7)*43758.5453)%1+1)%1;
 function blend(c1,c2,t){const p=s=>[parseInt(s.slice(1,3),16),parseInt(s.slice(3,5),16),parseInt(s.slice(5,7),16)];const a=p(c1),b=p(c2);return`rgb(${a.map((v,i)=>Math.round(lerp(v,b[i],t))).join(",")})`}
 
+
+/* ---------- язык игры ----------
+   Игра рисует подписи на канвасе, поэтому обычный переводчик страницы
+   до них не достаёт. Язык приходит параметром ?lang= из кабинета и лендинга. */
+const LANG=(new URLSearchParams(location.search).get('lang')||'ru');
+const G={
+ en:{'Диагностика и окружение':'Diagnosis and environment','Презентация проекта':'Project brief','Чертёж продукта':'Product blueprint','Ядро продукта':'Product core','Обвязка':'Supporting layer','Тестирование и защита':'Testing and hardening','Продукт в сети':'Product online','Защита проекта':'Project review','Вывод в рабочую среду':'Into real-world use',
+  'Карта запуска':'Launch map','Питч':'Pitch','Чертёж':'Blueprint','Ядро':'Core','Отчёт тестов':'Test report','Домен':'Domain','Демо':'Demo','Релиз':'Release',
+  'КТ-1':'CP-1','КТ-2':'CP-2','КТ-3':'CP-3','КТ-4':'CP-4','КТ-5':'CP-5',
+  'ВЫСОТА':'ALTITUDE','ПРОГРЕСС':'PROGRESS','СТАНЦИЯ':'STATION','ИЗ':'OF','ВЕРШИНА':'SUMMIT','ДВЕРЬ MVP':'MVP DOOR','НАЧАЛО ПУТИ':'THE ROUTE BEGINS','ГРУЗ ДОСТАВЛЕН':'CARGO DELIVERED','ВОСХОЖДЕНИЕ ЗАВЕРШЕНО':'CLIMB COMPLETE','М':'M',
+  'бросил после КТ-1':'quit after CP-1','переписывал ядро в 4-й раз':'rewrote the core a fourth time','ждал вдохновения':'waited for inspiration','сгорел на дедлайне':'burned out on the deadline','ПРОЙДЕНА':'PASSED','СКАНИРОВАНИЕ ГРУЗА':'CARGO SCAN','Артефакт':'Deliverable'},
+ ar:{'Диагностика и окружение':'التشخيص وبيئة العمل','Презентация проекта':'عرض المشروع','Чертёж продукта':'مخطط المنتج','Ядро продукта':'نواة المنتج','Обвязка':'الطبقة المساندة','Тестирование и защита':'الاختبار والتحصين','Продукт в сети':'المنتج على الإنترنت','Защита проекта':'مراجعة المشروع','Вывод в рабочую среду':'الاستخدام الفعلي',
+  'Карта запуска':'خريطة الإطلاق','Питч':'العرض','Чертёж':'المخطط','Ядро':'النواة','Отчёт тестов':'تقرير الاختبار','Домен':'النطاق','Демо':'عرض تجريبي','Релиз':'الإصدار',
+  'КТ-1':'ن.ت-١','КТ-2':'ن.ت-٢','КТ-3':'ن.ت-٣','КТ-4':'ن.ت-٤','КТ-5':'ن.ت-٥',
+  'ВЫСОТА':'الارتفاع','ПРОГРЕСС':'التقدّم','СТАНЦИЯ':'المحطة','ИЗ':'من','ВЕРШИНА':'القمة','ДВЕРЬ MVP':'باب النسخة الأولية','НАЧАЛО ПУТИ':'بداية الطريق','ГРУЗ ДОСТАВЛЕН':'تم تسليم الحمولة','ВОСХОЖДЕНИЕ ЗАВЕРШЕНО':'اكتمل التسلق','М':'م',
+  'бросил после КТ-1':'انسحب بعد نقطة التحقق الأولى','переписывал ядро в 4-й раз':'أعاد كتابة النواة للمرة الرابعة','ждал вдохновения':'كان ينتظر الإلهام','сгорел на дедлайне':'أنهكه الموعد النهائي','ПРОЙДЕНА':'اجتيزت','СКАНИРОВАНИЕ ГРУЗА':'فحص الحمولة','Артефакт':'المُخرَج'}
+};
+const L=s=>(LANG==='ru'?s:(G[LANG]&&G[LANG][s])||s);
+
 /* ---------- программа ---------- */
 const ST=[
  {t:"Диагностика и окружение",art:"Карта запуска"},
@@ -211,7 +230,7 @@ const MC=document.createElement("canvas");MC.width=W*MS;MC.height=WORLD_H*MS;
 
 /* ---------- ввод ---------- */
 cv.addEventListener("pointerdown",()=>{
-  if(S.state==="intro"){S.state="play";showCaption("СТАНЦИЯ 1 · ДИАГНОСТИКА И ОКРУЖЕНИЕ","НАЧАЛО ПУТИ");}
+  if(S.state==="intro"){S.state="play";showCaption(`${L("СТАНЦИЯ")} 1 · ${L("Диагностика и окружение").toUpperCase()}`,L("НАЧАЛО ПУТИ"));}
   else if(S.pause>0)S.pause=.01;
 });
 
@@ -238,7 +257,7 @@ function step(dt){
       const p=easeIO((S.tI-HOLD)/PAN);
       S.cy=lerp(PEAK.y+80,BASE_Y-120,p);S.cx=lerp(480,STARTP.x+60,p);
     }else if(S.tI<HOLD+PAN+SETTLE){S.cy=BASE_Y-120;S.cx=STARTP.x+60;}
-    else{S.state="play";showCaption("СТАНЦИЯ 1 · ДИАГНОСТИКА И ОКРУЖЕНИЕ","НАЧАЛО ПУТИ");}
+    else{S.state="play";showCaption(`${L("СТАНЦИЯ")} 1 · ${L("Диагностика и окружение").toUpperCase()}`,L("НАЧАЛО ПУТИ"));}
   }
   /* движение героя */
   const h=heroPos();
@@ -255,10 +274,10 @@ function step(dt){
         for(let i=0;i<9;i++)if(!S.delivered.has(i)&&S.dist>=stDist[i]&&stDist[i]>1){
           S.delivered.add(i);S.dist=stDist[i];S.pause=2.6;
           S.card={i,t0:S.t};S.facing=PTS[i].x<480?-1:1;
-          showCaption(`СТАНЦИЯ ${i+1} ИЗ 9`,ST[i].t.toUpperCase(),2.6);
+          showCaption(`${L("СТАНЦИЯ")} ${i+1} ${L("ИЗ")} 9`,L(ST[i].t).toUpperCase(),2.6);
         }
         // контрольные точки: вспышка
-        GATES.forEach(g=>{if(!g.done&&S.dist>=g.d){g.done=true;S.gateFlash=1;showCaption(ST[g.i].kt+" ПРОЙДЕНА","СКАНИРОВАНИЕ ГРУЗА",2);}});
+        GATES.forEach(g=>{if(!g.done&&S.dist>=g.d){g.done=true;S.gateFlash=1;showCaption(L(ST[g.i].kt)+" "+L("ПРОЙДЕНА"),L("СКАНИРОВАНИЕ ГРУЗА"),2);}});
         // следы на снегу
         if(zoneOf(h.y)==="snow"&&S.t-S.lastStep>.26){S.lastStep=S.t;S.stepSide*=-1;S.prints.push({x:h.x-S.facing*4+S.stepSide*3,y:h.y+2,t0:S.t});}
         // пар изо рта
@@ -427,7 +446,7 @@ function drawStations(){
     c.restore();
     c.font=FONT(13,600);
     c.fillStyle=done?"rgba(157,180,199,.85)":i===cur?"#e8eef6":"rgba(200,212,228,.4)";
-    c.fillText(s.t.toUpperCase(),p.x,p.y-90);
+    c.fillText(L(s.t).toUpperCase(),p.x,p.y-90);
     c.font=FONT(10,400);c.fillStyle="rgba(157,180,199,.4)";
     c.fillText(`${altOf(p.y)} М · ${String(i+1).padStart(2,"0")}/09`,p.x,p.y-104);
     if(done){c.strokeStyle="#7fc98f";c.lineWidth=2.5;c.beginPath();
@@ -463,7 +482,7 @@ function drawGates(){
       c.strokeStyle="rgba(230,57,70,.65)";c.lineWidth=1.5;
       c.beginPath();c.moveTo(p.x-18,sy);c.lineTo(p.x+18,sy);c.stroke();}
     c.font=FONT(10,700);c.textAlign="center";c.fillStyle=col;
-    c.fillText(ST[g.i].kt,p.x,p.y+16);
+    c.fillText(L(ST[g.i].kt),p.x,p.y+16);
   });
 }
 function drawBirds(){
@@ -492,7 +511,7 @@ function drawPeak(){
   c.fillStyle=open?"rgba(127,201,143,.85)":"#1f2a38";c.fillRect(DOOR.x-15,DOOR.y-52,30,60);
   c.strokeStyle=PALE;c.lineWidth=1.5;c.strokeRect(DOOR.x-22,DOOR.y-58,44,66);
   c.font=FONT(12,700);c.textAlign="center";
-  c.fillStyle=open?"#7fc98f":PALE;c.fillText("ДВЕРЬ MVP",DOOR.x,DOOR.y-68);
+  c.fillStyle=open?"#7fc98f":PALE;c.fillText(L("ДВЕРЬ MVP"),DOOR.x,DOOR.y-68);
   const pu=.7+Math.sin(S.t*1.7)*.3;
   c.save();
   c.shadowColor=RED;c.shadowBlur=36*pu;c.fillStyle=RED;
@@ -501,7 +520,7 @@ function drawPeak(){
   c.fillText("TAULAU",480,PEAK.y-40);
   try{c.letterSpacing="0px";}catch(e){}
   c.shadowBlur=0;c.font=FONT(12,400);c.fillStyle="rgba(230,57,70,.8)";
-  c.fillText("· ВЕРШИНА · 2622 М ·",480,PEAK.y-16);
+  c.fillText(`· ${L("ВЕРШИНА")} · 2622 ${L("М")} ·`,480,PEAK.y-16);
   c.fillStyle=`rgba(230,57,70,${pu})`;
   c.beginPath();c.arc(480,PEAK.y-96,4,0,7);c.fill();
   c.strokeStyle=`rgba(230,57,70,${.5*pu})`;c.lineWidth=1.5;
@@ -618,10 +637,10 @@ function drawUI(vW,vH,night){
   c.fillText("TAULAU ASCENT",pad,pad+12*u);
   c.font=FONT(10.5*u,400);c.fillStyle="rgba(215,224,236,.8)";
   if(vW<560){
-    c.fillText(`ВЫСОТА ${alt} М · ${pct}%`,pad,pad+31*u);
-    c.fillText(`СТАНЦИЯ ${cur} ИЗ 9`,pad,pad+47*u);
+    c.fillText(`${L("ВЫСОТА")} ${alt} ${L("М")} · ${pct}%`,pad,pad+31*u);
+    c.fillText(`${L("СТАНЦИЯ")} ${cur} ${L("ИЗ")} 9`,pad,pad+47*u);
   }else{
-    c.fillText(`ВЫСОТА ${alt} М · ПРОГРЕСС ${pct}% · СТАНЦИЯ ${cur} ИЗ 9`,pad,pad+32*u);
+    c.fillText(`${L("ВЫСОТА")} ${alt} ${L("М")} · ${L("ПРОГРЕСС")} ${pct}% · ${L("СТАНЦИЯ")} ${cur} ${L("ИЗ")} 9`,pad,pad+32*u);
   }
   try{c.letterSpacing="0px";}catch(e){}
   // шкала высоты
@@ -656,9 +675,9 @@ function drawUI(vW,vH,night){
         c.fillStyle=RED;c.fillRect(cx0,cy0,3*u,ch);
         c.font=(20*u)+"px sans-serif";c.textAlign="left";c.fillText("📦",cx0+12*u,cy0+38*u);
         c.font=FONT(11*u,700);c.fillStyle="#e8eef6";
-        c.fillText("ГРУЗ ДОСТАВЛЕН",cx0+44*u,cy0+22*u);
+        c.fillText(L("ГРУЗ ДОСТАВЛЕН"),cx0+44*u,cy0+22*u);
         c.font=FONT(10*u,400);c.fillStyle="rgba(157,180,199,.85)";
-        c.fillText("Артефакт: "+ST[S.card.i].art,cx0+44*u,cy0+38*u);
+        c.fillText(L("Артефакт")+": "+L(ST[S.card.i].art),cx0+44*u,cy0+38*u);
         c.fillText(`Станция ${S.card.i+1} из 9`,cx0+44*u,cy0+53*u);
         c.restore();
       }
@@ -672,8 +691,8 @@ function drawUI(vW,vH,night){
   if(S.state==="finale"){
     const a=clamp(S.finaleT*.8,0,1);
     c.save();c.globalAlpha=a;
-    const f1=fitFont("ВОСХОЖДЕНИЕ ЗАВЕРШЕНО",vW-2*pad,Math.round(21*u),700);
-    glitchText("ВОСХОЖДЕНИЕ ЗАВЕРШЕНО",vW/2,vH*.84,FONT(f1,700),"#e8eef6",S.finaleT);
+    const f1=fitFont(L("ВОСХОЖДЕНИЕ ЗАВЕРШЕНО"),vW-2*pad,Math.round(21*u),700);
+    glitchText(L("ВОСХОЖДЕНИЕ ЗАВЕРШЕНО"),vW/2,vH*.84,FONT(f1,700),"#e8eef6",S.finaleT);
     glitchText("MVP ДОСТАВЛЕН · 9 ИЗ 9",vW/2,vH*.84+f1*1.3,FONT(Math.round(12*u),400),"rgba(230,57,70,.9)",S.finaleT);
     c.restore();
   }

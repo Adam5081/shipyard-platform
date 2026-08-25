@@ -422,3 +422,35 @@ body.cyber .af-tariff-change {
   font: inherit; font-size: 13px; color: #8e94ff; text-decoration: underline;
 }
 body.cyber .af-tariff-change:hover { color: #b3b8ff; }
+
+/* ---------- переключатель языка ---------- */
+body.cyber .lang-switch { display: inline-flex; gap: 2px; margin-left: 14px;
+  border: 1px solid rgba(255,255,255,.16); border-radius: 999px; padding: 2px; }
+body.cyber .lang-switch button {
+  border: none; background: none; cursor: pointer; font: inherit; font-size: 12.5px;
+  color: #9aa0ae; padding: 4px 10px; border-radius: 999px; line-height: 1.4;
+}
+body.cyber .lang-switch button:hover { color: #fff; }
+body.cyber .lang-switch button.on { background: #5E6AD2; color: #fff; }
+
+/* ---------- арабский: зеркальная вёрстка ----------
+   Меняем только направление и то, что жёстко прижато к левому краю.
+   Латиница и цифры внутри арабского текста разворачиваются сами
+   по правилам двунаправленного письма - вручную их трогать не нужно. */
+[dir="rtl"] body, [dir="rtl"] .wrap, [dir="rtl"] .wrap-narrow { text-align: right; }
+[dir="rtl"] .nav-inner { flex-direction: row-reverse; }
+[dir="rtl"] .nav-links { flex-direction: row-reverse; }
+[dir="rtl"] .lang-switch { margin-left: 0; margin-right: 14px; }
+[dir="rtl"] ul, [dir="rtl"] ol { padding-left: 0; padding-right: 18px; }
+[dir="rtl"] .price-card ul li,
+[dir="rtl"] .hero-proof span,
+[dir="rtl"] .acc-item { text-align: right; }
+[dir="rtl"] .tick { margin-left: 8px; margin-right: 0; }
+[dir="rtl"] .acc-num { margin-left: 14px; margin-right: 0; }
+[dir="rtl"] .compare-row { flex-direction: row-reverse; }
+[dir="rtl"] .nda-accept, [dir="rtl"] .field label { text-align: right; }
+[dir="rtl"] .nda-accept input { margin-left: 8px; margin-right: 0; }
+[dir="rtl"] .af-tariff-change { margin-left: 0; margin-right: 10px; }
+[dir="rtl"] .footer .wrap { flex-direction: row-reverse; }
+/* центрированные блоки остаются центрированными */
+[dir="rtl"] .center, [dir="rtl"] .hero, [dir="rtl"] .hero .wrap { text-align: center; }
