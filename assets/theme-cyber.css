@@ -438,8 +438,8 @@ body.cyber .lang-switch button.on { background: #5E6AD2; color: #fff; }
    Латиница и цифры внутри арабского текста разворачиваются сами
    по правилам двунаправленного письма - вручную их трогать не нужно. */
 [dir="rtl"] body, [dir="rtl"] .wrap, [dir="rtl"] .wrap-narrow { text-align: right; }
-[dir="rtl"] .nav-inner { flex-direction: row-reverse; }
-[dir="rtl"] .nav-links { flex-direction: row-reverse; }
+/* ⚠️ row-reverse при dir=rtl НЕ нужен: flex сам течёт справа налево,
+   а row-reverse поверх этого возвращает латинский порядок */
 [dir="rtl"] .lang-switch { margin-left: 0; margin-right: 14px; }
 [dir="rtl"] ul, [dir="rtl"] ol { padding-left: 0; padding-right: 18px; }
 [dir="rtl"] .price-card ul li,
@@ -447,10 +447,12 @@ body.cyber .lang-switch button.on { background: #5E6AD2; color: #fff; }
 [dir="rtl"] .acc-item { text-align: right; }
 [dir="rtl"] .tick { margin-left: 8px; margin-right: 0; }
 [dir="rtl"] .acc-num { margin-left: 14px; margin-right: 0; }
-[dir="rtl"] .compare-row { flex-direction: row-reverse; }
 [dir="rtl"] .nda-accept, [dir="rtl"] .field label { text-align: right; }
 [dir="rtl"] .nda-accept input { margin-left: 8px; margin-right: 0; }
 [dir="rtl"] .af-tariff-change { margin-left: 0; margin-right: 10px; }
-[dir="rtl"] .footer .wrap { flex-direction: row-reverse; }
 /* центрированные блоки остаются центрированными */
 [dir="rtl"] .center, [dir="rtl"] .hero, [dir="rtl"] .hero .wrap { text-align: center; }
+/* раскрытая панель ленты и аккордеона: текст вправо, бордеры зеркально */
+[dir="rtl"] .live-detail, [dir="rtl"] .acc-body { text-align: right; }
+[dir="rtl"] .faq-q { text-align: right; }
+[dir="rtl"] .sub, [dir="rtl"] .eyebrow { text-align: inherit; }

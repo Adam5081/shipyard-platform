@@ -1886,13 +1886,15 @@ pre.code .h { color: #7fd4e4; font-weight: 600; }
 .lang-switch button.on { background: var(--accent); color: #fff; }
 
 /* ---------- арабский в кабинете: зеркальная вёрстка ---------- */
+/* ⚠️ row-reverse при dir=rtl не нужен: flex сам течёт справа налево */
 [dir="rtl"] .app-body, [dir="rtl"] .panel, [dir="rtl"] .page-head { text-align: right; }
 [dir="rtl"] .side { left: auto; right: 0; border-right: none; border-left: 1px solid var(--line); }
 [dir="rtl"] .main { margin-left: 0; margin-right: var(--side-w, 260px); }
-[dir="rtl"] .side-link { flex-direction: row-reverse; text-align: right; }
-[dir="rtl"] .task, [dir="rtl"] .sess, [dir="rtl"] .legal-step { flex-direction: row-reverse; }
+[dir="rtl"] .side-link { text-align: right; }
 [dir="rtl"] .task label, [dir="rtl"] .sess-main { text-align: right; }
 [dir="rtl"] .hr-card, [dir="rtl"] .week-line { text-align: right; }
-[dir="rtl"] .acc-agree { flex-direction: row-reverse; }
-[dir="rtl"] .ta-btn { flex-direction: row-reverse; text-align: right; }
+[dir="rtl"] .ta-btn { text-align: right; }
 [dir="rtl"] ul, [dir="rtl"] ol { padding-left: 0; padding-right: 18px; }
+[dir="rtl"] .map-head, [dir="rtl"] .deck, [dir="rtl"] .kb-card { text-align: right; }
+[dir="rtl"] .topbar { flex-direction: row; }
+[dir="rtl"] .btn .ic, [dir="rtl"] .side-ic { margin-right: 0; margin-left: 8px; }

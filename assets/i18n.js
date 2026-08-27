@@ -34,7 +34,7 @@ add("Занять место", "Join the cohort", "احجز مقعدك");
 add("Запустите свой IT-продукт", "Launch your own software product", "أطلق منتجك الرقمي");
 add("без навыков в программировании", "without knowing how to code", "دون خبرة في البرمجة");
 add("Без программистов, без агентств, без «когда-нибудь». ИИ пишет код. Эксперты доводят до запуска. Вы - владелец: продукт, права и навык остаются у вас навсегда.",
-    "No developers to hire, no agencies, no «someday». AI writes the code. Industry experts carry it to launch. You own the outcome: the product, the rights and the skill stay with you.",
+    "No developers to hire, no agencies, no “someday”. AI writes the code. Industry experts carry it to launch. You own the outcome: the product, the rights and the skill stay with you.",
     "دون توظيف مبرمجين، ودون وكالات، ودون «يوماً ما». الذكاء الاصطناعي يكتب الشيفرة، والخبراء يوصلون المنتج إلى الإطلاق. وأنت المالك: المنتج والحقوق والمهارة تبقى لك.");
 add("Занять место в потоке", "Join the next cohort", "احجز مقعدك في الدفعة");
 add("Набор в ближайший поток открыт", "Enrolment for the next cohort is open", "التسجيل في الدفعة القادمة مفتوح");
@@ -116,17 +116,17 @@ add("Это не курс. Это ваша команда на время пот
 add("Один поток - до двух месяцев работы над вашим продуктом, срок зависит от сложности проекта. Вместо найма команды на полгода вы берёте подписку на процесс, инструменты и экспертов отрасли - и собираете продукт сами.",
     "One cohort is up to two months of work on your product, depending on its complexity. Instead of hiring a team for half a year, you subscribe to the process, the tooling and the industry experts - and build the product yourself.",
     "الدفعة الواحدة تصل إلى شهرين من العمل على منتجك بحسب تعقيده. وبدل توظيف فريق لستة أشهر، تشترك في المنهجية والأدوات وخبراء الصناعة - وتبني المنتج بنفسك.");
-add("«Курс по AI-разработке»", "«A course on AI development»", "«دورة في التطوير بالذكاء الاصطناعي»");
+add("«Курс по AI-разработке»", "“A course on AI development”", "«دورة في التطوير بالذكاء الاصطناعي»");
 add("Ваша команда", "Your team", "فريقك");
 add("на время потока", "for the length of the cohort", "طوال مدة الدفعة");
-add("«Вы научитесь программировать»", "«You will learn to code»", "«ستتعلم البرمجة»");
+add("«Вы научитесь программировать»", "“You will learn to code”", "«ستتعلم البرمجة»");
 add("Вы", "You", "أنت");
 add("выпустите продукт", "will ship a product", "ستطلق منتجاً");
 add("и научитесь собирать следующий через Claude Code", "and learn to build the next one with Claude Code", "وتتعلم بناء التالي عبر Claude Code");
-add("«Модули, уроки, домашние задания»", "«Modules, lessons, homework»", "«وحدات ودروس وواجبات»");
+add("«Модули, уроки, домашние задания»", "“Modules, lessons, homework”", "«وحدات ودروس وواجبات»");
 add("Спринты, релизы, демо", "Sprints, releases, demos", "دورات تطوير وإصدارات وعروض");
 add(", первые клиенты", ", first customers", "، وأول العملاء");
-add("«Сертификат об окончании»", "«A certificate of completion»", "«شهادة إتمام»");
+add("«Сертификат об окончании»", "“A certificate of completion”", "«شهادة إتمام»");
 add("Ссылка на работающий продукт", "A link to a working product", "رابط لمنتج يعمل فعلاً");
 add("и отчёт по безопасности", "and a security report", "وتقرير أمني");
 
@@ -266,18 +266,21 @@ add("Тарифы Pro и Partner. Разбор специалистом: лог�
     "لباقتَي Pro وPartner. مراجعة متخصص: منطق الصلاحيات، ومنطق الأعمال، وإعادة فحص بعد الإصلاحات.");
 
 /* ---------- экономика ---------- */
-add("Дешевле команды. Не «дешевле курсов».", "Cheaper than a team. Not «cheaper than a course».", "أرخص من فريق. لا «أرخص من دورة».");
+add("Дешевле команды. Не «дешевле курсов».", "Cheaper than a team. Not “cheaper than a course”.", "أرخص من فريق. لا «أرخص من دورة».");
 add("Техлид, два разработчика, DevOps, дизайнер, аудит безопасности и юристы на полгода - это от 10 млн ₸ и наём, который нужно содержать дальше. Поток Taulau - от 290 000 ₸ в месяц. Вы получаете ту же функцию подпиской на время потока.",
-    "A tech lead, two developers, a DevOps engineer, a designer, a security audit and lawyers for six months start at 10 million ₸ - plus a payroll you then have to keep carrying. A Taulau cohort starts at 290,000 ₸ a month. You get the same function as a subscription, for the length of the cohort.",
-    "قائد تقني، ومطوّران، ومهندس عمليات، ومصمم، وتدقيق أمني، ومحامون لستة أشهر: تبدأ التكلفة من ١٠ ملايين تنغي، إضافة إلى رواتب تستمر بعد ذلك. أما دفعة تاولاو فتبدأ من ٢٩٠ ألف تنغي شهرياً، وتحصل على الوظيفة نفسها باشتراك طوال مدة الدفعة.");
+    "A tech lead, two developers, a DevOps engineer, a designer, a security audit and lawyers for six months start at $22,000 - plus a payroll you then have to keep carrying. A Taulau cohort starts at $640 a month. You get the same function as a subscription, for the length of the cohort.",
+    "قائد تقني، ومطوّران، ومهندس عمليات، ومصمم، وتدقيق أمني، ومحامون لستة أشهر: تبدأ التكلفة من ٨٢٬٥٠٠ ريال سعودي، إضافة إلى رواتب تستمر بعد ذلك. أما دفعة تاولاو فتبدأ من ٢٬٤٠٠ ريال شهرياً، وتحصل على الوظيفة نفسها باشتراك طوال مدة الدفعة.");
 add("Наём своей команды", "Hiring your own team", "توظيف فريق خاص بك");
-add("от 10 млн ₸ за полгода", "from 10 million ₸ per six months", "من ١٠ ملايين تنغي لستة أشهر");
+add("от 10 млн ₸ за полгода", "from $22,000 per six months", "من ٨٢٬٥٠٠ ر.س لستة أشهر");
 add("4–6 месяцев до первой версии", "4–6 months to a first version", "٤–٦ أشهر حتى النسخة الأولى");
 add("Крупный бюджет и постоянный ФОТ", "A large budget and an ongoing payroll", "ميزانية كبيرة ورواتب مستمرة");
 add("Продукт + зависимость от подрядчика", "A product plus dependence on the contractor", "منتج + اعتماد على المورّد");
 add("Безопасность и право - отдельные бюджеты", "Security and legal are separate budgets", "الأمن والقانون ميزانيتان منفصلتان");
 add("Навык остаётся у исполнителя", "The skill stays with the contractor", "المهارة تبقى لدى المنفّذ");
-add("от 290 000 ₸ / месяц", "from 290,000 ₸ / month", "من ٢٩٠٬٠٠٠ تنغي / شهرياً");
+add("от 290 000 ₸ / месяц", "from $640 / month", "من ٢٬٤٠٠ ر.س / شهرياً");
+/* суммы тарифных карточек: в EN - доллары, в AR - саудовские риялы (курс ~460 ₸/$, SAR = 3.75 $) */
+add("290 000 ₸", "$640", "٢٬٤٠٠ ر.س");
+add("590 000 ₸", "$1,280", "٤٬٨٠٠ ر.س");
 add("Подписка вместо найма", "A subscription instead of hiring", "اشتراك بدل التوظيف");
 add("Продукт в рабочей среде к концу потока", "A product in real-world use by the end of the cohort", "منتج قيد الاستخدام الفعلي بنهاية الدفعة");
 add("Продукт + собственная компетенция", "A product plus a capability of your own", "منتج + كفاءة تمتلكها أنت");
@@ -377,8 +380,8 @@ add("Тариф:", "Plan:", "الباقة:");
 add("изменить", "change", "تغيير");
 add("Какой тариф предпочитаете?", "Which plan do you prefer?", "أي باقة تفضّل؟");
 add("Выберите тариф", "Choose a plan", "اختر باقة");
-add("Solo - 290 000 ₸ / месяц", "Solo - 290,000 ₸ / month", "Solo - ٢٩٠٬٠٠٠ تنغي / شهرياً");
-add("Pro - 590 000 ₸ / месяц", "Pro - 590,000 ₸ / month", "Pro - ٥٩٠٬٠٠٠ تنغي / شهرياً");
+add("Solo - 290 000 ₸ / месяц", "Solo - $640 / month", "Solo - ٢٬٤٠٠ ر.س / شهرياً");
+add("Pro - 590 000 ₸ / месяц", "Pro - $1,280 / month", "Pro - ٤٬٨٠٠ ر.س / شهرياً");
 add("Partner - по договорённости", "Partner - by arrangement", "Partner - حسب الاتفاق");
 add("Продолжая, вы соглашаетесь с условиями", "By continuing you agree to the", "بالمتابعة فإنك توافق على");
 add("Публичной оферты", "Public Offer", "العرض العام");
@@ -522,8 +525,41 @@ add("Ревью сгенерированного кода вместе с экс
     "مراجعة الشيفرة المولّدة مع خبير");
 add("Работающий ключевой сценарий", "A working core journey", "مسار أساسي يعمل");
 add("Сдайте её кнопкой «Готов» - ментор проверит и откроет путь дальше.",
-    "Submit it with the «Ready» button - the mentor reviews and opens the way on.",
+    "Submit it with the “Ready” button - the mentor reviews and opens the way on.",
     "أرسلها بزر «جاهز» - يراجعها المرشد ويفتح الطريق التالي.");
+
+/* станция 1: видна гостю целиком */
+add("Старт · награда: Рюкзак и компас", "Start · reward: Pack and compass", "البداية · المكافأة: الحقيبة والبوصلة");
+add("Вы стоите у подножия горы Taulau с пустыми руками - ни карты, ни повода идти именно сюда. Прежде чем сделать первый шаг, мастер лагеря проверяет вашу идею: та ли это гора и стоит ли вообще подниматься. Вы подписываете разрешение на восхождение и получаете первое снаряжение - рюкзак и компас. Теперь у вас есть с чем идти и куда идти.",
+    "You stand at the foot of Mount Taulau empty-handed - no map, no particular reason this should be your mountain. Before the first step, the camp master checks your idea: is this the right mountain, and is it worth climbing at all. You sign the climbing permit and receive your first gear - a pack and a compass. Now you have something to carry and somewhere to go.",
+    "تقف عند سفح جبل تاولاو خالي الوفاض - لا خريطة ولا سبباً يجعل هذا الجبل جبلك. قبل الخطوة الأولى يفحص مسؤول المخيّم فكرتك: هل هذا هو الجبل الصحيح، وهل يستحق الصعود أصلاً. توقّع تصريح التسلق وتتسلم أول عتادك - حقيبة وبوصلة. الآن لديك ما تحمله ووجهة تقصدها.");
+add("Пройти диагностику идеи и получить заключение", "Go through the idea diagnosis and get the verdict", "اخضع لتشخيص الفكرة واحصل على التقييم");
+add("Подписать договор с программой (права на продукт - у вас)", "Sign the programme agreement (the product rights are yours)", "وقّع عقد البرنامج (حقوق المنتج لك)");
+add("Нажмите, чтобы прочитать и принять", "Tap to read and accept", "اضغط للقراءة والموافقة");
+add("Принято - нажмите, чтобы перечитать", "Accepted - tap to reread", "تمت الموافقة - اضغط لإعادة القراءة");
+add("Установить Claude Code и настроить рабочее окружение - live-сессия", "Install Claude Code and set up the working environment - live session", "ثبّت Claude Code وجهّز بيئة العمل - جلسة مباشرة");
+add("Изучить базовые принципы вайб-кодинга: контекст и планирование", "Learn the basics of AI coding: context and planning", "تعلّم أساسيات البرمجة بالذكاء الاصطناعي: السياق والتخطيط");
+add("Вступить в закрытый Telegram-канал потока", "Join the cohort's private Telegram channel", "انضم إلى قناة تيليغرام الخاصة بالدفعة");
+
+/* гостевой режим и ожидание подтверждения */
+add("Вы смотрите платформу как гость.", "You are viewing the platform as a guest.", "أنت تتصفح المنصة كزائر.");
+add("Открыты карта пути и станция 1 - так выглядит работа внутри потока. Полный доступ откроется после записи и одобрения командой.",
+    "The route map and station 1 are open - this is what working inside a cohort looks like. Full access opens after you sign up and the team approves it.",
+    "خريطة المسار والمحطة الأولى مفتوحتان - هكذا يبدو العمل داخل الدفعة. ويُفتح الوصول الكامل بعد التسجيل وموافقة الفريق.");
+add("Раздел под замком", "This section is locked", "هذا القسم مقفل");
+add("Полный доступ открывается после записи на поток и оплаты: зарегистрируйтесь - и когда команда одобрит вашу заявку, все разделы откроются.",
+    "Full access opens after you sign up for the cohort and pay: register, and once the team approves your application every section unlocks.",
+    "يُفتح الوصول الكامل بعد التسجيل في الدفعة والدفع: سجّل، وحين يوافق الفريق على طلبك تُفتح جميع الأقسام.");
+add("Ваш аккаунт создан и ждёт подтверждения командой - обычно это происходит сразу после оплаты. Мы напишем вам, и все разделы откроются.",
+    "Your account is created and awaiting the team's confirmation - usually right after payment. We will message you, and every section will open.",
+    "حسابك مُنشأ وينتظر تأكيد الفريق - وعادةً يتم ذلك فور الدفع. سنراسلك، وستُفتح جميع الأقسام.");
+add("Аккаунт создан и ждёт подтверждения.", "Your account is created and awaiting confirmation.", "حسابك مُنشأ وينتظر التأكيد.");
+add("Команда откроет полный доступ после оплаты - мы напишем вам. Пока открыты карта пути и станция 1.",
+    "The team opens full access after payment - we will message you. For now the route map and station 1 are open.",
+    "يفتح الفريق الوصول الكامل بعد الدفع - وسنراسلك. حالياً خريطة المسار والمحطة الأولى مفتوحتان.");
+add("Понятно", "Got it", "حسناً");
+add("Продолжить просмотр", "Keep browsing", "متابعة التصفح");
+add("← Посмотреть платформу гостем", "← Browse the platform as a guest", "→ تصفّح المنصة كزائر");
 
 /* ============================================================
    Движок
