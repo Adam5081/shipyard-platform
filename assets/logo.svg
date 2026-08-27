@@ -1,18 +1,25 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <!-- Taulau — знак: греческая буква τ (тау) на фирменном градиенте.
-       τ отсылает и к имени, и к «тау» (гора): стебель буквы — маршрут,
-       перекладина — линия вершины. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 400">
+  <!-- Taulau — знак: гора с маршрутом и τ на вершине.
+       Точки маршрута — станции, кольцо с τ — вершина.
+       Палитра: фиолетовый градиент #9d6ff2 → #5b2fbf. -->
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#0a84ff"/>
-      <stop offset="1" stop-color="#0058b9"/>
+    <linearGradient id="front" x1="0.3" y1="0" x2="0.7" y2="1">
+      <stop offset="0" stop-color="#9d6ff2"/>
+      <stop offset="1" stop-color="#5b2fbf"/>
     </linearGradient>
   </defs>
-  <rect width="512" height="512" rx="115" fill="url(#bg)"/>
-  <!-- вершины на заднем плане -->
-  <path d="M96 386 L192 268 L256 330 L336 224 L416 386 Z"
-        fill="rgba(255,255,255,.14)"/>
-  <!-- буква τ -->
-  <path d="M140 172 H 372 M 256 172 V 340 Q 256 396 310 396 Q 340 396 354 372"
-        fill="none" stroke="#ffffff" stroke-width="54" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- задняя вершина -->
+  <path d="M240 260 L330 150 L455 395 L240 395 Z" fill="#4a2a92"/>
+  <!-- передняя гора -->
+  <path d="M15 395 L200 55 L385 395 Z" fill="url(#front)"/>
+  <!-- маршрут -->
+  <path d="M55 385 L155 290 L130 255 L200 90" fill="none" stroke="#f6f3ff"
+        stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="55" cy="385" r="15" fill="#ffffff"/>
+  <circle cx="155" cy="290" r="15" fill="#ffffff"/>
+  <circle cx="130" cy="255" r="15" fill="#ffffff"/>
+  <!-- вершина: кольцо с τ -->
+  <circle cx="200" cy="62" r="52" fill="#ffffff" stroke="#b39df7" stroke-width="12"/>
+  <text x="200" y="86" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif"
+        font-size="72" font-weight="700" fill="#4c2a92">&#964;</text>
 </svg>

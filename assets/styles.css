@@ -11,8 +11,8 @@
   --ink-2: #6e6e73;
   --ink-3: #86868b;
   --line: #d2d2d7;
-  --accent: #0071e3;
-  --accent-hover: #0077ed;
+  --accent: #6C3FD8;
+  --accent-hover: #7B4FE0;
   --teal: #30b0c7;
   --green: #34c759;
   --orange: #ff9500;
@@ -375,7 +375,7 @@ button.stat.active .stat-arrow { color: #fff; transform: rotate(180deg); }
   align-items: center;
   gap: 8px;
   margin: 18px 0 6px 112px;
-  background: linear-gradient(90deg, #0071e3, #30b0c7);
+  background: linear-gradient(90deg, #6C3FD8, #30b0c7);
   color: #fff;
   font-size: 13px;
   font-weight: 600;
@@ -684,7 +684,7 @@ button.stat.active .stat-arrow { color: #fff; transform: rotate(180deg); }
 /* progress bar */
 
 .bar { height: 8px; background: var(--bg-alt); border-radius: 980px; overflow: hidden; }
-.bar > i { display: block; height: 100%; background: linear-gradient(90deg, #0071e3, #30b0c7); border-radius: 980px; transition: width .5s cubic-bezier(.4,0,.2,1); }
+.bar > i { display: block; height: 100%; background: linear-gradient(90deg, #6C3FD8, #30b0c7); border-radius: 980px; transition: width .5s cubic-bezier(.4,0,.2,1); }
 
 .hero-card .bar { background: rgba(255,255,255,.15); margin-top: 22px; }
 .hero-card .bar > i { background: linear-gradient(90deg, #4cc2ff, #7fffd4); }
@@ -1331,7 +1331,7 @@ pre.code .h { color: #7fd4e4; font-weight: 600; }
 .fr-main small { display: block; color: var(--ink-3); font-size: 12.5px; margin-bottom: 6px;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fr-track { position: relative; height: 6px; background: var(--bg-alt); border-radius: 980px; }
-.fr-track > i { display: block; height: 100%; border-radius: 980px; background: linear-gradient(90deg, #0071e3, #34c759); }
+.fr-track > i { display: block; height: 100%; border-radius: 980px; background: linear-gradient(90deg, #6C3FD8, #34c759); }
 .fr-dot {
   position: absolute; top: -3px; width: 12px; height: 12px;
   margin-left: -6px; border-radius: 50%;

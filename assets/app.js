@@ -843,7 +843,7 @@ const VIEWS = {
     const box = inner => `
       <div style="max-width:440px;margin:8vh auto 0">
         <div style="text-align:center;margin-bottom:26px">
-          <div style="margin:0 auto;width:52px"><svg viewBox="0 0 100 100" width="52" height="52"><rect width="100" height="100" rx="22" fill="#0071e3"/><path d="M27 34h46M50 34v32q0 13 13 13 7 0 10-6" stroke="#fff" stroke-width="11" fill="none" stroke-linecap="round"/></svg></div>
+          <div style="margin:0 auto;width:52px"><svg viewBox="0 0 460 400" width="56" height="49"><path d="M240 260 L330 150 L455 395 L240 395 Z" fill="#4a2a92"/><path d="M15 395 L200 55 L385 395 Z" fill="#7c4dd4"/><path d="M55 385 L155 290 L130 255 L200 90" fill="none" stroke="#f6f3ff" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/><circle cx="55" cy="385" r="15" fill="#fff"/><circle cx="155" cy="290" r="15" fill="#fff"/><circle cx="130" cy="255" r="15" fill="#fff"/><circle cx="200" cy="62" r="52" fill="#fff" stroke="#b39df7" stroke-width="12"/><text x="200" y="86" text-anchor="middle" font-family="Georgia,serif" font-size="72" font-weight="700" fill="#4c2a92">\u03c4</text></svg></div>
           <h1 style="font-size:28px;font-weight:700;letter-spacing:-.02em;margin-top:8px">TAULAU</h1>
         </div>
         <div class="panel">${inner}</div>
@@ -880,7 +880,7 @@ const VIEWS = {
     return `
       <div style="max-width:440px;margin:8vh auto 0">
         <div style="text-align:center;margin-bottom:26px">
-          <div style="margin:0 auto;width:52px"><svg viewBox="0 0 100 100" width="52" height="52"><rect width="100" height="100" rx="22" fill="#0071e3"/><path d="M27 34h46M50 34v32q0 13 13 13 7 0 10-6" stroke="#fff" stroke-width="11" fill="none" stroke-linecap="round"/></svg></div>
+          <div style="margin:0 auto;width:52px"><svg viewBox="0 0 460 400" width="56" height="49"><path d="M240 260 L330 150 L455 395 L240 395 Z" fill="#4a2a92"/><path d="M15 395 L200 55 L385 395 Z" fill="#7c4dd4"/><path d="M55 385 L155 290 L130 255 L200 90" fill="none" stroke="#f6f3ff" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/><circle cx="55" cy="385" r="15" fill="#fff"/><circle cx="155" cy="290" r="15" fill="#fff"/><circle cx="130" cy="255" r="15" fill="#fff"/><circle cx="200" cy="62" r="52" fill="#fff" stroke="#b39df7" stroke-width="12"/><text x="200" y="86" text-anchor="middle" font-family="Georgia,serif" font-size="72" font-weight="700" fill="#4c2a92">\u03c4</text></svg></div>
           <h1 style="font-size:28px;font-weight:700;letter-spacing:-.02em;margin-top:8px">TAULAU</h1>
           <p class="muted" style="margin-top:6px">Войдите, чтобы увидеть свой путь</p>
         </div>

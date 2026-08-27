@@ -12,7 +12,7 @@ body.cyber {
   --ink: #f7f8f8;
   --ink-2: rgba(255, 255, 255, .62);
   --ink-3: rgba(255, 255, 255, .38);
-  --accent: #5E6AD2;                 /* спокойный индиго, как у Linear */
+  --accent: #7A4FF2;                 /* фиолетовый из логотипа-горы */
   --line: rgba(255, 255, 255, .07);
   --green: #8a8f98;                  /* галочки — приглушённые, не кричат */
 
@@ -60,11 +60,11 @@ body.cyber .btn {
   letter-spacing: -0.01em;
 }
 body.cyber .btn-primary {
-  background: #5E6AD2;
+  background: #7A4FF2;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12), 0 1px 3px rgba(0, 0, 0, .4);
   transition: background .18s ease, transform .18s ease;
 }
-body.cyber .btn-primary:hover { background: #6E79DD; transform: none; }
+body.cyber .btn-primary:hover { background: #6B42D9; transform: none; }
 body.cyber .btn-breathe { animation: none; }
 body.cyber .btn-ghost {
   background: rgba(255, 255, 255, .04);
@@ -84,12 +84,12 @@ body.cyber .nav-links a { color: var(--ink-2); font-size: 14px; }
 body.cyber .nav-links a:hover { color: #fff; }
 /* CTA в наве — акцентная, светится фирменным цветом */
 body.cyber .nav-cta {
-  background: #5E6AD2;
+  background: #7A4FF2;
   border: 1px solid rgba(255, 255, 255, .12);
   color: #fff;
-  box-shadow: 0 0 16px rgba(94, 106, 210, .45);
+  box-shadow: 0 0 16px rgba(122, 79, 242, .45);
 }
-body.cyber .nav-cta:hover { background: #6E79DD; box-shadow: 0 0 24px rgba(94, 106, 210, .65); }
+body.cyber .nav-cta:hover { background: #6B42D9; box-shadow: 0 0 24px rgba(122, 79, 242, .65); }
 
 /* scrollspy: подчёркивание пункта текущей секции */
 body.cyber .nav-links a { position: relative; }
@@ -99,7 +99,7 @@ body.cyber .nav-links a.spy-active::after {
   position: absolute;
   left: 0; right: 0; bottom: -8px;
   height: 2px;
-  background: #5E6AD2;
+  background: #7A4FF2;
   border-radius: 2px;
 }
 
@@ -133,7 +133,7 @@ body.cyber .hero::before {
   width: 980px; height: 700px;
   left: 50%; top: 4%;
   transform: translateX(-50%);
-  background: radial-gradient(closest-side, rgba(94, 106, 210, .17), rgba(94, 106, 210, .06) 55%, transparent 78%);
+  background: radial-gradient(closest-side, rgba(122, 79, 242, .17), rgba(122, 79, 242, .06) 55%, transparent 78%);
   pointer-events: none;
 }
 /* ступенчатое, но быстрое появление hero-контента: текст виден почти сразу */
@@ -162,8 +162,8 @@ body.cyber .nda-accept {
   margin: 4px 0 16px; cursor: pointer;
   color: var(--ink-2); font-size: 14px; line-height: 1.5;
 }
-body.cyber .nda-accept input { margin-top: 3px; accent-color: #5E6AD2; }
-body.cyber .nda-accept a { color: #9aa5e8; }
+body.cyber .nda-accept input { margin-top: 3px; accent-color: #7A4FF2; }
+body.cyber .nda-accept a { color: #b39df7; }
 body.cyber .section-alt { background: #0d0e11; }
 body.cyber .section-dark {
   background: #0B0C0E;
@@ -188,7 +188,7 @@ body.cyber section[id], body.cyber .stat-panel[id] { scroll-margin-top: 84px; }
   body.cyber .pricing { grid-template-columns: repeat(3, 1fr); }
 }
 /* выделенный тариф - Solo с бейджем «Большинство начинают здесь» */
-body.cyber .price-badge.badge-solo { background: #5E6AD2; color: #fff; }
+body.cyber .price-badge.badge-solo { background: #7A4FF2; color: #fff; }
 
 /* персонаж в живом демо: лёгкая виньетка-подсветка, чтобы не терялся на тёмном */
 body.cyber .ld-frame::after {
@@ -232,9 +232,9 @@ body.cyber .team-card:hover {
 }
 body.cyber .card-dark { background: #121417; }
 body.cyber .card .icon { background: rgba(255, 255, 255, .05); }
-body.cyber .icon svg, body.cyber .d-ic svg { color: #9aa5e8; }
+body.cyber .icon svg, body.cyber .d-ic svg { color: #b39df7; }
 body.cyber .dir-card { border-top: 1px solid rgba(255, 255, 255, .07); }
-body.cyber .proj-card .p-tag { background: rgba(94, 106, 210, .15); color: #a7aef0; }
+body.cyber .proj-card .p-tag { background: rgba(122, 79, 242, .15); color: #a7aef0; }
 body.cyber .team-card .t-role { color: #8a8f98; text-transform: uppercase; font-size: 11px; letter-spacing: .08em; }
 
 /* ---------- лента «Как это работает» ---------- */
@@ -288,10 +288,10 @@ body.cyber button.stat:hover .stat-arrow { color: #fff; }
    переходящая в панель (двух параллельных полос быть не должно) */
 body.cyber button.stat.active {
   background: #12141a;
-  box-shadow: inset 0 -2px 0 #5E6AD2;
+  box-shadow: inset 0 -2px 0 #7A4FF2;
 }
 body.cyber button.stat.active b { color: #fff; }
-body.cyber button.stat.active .stat-arrow { transform: rotate(45deg); color: #9aa5e8; }
+body.cyber button.stat.active .stat-arrow { transform: rotate(45deg); color: #b39df7; }
 
 
 body.cyber .stat-panel,
@@ -312,15 +312,15 @@ body.cyber .stat-panel .acc-body { font-size: 14.5px; }
 /* аккордеон станций */
 body.cyber .acc-item[open] > summary { background: rgba(255, 255, 255, .04); }
 body.cyber .acc-num { background: rgba(255, 255, 255, .06); color: #a7aef0; }
-body.cyber .acc-item[open] .acc-num { background: #5E6AD2; color: #fff; }
+body.cyber .acc-item[open] .acc-num { background: #7A4FF2; color: #fff; }
 body.cyber .acc-title span { color: var(--ink-2); }
-body.cyber .tl-artifact { color: #9aa5e8; }
+body.cyber .tl-artifact { color: #b39df7; }
 body.cyber .cp-chip { color: #d3a95d; border-color: rgba(211, 169, 93, .35); }
 
 /* сравнение «не курс» */
 body.cyber .compare-no { background: #0d0e11; color: var(--ink-3); }
 body.cyber .compare-yes { background: #121417; color: #f7f8f8; }
-body.cyber .compare-yes b { color: #9aa5e8; }
+body.cyber .compare-yes b { color: #b39df7; }
 
 /* ---------- живое демо ---------- */
 body.cyber .ld-frame {
@@ -331,10 +331,10 @@ body.cyber .ld-note { color: var(--ink-3); font-size: 13.5px; }
 
 /* ---------- тарифы ---------- */
 body.cyber .price-card.featured {
-  border-color: rgba(94, 106, 210, .55);
-  box-shadow: 0 0 0 1px rgba(94, 106, 210, .35);
+  border-color: rgba(122, 79, 242, .55);
+  box-shadow: 0 0 0 1px rgba(122, 79, 242, .35);
 }
-body.cyber .price-badge { background: #5E6AD2; }
+body.cyber .price-badge { background: #7A4FF2; }
 body.cyber .price-card li { border-bottom-color: rgba(255, 255, 255, .06); }
 body.cyber .price-card li .tick { color: #8a8f98; }
 body.cyber .price-card .amount { color: #f7f8f8; }
@@ -355,8 +355,8 @@ body.cyber .field select {
 body.cyber .field input:focus,
 body.cyber .field textarea:focus,
 body.cyber .field select:focus {
-  border-color: #5E6AD2;
-  box-shadow: 0 0 0 3px rgba(94, 106, 210, .22);
+  border-color: #7A4FF2;
+  box-shadow: 0 0 0 3px rgba(122, 79, 242, .22);
 }
 body.cyber .field input::placeholder,
 body.cyber .field textarea::placeholder { color: var(--ink-3); }
@@ -413,13 +413,13 @@ body.cyber .footer {
    чтобы не переспрашивать человека о том, что он только что выбрал. */
 body.cyber .af-tariff-set {
   margin: 4px 0 2px; padding: 10px 14px; border-radius: 10px;
-  background: rgba(94, 106, 210, .12); border: 1px solid rgba(94, 106, 210, .35);
+  background: rgba(122, 79, 242, .12); border: 1px solid rgba(122, 79, 242, .35);
   font-size: 14px; color: #cfd3e6;
 }
 body.cyber .af-tariff-set b { color: #fff; }
 body.cyber .af-tariff-change {
   margin-left: 10px; padding: 0; border: none; background: none; cursor: pointer;
-  font: inherit; font-size: 13px; color: #8e94ff; text-decoration: underline;
+  font: inherit; font-size: 13px; color: #a98cf7; text-decoration: underline;
 }
 body.cyber .af-tariff-change:hover { color: #b3b8ff; }
 
@@ -431,7 +431,7 @@ body.cyber .lang-switch button {
   color: #9aa0ae; padding: 4px 10px; border-radius: 999px; line-height: 1.4;
 }
 body.cyber .lang-switch button:hover { color: #fff; }
-body.cyber .lang-switch button.on { background: #5E6AD2; color: #fff; }
+body.cyber .lang-switch button.on { background: #7A4FF2; color: #fff; }
 
 /* ---------- арабский: зеркальная вёрстка ----------
    Меняем только направление и то, что жёстко прижато к левому краю.

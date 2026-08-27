@@ -7,8 +7,8 @@
    ============================================================ */
 
 body.cyber-lite {
-  --accent: #5D78FF;
-  --accent-hover: #4158D0;
+  --accent: #7A4FF2;
+  --accent-hover: #6B42D9;
   --bg: #ffffff;
   --bg-alt: #eef2fc;
   --line: rgba(93, 120, 255, .22);
@@ -16,8 +16,8 @@ body.cyber-lite {
   font-family: 'Inter', -apple-system, 'SF Pro Text', 'Segoe UI', sans-serif;
   /* лёгкая сетка на голубоватом фоне */
   background:
-    linear-gradient(rgba(93, 120, 255, .05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(93, 120, 255, .05) 1px, transparent 1px),
+    linear-gradient(rgba(122, 79, 242, .05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(122, 79, 242, .05) 1px, transparent 1px),
     linear-gradient(180deg, #f3f6ff 0%, #eaeffc 100%);
   background-size: 56px 56px, 56px 56px, auto;
   background-attachment: fixed;
@@ -45,18 +45,18 @@ body.cyber-lite .sidebar {
 body.cyber-lite .side-label { color: #2ba7c4; letter-spacing: .14em; }
 body.cyber-lite .side-link:hover { background: rgba(93, 120, 255, .08); }
 body.cyber-lite .side-link.active {
-  background: linear-gradient(135deg, #5D78FF, #00b2d6);
+  background: linear-gradient(135deg, #9d6ff2, #5b2fbf);
   box-shadow: 0 4px 16px rgba(93, 120, 255, .35);
 }
 body.cyber-lite .side-user { border-top: 1px solid rgba(93, 120, 255, .18); }
 
 /* ---------- кнопки ---------- */
 body.cyber-lite .btn-primary {
-  background: linear-gradient(135deg, #5D78FF 0%, #00b2d6 100%);
+  background: linear-gradient(135deg, #9d6ff2 0%, #5b2fbf 100%);
   box-shadow: 0 3px 14px rgba(93, 120, 255, .28);
 }
 body.cyber-lite .btn-primary:hover {
-  background: linear-gradient(135deg, #4158D0 0%, #009fc0 100%);
+  background: linear-gradient(135deg, #8a5ce8 0%, #4a2a92 100%);
   box-shadow: 0 6px 22px rgba(93, 120, 255, .4);
 }
 
@@ -79,7 +79,7 @@ body.cyber-lite .map-stage {
 /* прогресс и статусы */
 body.cyber-lite .lvl-chip,
 body.cyber-lite .status-chip { border: 1px solid rgba(93, 120, 255, .2); }
-body.cyber-lite .pill { background: rgba(93, 120, 255, .14); color: #4158D0; }
+body.cyber-lite .pill { background: rgba(122, 79, 242, .14); color: #6B42D9; }
 body.cyber-lite .side-link.active .pill { background: rgba(255, 255, 255, .25); color: #fff; }
 
 /* таблицы */
@@ -90,8 +90,8 @@ body.cyber-lite .table tr.me td { background: rgba(93, 120, 255, .08); }
 body.cyber-lite .field input:focus,
 body.cyber-lite .field textarea:focus,
 body.cyber-lite .field select:focus {
-  border-color: #5D78FF;
-  box-shadow: 0 0 0 4px rgba(93, 120, 255, .14);
+  border-color: #7A4FF2;
+  box-shadow: 0 0 0 4px rgba(122, 79, 242, .14);
 }
 
 /* праздники и лотерея наследуют акцент через var(--accent) */
