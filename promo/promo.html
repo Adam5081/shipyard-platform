@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>TAULAU — promo loop</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: #08090A; overflow: hidden;
+    font-family: 'Inter', 'Segoe UI', -apple-system, sans-serif; color: #f7f8f8;
+    -webkit-font-smoothing: antialiased; cursor: none; }
+
+  #stage { position: fixed; inset: 0; }
+  .scene { position: absolute; inset: 0; display: none; overflow: hidden; }
+  .scene.active { display: flex; }
+
+  /* ---------- общие анимации ---------- */
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: none; } }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes pop { 0% { opacity: 0; transform: scale(.6); } 70% { transform: scale(1.06); } 100% { opacity: 1; transform: scale(1); } }
+  @keyframes drift { from { transform: scale(1.02) translate(0,0); } to { transform: scale(1.12) translate(-1.5%, -2%); } }
+  @keyframes pulse { 0%,100% { opacity: .85; transform: scale(1); } 50% { opacity: 1; transform: scale(1.25); } }
+  @keyframes drawRoute { to { stroke-dashoffset: 0; } }
+  @keyframes glowSweep { from { background-position: -200% 0; } to { background-position: 300% 0; } }
+  @keyframes slideL { from { opacity: 0; transform: translateX(-70px); } to { opacity: 1; transform: none; } }
+  @keyframes slideR { from { opacity: 0; transform: translateX(70px); } to { opacity: 1; transform: none; } }
+  @keyframes floaty { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-14px); } }
+
+  .fx-up   { opacity: 0; animation: fadeUp .9s cubic-bezier(.16,1,.3,1) forwards; }
+  .fx-in   { opacity: 0; animation: fadeIn 1.1s ease forwards; }
+  .fx-pop  { opacity: 0; animation: pop .8s cubic-bezier(.34,1.56,.64,1) forwards; }
+  .fx-sl   { opacity: 0; animation: slideL .9s cubic-bezier(.16,1,.3,1) forwards; }
+  .fx-sr   { opacity: 0; animation: slideR .9s cubic-bezier(.16,1,.3,1) forwards; }
+  .d1 { animation-delay: .25s; } .d2 { animation-delay: .55s; } .d3 { animation-delay: .9s; }
+  .d4 { animation-delay: 1.3s; } .d5 { animation-delay: 1.8s; } .d6 { animation-delay: 2.4s; }
+  .d7 { animation-delay: 3s; } .d8 { animation-delay: 3.8s; }
+
+  .kicker { font-size: clamp(14px, 1.2vw, 22px); font-weight: 700; letter-spacing: .34em;
+    text-transform: uppercase; color: #a98cf7; }
+  h1 { font-size: clamp(42px, 5.6vw, 108px); font-weight: 800; letter-spacing: -.025em; line-height: 1.04; }
+  h2 { font-size: clamp(30px, 3.6vw, 68px); font-weight: 800; letter-spacing: -.02em; line-height: 1.08; }
+  .accent { background: linear-gradient(100deg, #b3a6ff, #8fd0f4);
+    -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .dim { color: rgba(255,255,255,.55); }
+
+  /* дымка на фоне всех сцен */
+  .haze { position: absolute; width: 68vw; height: 68vw; left: 50%; top: 45%;
+    transform: translate(-50%,-50%); border-radius: 50%; pointer-events: none;
+    background: radial-gradient(closest-side, rgba(122,79,242,.20), rgba(122,79,242,.05) 55%, transparent 75%); }
+
+  /* ---------- S1: логотип ---------- */
+  #s1 { align-items: center; justify-content: center; flex-direction: column; gap: 3vh; }
+  #s1 .mark { width: clamp(200px, 22vw, 380px); opacity: 0;
+    animation: fadeIn 1.1s ease forwards, floaty 6s ease-in-out 1.2s infinite; }
+  #s1 .route-line { stroke-dasharray: 520; stroke-dashoffset: 520;
+    animation: drawRoute 2.2s cubic-bezier(.4,0,.2,1) .6s forwards; }
+  #s1 .peak-ring { transform-origin: 200px 62px; animation: pop 1s cubic-bezier(.34,1.56,.64,1) 2.6s both; }
+  #s1 .wordmark { font-size: clamp(52px, 6.5vw, 120px); font-weight: 800; letter-spacing: .12em; }
+  #s1 .tagline { font-size: clamp(16px, 1.6vw, 30px); letter-spacing: .42em; font-weight: 700;
+    color: #a98cf7; text-transform: uppercase; }
+
+  /* ---------- S2: проблема ---------- */
+  #s2 { align-items: center; }
+  #s2 .wrap { padding: 0 8vw; max-width: 78vw; }
+  #s2 h1 { margin: 2.5vh 0 4vh; }
+  #s2 .facts { display: flex; gap: 4vw; }
+  #s2 .fact b { display: block; font-size: clamp(34px, 3.6vw, 72px); font-weight: 800; color: #ff9d8d; }
+  #s2 .fact span { font-size: clamp(14px, 1.2vw, 22px); color: rgba(255,255,255,.6); }
+
+  /* ---------- S3: маршрут ---------- */
+  #s3 { align-items: center; flex-direction: column; justify-content: center; gap: 5vh; }
+  #s3 .stations { display: flex; gap: 1.2vw; }
+  #s3 .st { width: clamp(64px, 8.2vw, 150px); text-align: center; }
+  #s3 .dot { width: clamp(38px, 3.4vw, 64px); height: clamp(38px, 3.4vw, 64px); border-radius: 50%;
+    margin: 0 auto 1.2vh; display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: clamp(16px, 1.5vw, 28px);
+    background: #17131f; border: 3px solid #3a2f57; color: #a98cf7; }
+  #s3 .st.cp .dot { background: #7A4FF2; border-color: #a98cf7; color: #fff;
+    box-shadow: 0 0 34px rgba(122,79,242,.65); }
+  #s3 .st span { font-size: clamp(10px, .9vw, 16px); color: rgba(255,255,255,.55); line-height: 1.25; display: block; }
+  #s3 .legend { font-size: clamp(15px, 1.4vw, 26px); color: rgba(255,255,255,.7); }
+  #s3 .legend b { color: #a98cf7; }
+
+  /* ---------- S4: живая игра ---------- */
+  #s4 { background: #0B0C0E; }
+  #s4 iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+  #s4 .over { position: absolute; left: 4vw; bottom: 6vh; z-index: 2; max-width: 44vw; }
+  #s4 .over .card { background: rgba(8,9,10,.78); border: 1px solid rgba(169,140,247,.35);
+    backdrop-filter: blur(8px); border-radius: 18px; padding: 2.4vh 2vw; }
+  #s4 .over h2 { font-size: clamp(24px, 2.6vw, 48px); }
+  #s4 .over p { font-size: clamp(14px, 1.25vw, 24px); color: rgba(255,255,255,.75); margin-top: 1vh; line-height: 1.45; }
+  #s4 .live { position: absolute; top: 4vh; right: 3vw; z-index: 2; display: flex; align-items: center; gap: .7vw;
+    font-weight: 800; letter-spacing: .2em; font-size: clamp(13px, 1.1vw, 20px); color: #ff8d8d; }
+  #s4 .live i { width: 14px; height: 14px; border-radius: 50%; background: #ff5c5c;
+    animation: pulse 1.2s ease-in-out infinite; }
+
+  /* ---------- S5: платформа ---------- */
+  #s5 { align-items: center; padding: 0 5vw; gap: 4vw; }
+  #s5 .txt { flex: 0 0 34vw; }
+  #s5 .txt h2 { margin-bottom: 3vh; }
+  #s5 .txt li { list-style: none; font-size: clamp(15px, 1.35vw, 26px); color: rgba(255,255,255,.75);
+    padding: 1.1vh 0 1.1vh 2.2vw; position: relative; line-height: 1.4; }
+  #s5 .txt li::before { content: "→"; position: absolute; left: 0; color: #7A4FF2; font-weight: 800; }
+  #s5 .shots { flex: 1; position: relative; height: 72vh; }
+  #s5 .shot { position: absolute; border-radius: 14px; overflow: hidden;
+    border: 1px solid rgba(169,140,247,.4); box-shadow: 0 30px 80px rgba(0,0,0,.6); }
+  #s5 .shot img { width: 100%; height: 100%; object-fit: cover; animation: drift 14s linear infinite alternate; }
+  #s5 .shot.a { width: 78%; height: 62%; top: 0; left: 0; z-index: 1; }
+  #s5 .shot.b { width: 58%; height: 48%; bottom: 0; right: 0; z-index: 2; }
+
+  /* ---------- S6: цифры ---------- */
+  #s6 { align-items: center; flex-direction: column; justify-content: center; gap: 6vh; }
+  #s6 .grid { display: flex; gap: 5vw; }
+  #s6 .num { text-align: center; }
+  #s6 .num b { display: block; font-size: clamp(48px, 5.4vw, 110px); font-weight: 800; letter-spacing: -.03em;
+    background: linear-gradient(100deg, #b3a6ff, #8fd0f4);
+    -webkit-background-clip: text; background-clip: text; color: transparent; }
+  #s6 .num span { font-size: clamp(14px, 1.2vw, 23px); color: rgba(255,255,255,.6); }
+
+  /* ---------- S7: финал ---------- */
+  #s7 { align-items: center; justify-content: center; flex-direction: column; gap: 3.4vh; }
+  #s7 .mark { width: clamp(150px, 15vw, 260px); opacity: 0;
+    animation: pop .8s cubic-bezier(.34,1.56,.64,1) forwards, floaty 6s ease-in-out 1s infinite; }
+  #s7 .cta { font-size: clamp(20px, 2vw, 40px); color: rgba(255,255,255,.8); }
+  #s7 .site { font-size: clamp(34px, 4vw, 84px); font-weight: 800; letter-spacing: .04em;
+    background: linear-gradient(100deg, #b3a6ff 20%, #fff 40%, #b3a6ff 60%);
+    background-size: 200% 100%; -webkit-background-clip: text; background-clip: text;
+    color: transparent; animation: glowSweep 3.4s linear infinite; }
+
+  /* ---------- прогресс и таймер ---------- */
+  #bar { position: fixed; left: 0; bottom: 0; height: 5px; width: 0;
+    background: linear-gradient(90deg, #7A4FF2, #9d6ff2); z-index: 9; }
+  #tc { position: fixed; top: 2vh; left: 2vw; z-index: 9; font-family: Consolas, monospace;
+    font-size: clamp(18px, 1.8vw, 34px); font-weight: 700; color: #ffd94a;
+    background: rgba(0,0,0,.55); padding: .6vh 1vw; border-radius: 10px; display: none; }
+  body.timer #tc { display: block; }
+</style>
+</head>
+<body>
+<div id="stage">
+
+  <!-- S1: логотип -->
+  <section class="scene" id="s1">
+    <div class="haze"></div>
+    <svg class="mark fx-in" viewBox="0 0 460 400">
+      <defs><linearGradient id="pf" x1="0.3" y1="0" x2="0.7" y2="1">
+        <stop offset="0" stop-color="#9d6ff2"/><stop offset="1" stop-color="#5b2fbf"/></linearGradient></defs>
+      <path d="M240 260 L330 150 L455 395 L240 395 Z" fill="#3a2178"/>
+      <path d="M15 395 L200 55 L385 395 Z" fill="url(#pf)"/>
+      <path class="route-line" d="M55 385 L155 290 L130 255 L200 90" fill="none" stroke="#f6f3ff"
+            stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="55" cy="385" r="15" fill="#fff"/><circle cx="155" cy="290" r="15" fill="#fff"/>
+      <circle cx="130" cy="255" r="15" fill="#fff"/>
+      <g class="peak-ring"><circle cx="200" cy="62" r="52" fill="#fff" stroke="#b39df7" stroke-width="12"/>
+      <text x="200" y="86" text-anchor="middle" font-family="Georgia,serif" font-size="72"
+            font-weight="700" fill="#4c2a92">&#964;</text></g>
+    </svg>
+    <div class="wordmark fx-up d5">TAULAU</div>
+    <div class="tagline fx-up d6">From idea to product</div>
+  </section>
+
+  <!-- S2: проблема -->
+  <section class="scene" id="s2">
+    <div class="haze" style="left:70%"></div>
+    <div class="wrap">
+      <div class="kicker fx-up">The bottleneck</div>
+      <h1><span class="fx-up d1" style="display:block">The people who understand the problems</span>
+          <span class="fx-up d3 accent" style="display:block">can't build software.</span></h1>
+      <div class="facts">
+        <div class="fact fx-pop d5"><b>$22,000+</b><span>to hire a team for six months</span></div>
+        <div class="fact fx-pop d6"><b>6&ndash;12 mo</b><span>waiting for outsourced delivery</span></div>
+        <div class="fact fx-pop d7"><b>0 skills</b><span>left behind when the agency walks away</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- S3: маршрут -->
+  <section class="scene" id="s3">
+    <div class="haze"></div>
+    <div class="kicker fx-up">The Taulau route</div>
+    <h2 class="fx-up d1">Nine stations. Five expert checkpoints.<br>
+      <span class="accent">One product in production.</span></h2>
+    <div class="stations">
+      <div class="st fx-pop d1"><div class="dot">1</div><span>Diagnosis</span></div>
+      <div class="st cp fx-pop d2"><div class="dot">2</div><span>Project brief</span></div>
+      <div class="st cp fx-pop d3"><div class="dot">3</div><span>Blueprint</span></div>
+      <div class="st fx-pop d4"><div class="dot">4</div><span>Product core</span></div>
+      <div class="st cp fx-pop d5"><div class="dot">5</div><span>Supporting layer</span></div>
+      <div class="st fx-pop d5"><div class="dot">6</div><span>Testing</span></div>
+      <div class="st cp fx-pop d6"><div class="dot">7</div><span>Go live</span></div>
+      <div class="st fx-pop d6"><div class="dot">8</div><span>Review</span></div>
+      <div class="st cp fx-pop d7"><div class="dot">9</div><span>Real-world use</span></div>
+    </div>
+    <div class="legend fx-up d8"><b>Purple = expert signature required.</b> No sign-off &mdash; no progress.</div>
+  </section>
+
+  <!-- S4: живая игра -->
+  <section class="scene" id="s4">
+    <iframe id="gameFrame" title="TAULAU ASCENT"></iframe>
+    <div class="live"><i></i> LIVE &mdash; NOT A RENDER</div>
+    <div class="over">
+      <div class="card fx-up d2">
+        <h2>The journey is a <span class="accent">live climb</span></h2>
+        <p>Every participant sees their route as a mountain: stations are altitude marks,
+           checkpoints are gates, the MVP door waits at the summit. This is running
+           inside the real platform &mdash; right now.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- S5: платформа -->
+  <section class="scene" id="s5">
+    <div class="txt">
+      <div class="kicker fx-up">Inside the workspace</div>
+      <h2 class="fx-up d1">Gear you earn.<br><span class="accent">Levels you can't buy.</span></h2>
+      <ul>
+        <li class="fx-sl d3">AI writes the code &mdash; you direct it in plain language</li>
+        <li class="fx-sl d4">Levels rise only when an expert signs a checkpoint</li>
+        <li class="fx-sl d5">Security, legal and DevOps built into the route</li>
+        <li class="fx-sl d6">Arabic, English and Russian &mdash; full RTL support</li>
+      </ul>
+    </div>
+    <div class="shots">
+      <div class="shot a fx-sr d2"><img src="img/map.jpg" alt=""></div>
+      <div class="shot b fx-sr d4"><img src="img/station.jpg" alt=""></div>
+    </div>
+  </section>
+
+  <!-- S6: цифры -->
+  <section class="scene" id="s6">
+    <div class="haze"></div>
+    <div class="kicker fx-up">One cohort. Up to two months.</div>
+    <div class="grid">
+      <div class="num fx-pop d1"><b data-count="640" data-prefix="$">$0</b><span>Solo &middot; per month</span></div>
+      <div class="num fx-pop d2"><b data-count="1280" data-prefix="$">$0</b><span>Pro &middot; with 1-to-1 expert hours</span></div>
+      <div class="num fx-pop d3"><b data-count="100" data-suffix="%">0%</b><span>of rights stay with the founder</span></div>
+      <div class="num fx-pop d4"><b data-count="3">0</b><span>languages &middot; Arabic-first ready</span></div>
+    </div>
+    <h2 class="fx-up d6" style="text-align:center">Delivery infrastructure for <span class="accent">Vision 2030</span></h2>
+  </section>
+
+  <!-- S7: финал -->
+  <section class="scene" id="s7">
+    <div class="haze"></div>
+    <svg class="mark fx-pop" viewBox="0 0 460 400">
+      <defs><linearGradient id="pf2" x1="0.3" y1="0" x2="0.7" y2="1">
+        <stop offset="0" stop-color="#9d6ff2"/><stop offset="1" stop-color="#5b2fbf"/></linearGradient></defs>
+      <path d="M240 260 L330 150 L455 395 L240 395 Z" fill="#3a2178"/>
+      <path d="M15 395 L200 55 L385 395 Z" fill="url(#pf2)"/>
+      <path d="M55 385 L155 290 L130 255 L200 90" fill="none" stroke="#f6f3ff"
+            stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="55" cy="385" r="15" fill="#fff"/><circle cx="155" cy="290" r="15" fill="#fff"/>
+      <circle cx="130" cy="255" r="15" fill="#fff"/>
+      <circle cx="200" cy="62" r="52" fill="#fff" stroke="#b39df7" stroke-width="12"/>
+      <text x="200" y="86" text-anchor="middle" font-family="Georgia,serif" font-size="72"
+            font-weight="700" fill="#4c2a92">&#964;</text>
+    </svg>
+    <h1 class="fx-up d2">Build yours.</h1>
+    <div class="cta fx-up d3">The platform is live &mdash; see it at our booth</div>
+    <div class="site fx-up d4">taulau.com</div>
+  </section>
+
+</div>
+<div id="bar"></div>
+<div id="tc">00:00.0</div>
+
+<script>
+/* ============================================================
+   Таймлайн промо-ролика. Длительности сцен в секундах.
+   ?timer=1  — таймкод для синхронизации озвучки при записи
+   ?once=1   — один проход без цикла (для записи ровно одного дубля)
+   ============================================================ */
+const SCENES = [
+  ["s1",  8],   // логотип
+  ["s2", 12],   // проблема
+  ["s3", 15],   // маршрут
+  ["s4", 25],   // живая игра
+  ["s5", 15],   // платформа
+  ["s6", 15],   // цифры
+  ["s7", 10],   // финал
+];
+const TOTAL = SCENES.reduce((a, [,d]) => a + d, 0);   // 100 c
+const qs = new URLSearchParams(location.search);
+if (qs.get("timer") === "1") document.body.classList.add("timer");
+const ONCE = qs.get("once") === "1";
+
+/* игра загружается сразу и живёт всё время — к своей сцене она уже в процессе восхождения */
+const gf = document.getElementById("gameFrame");
+gf.src = "game.html?demo=1&lang=en&v=1";
+
+let t0 = performance.now();
+let idx = -1;
+
+function activate(i) {
+  idx = i;
+  document.querySelectorAll(".scene").forEach(s => s.classList.remove("active"));
+  const [id] = SCENES[i];
+  const sc = document.getElementById(id);
+  sc.classList.add("active");
+  /* перезапуск CSS-анимаций: пересобираем содержимое УЖЕ ВИДИМОЙ сцены —
+     вставка в display:none контейнер оставляет анимации в замороженном
+     состоянии (opacity: 0 навсегда) */
+  if (id !== "s4") {                       // игру не трогаем — она живая
+    const html = sc.innerHTML;
+    sc.innerHTML = html;
+    void sc.offsetWidth;                   // принудительный reflow
+  }
+  if (id === "s6") runCounters(sc);
+  /* игра меряет канвас при старте: перезагружаем её в момент показа,
+     когда iframe уже видим и имеет реальный размер */
+  if (id === "s4") gf.src = "game.html?demo=1&lang=en&r=" + Date.now();
+}
+
+function runCounters(sc) {
+  sc.querySelectorAll("[data-count]").forEach(el => {
+    const target = +el.dataset.count, pre = el.dataset.prefix || "", suf = el.dataset.suffix || "";
+    const start = performance.now(), dur = 1600;
+    const step = now => {
+      const p = Math.min(1, (now - start) / dur);
+      const eased = 1 - Math.pow(1 - p, 3);
+      el.textContent = pre + Math.round(target * eased).toLocaleString("en-US") + suf;
+      if (p < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  });
+}
+
+function tick() {
+  const el = (performance.now() - t0) / 1000;
+  if (el >= TOTAL) {
+    if (ONCE) { document.getElementById("bar").style.width = "100%"; return; }
+    t0 = performance.now();
+  }
+  const t = ((performance.now() - t0) / 1000) % TOTAL;
+  /* какая сцена сейчас */
+  let acc = 0, cur = 0;
+  for (let i = 0; i < SCENES.length; i++) { acc += SCENES[i][1]; if (t < acc) { cur = i; break; } }
+  if (cur !== idx) activate(cur);
+  document.getElementById("bar").style.width = (t / TOTAL * 100) + "%";
+  const m = String(Math.floor(t / 60)).padStart(2, "0");
+  const s = (t % 60).toFixed(1).padStart(4, "0");
+  document.getElementById("tc").textContent = m + ":" + s;
+  requestAnimationFrame(tick);
+}
+activate(0);
+requestAnimationFrame(tick);
+
+/* клик — пауза/пуск (удобно на стенде) */
+let paused = false, pauseAt = 0;
+document.addEventListener("click", () => {
+  if (!paused) { pauseAt = performance.now(); paused = true; }
+  else { t0 += performance.now() - pauseAt; paused = false; requestAnimationFrame(tick); }
+});
+</script>
+</body>
+</html>
