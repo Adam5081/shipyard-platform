@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Taulau — Contact</title>
+<meta name="description" content="Taulau contact card: from idea to product. AI writes the code, industry experts carry it to production.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 460 430'><path d='M240 285 L330 175 L455 425 L240 425 Z' fill='%234a2a92'/><path d='M15 425 L200 85 L385 425 Z' fill='%237c4dd4'/><path d='M55 415 L155 320 L130 285 L200 120' fill='none' stroke='white' stroke-width='18' stroke-linecap='round' stroke-linejoin='round'/><circle cx='200' cy='92' r='54' fill='white' stroke='%23b39df7' stroke-width='14'/><text x='200' y='118' text-anchor='middle' font-family='Georgia,serif' font-size='78' font-weight='700' fill='%234c2a92'>%CF%84</text></svg>">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { min-height: 100vh; background: #08090A; color: #f7f8f8;
+    font-family: 'Inter', 'Segoe UI', -apple-system, sans-serif;
+    display: flex; align-items: center; justify-content: center; padding: 28px 20px;
+    -webkit-font-smoothing: antialiased; }
+  .glow { position: fixed; width: 90vmin; height: 90vmin; left: 50%; top: 40%;
+    transform: translate(-50%,-50%); border-radius: 50%; pointer-events: none;
+    background: radial-gradient(closest-side, rgba(122,79,242,.20), rgba(122,79,242,.05) 55%, transparent 78%); }
+  .card { position: relative; width: 100%; max-width: 440px; text-align: center; }
+  .mark { width: 130px; margin-bottom: 6px; }
+  h1 { font-size: 34px; font-weight: 800; letter-spacing: .1em; }
+  .tagline { font-size: 12.5px; font-weight: 700; letter-spacing: .38em; color: #a98cf7;
+    text-transform: uppercase; margin: 8px 0 26px; }
+  .lead { color: rgba(255,255,255,.62); font-size: 14.5px; line-height: 1.55; margin-bottom: 28px; }
+  .row { display: flex; align-items: center; gap: 14px; text-align: left;
+    background: #111017; border: 1px solid rgba(169,140,247,.22); border-radius: 14px;
+    padding: 14px 16px; margin-bottom: 10px; text-decoration: none; color: inherit;
+    transition: border-color .15s ease, transform .15s ease; }
+  .row:hover { border-color: rgba(169,140,247,.6); transform: translateY(-1px); }
+  .row .ic { width: 38px; height: 38px; border-radius: 10px; flex: 0 0 38px;
+    background: rgba(122,79,242,.18); display: flex; align-items: center; justify-content: center;
+    font-size: 17px; }
+  .row b { display: block; font-size: 15px; }
+  .row span { font-size: 12px; color: rgba(255,255,255,.5); }
+  .vcf { display: inline-block; margin-top: 16px; background: linear-gradient(135deg, #9d6ff2, #5b2fbf);
+    color: #fff; text-decoration: none; font-weight: 700; font-size: 15px;
+    padding: 13px 26px; border-radius: 12px; }
+  .foot { margin-top: 26px; font-size: 11.5px; color: rgba(255,255,255,.35); line-height: 1.6; }
+</style>
+</head>
+<body>
+<div class="glow"></div>
+<div class="card">
+  <svg class="mark" viewBox="0 0 460 400" aria-hidden="true">
+    <defs><linearGradient id="cm" x1="0.3" y1="0" x2="0.7" y2="1">
+      <stop offset="0" stop-color="#9d6ff2"/><stop offset="1" stop-color="#5b2fbf"/></linearGradient></defs>
+    <path d="M240 260 L330 150 L455 395 L240 395 Z" fill="#3a2178"/>
+    <path d="M15 395 L200 55 L385 395 Z" fill="url(#cm)"/>
+    <path d="M55 385 L155 290 L130 255 L200 90" fill="none" stroke="#f6f3ff"
+          stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="55" cy="385" r="15" fill="#fff"/><circle cx="155" cy="290" r="15" fill="#fff"/>
+    <circle cx="130" cy="255" r="15" fill="#fff"/>
+    <circle cx="200" cy="62" r="52" fill="#fff" stroke="#b39df7" stroke-width="12"/>
+    <text x="200" y="86" text-anchor="middle" font-family="Georgia,serif" font-size="72"
+          font-weight="700" fill="#4c2a92">&#964;</text>
+  </svg>
+  <h1>TAULAU</h1>
+  <div class="tagline">From idea to product</div>
+  <p class="lead">Domain experts ship their own software products:
+     AI writes the code, industry experts carry it to production.
+     Nine stations, five expert checkpoints, up to two months.</p>
+
+  <a class="row" href="mailto:samat@taulau.com">
+    <div class="ic">✉️</div>
+    <div><b>samat@taulau.com</b><span>Samat Zhumanov · CEO</span></div>
+  </a>
+  <a class="row" href="mailto:hello@taulau.com">
+    <div class="ic">💬</div>
+    <div><b>hello@taulau.com</b><span>General &amp; partnerships</span></div>
+  </a>
+  <a class="row" href="https://taulau.com">
+    <div class="ic">🏔️</div>
+    <div><b>taulau.com</b><span>The platform is live — Arabic · English · Russian</span></div>
+  </a>
+
+  <a class="vcf" id="saveVcf" href="#" download="Taulau.vcf">Save contact</a>
+
+  <div class="foot">Taulau · Astana, Kazakhstan<br>От идеи до продукта, который работает у клиента</div>
+</div>
+<script>
+/* vCard собирается на лету — карточка падает в контакты телефона одним тапом */
+const vcf = [
+  "BEGIN:VCARD", "VERSION:3.0",
+  "N:Zhumanov;Samat;;;", "FN:Samat Zhumanov",
+  "ORG:Taulau", "TITLE:CEO",
+  "EMAIL;TYPE=WORK:samat@taulau.com",
+  "EMAIL;TYPE=WORK:hello@taulau.com",
+  "URL:https://taulau.com",
+  "NOTE:Taulau - from idea to product. AI writes the code, industry experts carry it to production.",
+  "END:VCARD",
+].join("\r\n");
+document.getElementById("saveVcf").href = "data:text/vcard;charset=utf-8," + encodeURIComponent(vcf);
+</script>
+</body>
+</html>
